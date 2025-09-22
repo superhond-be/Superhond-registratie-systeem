@@ -1,0 +1,18 @@
+# 2.1 Maak een nieuwe map en ga erin
+mkdir superhond-new && cd superhond-new
+
+# 2.2 Maak structuur
+mkdir -p css js
+
+# 2.3 Voeg bestanden toe (zie complete code hieronder)
+# Plaats index.html, css/style.css en js/main.js exact zoals onder "Complete Code".
+
+# 2.4 Git init + eerste commit
+git init
+git add .
+git commit -m "feat: clean start (Superhond multi-layout)"
+
+# 2.5 Koppel aan GitHub (vervang <user> en <repo>)
+git branch -M main
+git remote add origin git@github.com:<user>/<repo>.git
+git push -u origin main
