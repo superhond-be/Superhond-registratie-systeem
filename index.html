@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Superhond – Nieuwe Start</title>
-  <meta name="description" content="Superhond: schone start met meerdere layouts." />
+  <title>Superhond Registratie Systeem</title>
   <link rel="stylesheet" href="./css/style.css" />
 </head>
 <body>
   <div id="app" data-layout="superhond">
-    <header class="topbar" role="banner">
-      <a class="brand" href="./" aria-label="Home">🐶 Superhond</a>
+    <header class="topbar">
+      <h1 class="brand">🐶 Superhond Registratie</h1>
       <nav class="switch" aria-label="Layout wisselaar">
         <button class="btn" data-switch="superhond" aria-pressed="true">Superhond</button>
         <button class="btn" data-switch="raster" aria-pressed="false">Raster</button>
@@ -18,29 +17,93 @@
       </nav>
     </header>
 
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="hero__media" aria-hidden="true"></div>
-      <div class="hero__content">
-        <h1 id="hero-title">Nieuwe start voor je Superhond-site</h1>
-        <p class="lead">Schoon, snel en simpel. Kies je structuur en bouw door.</p>
-        <div class="hero__actions">
-          <a class="btn btn--accent" href="#secties">Ontdek secties</a>
-          <button class="btn btn--ghost" id="actie">Actie</button>
-        </div>
-      </div>
-    </section>
+    <main class="sections">
+      <!-- REGISTRATIEFORMULIER -->
+      <section class="card" aria-labelledby="form-title">
+        <h2 id="form-title">Nieuwe hond registreren</h2>
+        <form id="dog-form" novalidate>
+          <div class="grid">
+            <label class="field">
+              <span>Naam <b>*</b></span>
+              <input name="name" type="text" placeholder="Bv. Rex" required minlength="2" />
+              <small class="error"></small>
+            </label>
 
-    <main id="secties" class="sections">
-      <article class="card"><h2>Training</h2><p>Commando’s, fun en focus.</p></article>
-      <article class="card"><h2>Voeding</h2><p>Gebalanceerd en energiek.</p></article>
-      <article class="card"><h2>Activiteiten</h2><p>Dagelijkse prikkels en spel.</p></article>
-      <article class="card"><h2>Verzorging</h2><p>Vacht, nagels en gebit.</p></article>
-      <article class="card"><h2>Community</h2><p>Deel tips en verhalen.</p></article>
+            <label class="field">
+              <span>Ras <b>*</b></span>
+              <input name="breed" type="text" placeholder="Bv. Labrador" required minlength="2" />
+              <small class="error"></small>
+            </label>
+
+            <label class="field">
+              <span>Leeftijd (jaren) <b>*</b></span>
+              <input name="age" type="number" min="0" max="25" step="1" placeholder="Bv. 3" required />
+              <small class="error"></small>
+            </label>
+
+            <label class="field">
+              <span>Eigenaar <b>*</b></span>
+              <input name="owner" type="text" placeholder="Naam eigenaar" required minlength="2" />
+              <small class="error"></small>
+            </label>
+
+            <label class="field">
+              <span>Chipnummer</span>
+              <input name="chip" type="text" placeholder="Optioneel" />
+              <small class="error"></small>
+            </label>
+
+            <label class="field">
+              <span>Contact (e-mail of tel.)</span>
+              <input name="contact" type="text" placeholder="Optioneel" />
+              <small class="error"></small>
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn--accent" type="submit">Opslaan</button>
+            <button class="btn btn--ghost" type="reset" id="reset-btn">Reset</button>
+          </div>
+
+          <!-- Hidden: id voor bewerken -->
+          <input type="hidden" name="id" />
+        </form>
+      </section>
+
+      <!-- FILTER & TABEL -->
+      <section class="card" aria-labelledby="list-title">
+        <div class="list-header">
+          <h2 id="list-title">Geregistreerde honden</h2>
+          <input id="search" class="search" type="search" placeholder="Zoek op naam, ras of eigenaar…" aria-label="Zoek" />
+        </div>
+
+        <div class="table-wrap">
+          <table class="table" aria-describedby="list-title">
+            <thead>
+              <tr>
+                <th>Naam</th>
+                <th>Ras</th>
+                <th>Leeftijd</th>
+                <th>Eigenaar</th>
+                <th>Chip</th>
+                <th>Acties</th>
+              </tr>
+            </thead>
+            <tbody id="dog-tbody">
+              <!-- Rijen worden via JS gevuld -->
+            </tbody>
+          </table>
+        </div>
+
+        <div class="list-footer">
+          <button class="btn btn--ghost" id="export-json">Exporteer JSON</button>
+          <button class="btn btn--ghost" id="clear-all">Alles leegmaken</button>
+          <span id="count" class="muted"></span>
+        </div>
+      </section>
     </main>
 
-    <footer class="footer" role="contentinfo">
-      <small>&copy; 2025 Superhond</small>
-    </footer>
+    <footer class="footer"><small>&copy; 2025 Superhond</small></footer>
   </div>
 
   <script type="module" src="./js/main.js"></script>
