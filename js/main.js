@@ -1,67 +1,38 @@
-// main.js (module scope)
-const APP_ID = "app";
+// Geen globals buiten dit bestand
 const LAYOUTS = ["superhond", "raster", "blog"];
-const STORAGE_KEY = "superhond-layout";
-
-const $ = (sel, root = document) => {
-  const el = root.querySelector(sel);
-  if (!el) throw new Error(`Element niet gevonden: ${sel}`);
-  return el;
-};
-const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-
-function getRoot() {
-  const root = document.getElementById(APP_ID);
-  if (!root) throw new Error("#app ontbreekt");
-  return root;
-}
-
-function getURLLayout() {
-  const p = new URLSearchParams(location.search);
-  const q = (p.get("layout") || "").toLowerCase();
-  return LAYOUTS.includes(q) ? q : null;
-}
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
 function applyLayout(layout) {
-  const root = getRoot();
+  const root = $("#app");
   if (!LAYOUTS.includes(layout)) layout = LAYOUTS[0];
   root.dataset.layout = layout;
-  localStorage.setItem(STORAGE_KEY, layout);
-  // UI state
-  $$(".layout-switch .btn").forEach(btn => {
-    btn.classList.toggle("btn--accent", btn.dataset.switch === layout);
+
+  // UI-knoppen + ARIA
+  $$(".switch .btn").forEach(btn => {
+    const active = btn.dataset.switch === layout;
+    btn.classList.toggle("btn--accent", active);
+    btn.setAttribute("aria-pressed", String(active));
   });
-  // Sync URL zonder reload
+
+  // URL sync + remember
   const url = new URL(location.href);
   url.searchParams.set("layout", layout);
   history.replaceState({}, "", url);
-}
-
-function initSwitch() {
-  $$(".layout-switch [data-switch]").forEach(btn => {
-    btn.addEventListener("click", () => applyLayout(btn.dataset.switch));
-  });
-}
-
-function initActions() {
-  const knop = $("#actieKnop");
-  knop.addEventListener("click", () => {
-    const active = getRoot().dataset.layout;
-    alert(`Actie vanuit layout: ${active} 🚀`);
-  });
+  localStorage.setItem("layout", layout);
 }
 
 function boot() {
-  const urlLayout = getURLLayout();
-  const stored = localStorage.getItem(STORAGE_KEY);
-  const initial = urlLayout || stored || LAYOUTS[0];
-  applyLayout(initial);
-  initSwitch();
-  initActions();
+  // Init layout
+  const urlQ = new URLSearchParams(location.search).get("layout");
+  const saved = localStorage.getItem("layout");
+  applyLayout(urlQ || saved || LAYOUTS[0]);
+
+  // Listeners
+  $$(".switch .btn").forEach(b => b.addEventListener("click", () => applyLayout(b.dataset.switch)));
+  $("#actie").addEventListener("click", () => alert(`Layout: ${$("#app").dataset.layout} 🚀`));
 }
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", boot, { once: true });
-} else {
-  boot();
-}
+document.readyState === "loading"
+  ? document.addEventListener("DOMContentLoaded", boot, { once: true })
+  : boot();
