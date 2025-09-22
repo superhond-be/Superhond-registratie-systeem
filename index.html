@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Superhond Registratie Systeem</title>
+  <meta name="description" content="Honden registreren, zoeken, bewerken en verwijderen.">
   <link rel="stylesheet" href="./css/style.css" />
 </head>
 <body>
@@ -37,7 +38,7 @@
 
             <label class="field">
               <span>Leeftijd (jaren) <b>*</b></span>
-              <input name="age" type="number" min="0" max="25" step="1" placeholder="Bv. 3" required />
+              <input name="age" type="number" min="0" max="25" step="1" placeholder="3" required />
               <small class="error"></small>
             </label>
 
@@ -65,12 +66,12 @@
             <button class="btn btn--ghost" type="reset" id="reset-btn">Reset</button>
           </div>
 
-          <!-- Hidden: id voor bewerken -->
+          <!-- Hidden id voor bewerken -->
           <input type="hidden" name="id" />
         </form>
       </section>
 
-      <!-- FILTER & TABEL -->
+      <!-- LIJST -->
       <section class="card" aria-labelledby="list-title">
         <div class="list-header">
           <h2 id="list-title">Geregistreerde honden</h2>
@@ -89,9 +90,7 @@
                 <th>Acties</th>
               </tr>
             </thead>
-            <tbody id="dog-tbody">
-              <!-- Rijen worden via JS gevuld -->
-            </tbody>
+            <tbody id="dog-tbody"><!-- gevuld via JS --></tbody>
           </table>
         </div>
 
