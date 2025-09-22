@@ -1,3 +1,8 @@
+
+body {
+  background: red !important;
+}
+
 /* ==== Scope & thema ==== */
 #app, #app * { box-sizing: border-box; }
 #app {
