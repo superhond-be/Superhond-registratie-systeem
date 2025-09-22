@@ -1,4 +1,4 @@
-// ====== Config & helpers ======
+// ====== Helpers & config ======
 const LAYOUTS = ["superhond", "raster", "blog"];
 const STORAGE_KEY = "superhond:dogs";
 const $ = (s, r = document) => r.querySelector(s);
@@ -91,7 +91,6 @@ function renderList(filter = "") {
     tbody.appendChild(tr);
   }
 
-  // Acties
   tbody.querySelectorAll("[data-edit]").forEach(btn =>
     btn.addEventListener("click", () => startEdit(btn.dataset.edit))
   );
@@ -139,11 +138,10 @@ function removeDog(id) {
   renderList($("#search").value);
 }
 
-// ====== Event handlers ======
+// ====== UI events ======
 function initForm() {
   const form = $("#dog-form");
 
-  // Submit
   form.addEventListener("submit", e => {
     e.preventDefault();
     if (!validate(form)) return;
@@ -165,12 +163,10 @@ function initForm() {
     form.querySelector('[type="submit"]').textContent = "Opslaan";
   });
 
-  // Live validatie bij blur
-  form.querySelectorAll("input").forEach(inp => {
-    inp.addEventListener("blur", () => validate(form));
-  });
+  form.querySelectorAll("input").forEach(inp =>
+    inp.addEventListener("blur", () => validate(form))
+  );
 
-  // Reset
   $("#reset-btn").addEventListener("click", () => {
     form.querySelectorAll(".error").forEach(e => (e.textContent = ""));
     form.id.value = "";
@@ -180,6 +176,7 @@ function initForm() {
 
 function initListControls() {
   $("#search").addEventListener("input", e => renderList(e.target.value));
+
   $("#export-json").addEventListener("click", () => {
     const data = JSON.stringify(dogs, null, 2);
     const blob = new Blob([data], { type: "application/json" });
@@ -187,6 +184,7 @@ function initListControls() {
     const a = Object.assign(document.createElement("a"), { href: url, download: "superhond-export.json" });
     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
   });
+
   $("#clear-all").addEventListener("click", () => {
     if (!confirm("Alles leegmaken?")) return;
     dogs = [];
@@ -197,7 +195,7 @@ function initListControls() {
 
 // ====== Boot ======
 function boot() {
-  // Layout init
+  // Layout
   const urlQ = new URLSearchParams(location.search).get("layout");
   const savedLayout = localStorage.getItem("layout");
   applyLayout(urlQ || savedLayout || LAYOUTS[0]);
