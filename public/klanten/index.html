@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Superhond – Klantenportaal Lessen</title>
+  <meta name="color-scheme" content="light dark">
+  <link rel="stylesheet" href="./assets/styles.css">
+</head>
+<body>
+  <!-- Superhond gele balk -->
+  <header class="topbar" role="banner" aria-label="Superhond navigatie">
+    <div class="logo">🐾 Superhond</div>
+    <span class="chip">Klantenportaal</span>
+    <div class="spacer"></div>
+    <form class="id-form" id="idForm" autocomplete="on">
+      <label for="clientId" class="sr-only">Jouw e-mail (voor opslaan)</label>
+      <input id="clientId" name="clientId" type="email" placeholder="jij@voorbeeld.be (optioneel, voor bewaren)"
+             aria-label="E-mail voor bewaren" />
+      <button type="submit" class="btn">Bewaar</button>
+    </form>
+  </header>
+
+  <main class="container" id="app">
+    <section class="panel" aria-labelledby="lessenHeading">
+      <div class="filters" role="region" aria-label="Filters">
+        <input id="search" type="search" placeholder="Zoek op les, trainer of trefwoord…" />
+        <select id="typeFilter">
+          <option value="">Alle types</option>
+          <option>Puppy Start</option>
+          <option>Basisgroep</option>
+          <option>Gevorderd</option>
+          <option>Privé</option>
+        </select>
+        <select id="locFilter">
+          <option value="">Alle locaties</option>
+          <option>Retie Terrein</option>
+          <option>Dessel Park</option>
+          <option>Turnhout Hal</option>
+        </select>
+        <select id="trainerFilter">
+          <option value="">Alle trainers</option>
+          <option>Paul</option>
+          <option>Sofie</option>
+          <option>Maas</option>
+        </select>
+        <button id="resetBtn" class="secondary" type="button">Reset</button>
+        <div class="legend">Tip: klik op ❤️ om je interesse te bewaren. Alleen zichtbaar voor jou.</div>
+      </div>
+
+      <div id="tableWrap" aria-live="polite"></div>
+
+      <div class="drawer" id="interesseDrawer" hidden>
+        <h3>Mijn interesse</h3>
+        <div id="interestPills"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Templates -->
+  <template id="tableTemplate">
+    <table class="table" aria-describedby="lessenHeading">
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Klas</th>
+          <th>Datum</th>
+          <th>Uren</th>
+          <th>Locatie</th>
+          <th>Trainer(s)</th>
+          <th>Acties</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </template>
+
+  <template id="rowTemplate">
+    <tr>
+      <td><span class="status">Actief</span></td>
+      <td class="caps"></td>
+      <td class="date"></td>
+      <td class="time"></td>
+      <td class="loc"></td>
+      <td class="trainer"></td>
+      <td class="row-actions"></td>
+    </tr>
+  </template>
+
+  <template id="cardTemplate">
+    <div class="card">
+      <div class="title"></div>
+      <div class="meta"></div>
+      <div class="row-actions"></div>
+    </div>
+  </template>
+
+  <script src="./assets/app.js" defer></script>
+</body>
+</html>
