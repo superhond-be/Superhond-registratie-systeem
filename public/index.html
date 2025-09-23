@@ -1,121 +1,70 @@
-
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Superhond Assistent</title>
-  <style>
-    body{font-family:system-ui,Arial,sans-serif;margin:0;background:#f6f7fb;color:#222;}
-    header{background:#ffcc00;padding:12px 16px;font-weight:700;position:sticky;top:0}
-    .wrap{max-width:900px;margin:0 auto;padding:16px}
-    .flex{display:flex;gap:16px}
-    .sidebar{width:260px;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);padding:12px}
-    .chat{flex:1;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;flex-direction:column;height:70vh}
-    .msgs{padding:12px;overflow:auto;flex:1}
-    .msg{margin:8px 0;padding:10px 12px;border-radius:10px;max-width:70%}
-    .me{background:#e7f0ff;margin-left:auto}
-    .bot{background:#f1f5f9}
-    .inputbar{display:flex;gap:8px;border-top:1px solid #eee;padding:10px}
-    input,button{font:inherit}
-    input[type=text]{flex:1;padding:10px;border:1px solid #ddd;border-radius:8px}
-    button{background:#111827;color:#fff;border:0;border-radius:8px;padding:10px 12px;cursor:pointer}
-    .conv{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px}
-    .conv:hover{background:#f7f7f7}
-    small{color:#666}
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Superhond.be — Admin Portaal</title>
+  <link rel="stylesheet" href="./css/style.css">
+  <script defer src="./js/app.js"></script>
 </head>
 <body>
-  <header>🐶 Superhond Assistent — eigen app</header>
-  <div class="wrap flex">
-    <aside class="sidebar">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <strong>Gesprekken</strong>
-        <button id="new">Nieuw</button>
-      </div>
-      <div id="convos"></div>
-    </aside>
+  <header class="sh-topbar">
+    <div class="brand">Superhond<span class="dotbe">.be</span> <span class="muted">Admin Portaal</span></div>
+    <div class="pills">
+      <span class="pill api">🔔 Agenda • <span id="apiStatus">API: ok</span></span>
+      <span class="pill version" id="version">v1.2</span>
+    </div>
+  </header>
 
-    <section class="chat">
-      <div class="msgs" id="msgs"><small>Kies of maak een gesprek.</small></div>
-      <div class="inputbar">
-        <input id="input" type="text" placeholder="Typ je bericht..." />
-        <button id="send">Stuur</button>
-      </div>
+  <main class="wrap">
+    <h1>Dashboard</h1>
+
+    <section class="cards">
+      <a class="card" href="./module-b.html">
+        <div class="icon">👤</div>
+        <div class="title">Klanten</div>
+        <div class="sub">Zoeken, toevoegen, bewerken</div>
+      </a>
+      <a class="card" href="./module-b.html">
+        <div class="icon">🐾</div>
+        <div class="title">Honden</div>
+        <div class="sub">Per klant, ras, leeftijd</div>
+      </a>
+      <a class="card" href="./module-c.html">
+        <div class="icon">📚</div>
+        <div class="title">Lessen</div>
+        <div class="sub">Puppypack, Pubergroep, Basisgroep</div>
+      </a>
+      <a class="card" href="./module-c.html">
+        <div class="icon">🎟️</div>
+        <div class="title">Strippenkaarten</div>
+        <div class="sub">Saldo, gebruikt, in verwerking</div>
+      </a>
+      <a class="card" href="./module-a.html">
+        <div class="icon">🧑‍🏫</div>
+        <div class="title">Trainers</div>
+        <div class="sub">Beschikbaarheid & locaties</div>
+      </a>
+      <a class="card" href="./home.html">
+        <div class="icon">⚙️</div>
+        <div class="title">Instellingen</div>
+        <div class="sub">Stijl, locaties, prijzen</div>
+      </a>
+      <a class="card" href="./home.html">
+        <div class="icon">📊</div>
+        <div class="title">Rapporten</div>
+        <div class="sub">Overzicht & export (CSV/PDF)</div>
+      </a>
+      <a class="card" href="./home.html">
+        <div class="icon">ℹ️</div>
+        <div class="title">Over</div>
+        <div class="sub">Build en versie-informatie</div>
+      </a>
     </section>
-  </div>
 
-  <script>
-    const API_BASE = location.origin; // als frontend apart draait, zet hier je server-URL
-    let currentId = null;
-
-    async function listConvos(){
-      const r = await fetch(API_BASE + '/api/convos');
-      const data = await r.json();
-      const box = document.getElementById('convos');
-      box.innerHTML = '';
-      data.forEach(c => {
-        const div = document.createElement('div');
-        div.className = 'conv';
-        div.innerHTML = '<span>#'+c.id+' — '+(c.title||'Gesprek')+'</span><small>'+new Date(c.created_at).toLocaleString()+'</small>';
-        div.onclick = () => loadConv(c.id);
-        box.appendChild(div);
-      });
-    }
-
-    async function newConv(){
-      const title = prompt('Titel voor nieuw gesprek:', 'Gesprek');
-      const r = await fetch(API_BASE + '/api/convos', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ title })
-      });
-      const data = await r.json();
-      await listConvos();
-      await loadConv(data.id);
-    }
-
-    async function loadConv(id){
-      currentId = id;
-      const r = await fetch(API_BASE + '/api/messages?conversationId=' + id);
-      const data = await r.json();
-      const msgs = document.getElementById('msgs');
-      msgs.innerHTML = '';
-      data.forEach(m => appendMsg(m.role, m.content));
-      msgs.scrollTop = msgs.scrollHeight;
-    }
-
-    function appendMsg(role, content){
-      const d = document.createElement('div');
-      d.className = 'msg ' + (role === 'user' ? 'me' : 'bot');
-      d.textContent = content;
-      document.getElementById('msgs').appendChild(d);
-    }
-
-    async function send(){
-      const inp = document.getElementById('input');
-      const text = inp.value.trim();
-      if(!text || !currentId) return;
-      appendMsg('user', text);
-      inp.value = '';
-      const r = await fetch(API_BASE + '/api/chat', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ conversationId: currentId, message: text })
-      });
-      const data = await r.json();
-      appendMsg('assistant', data.reply || '(geen antwoord)');
-      const msgs = document.getElementById('msgs');
-      msgs.scrollTop = msgs.scrollHeight;
-    }
-
-    document.getElementById('new').onclick = newConv;
-    document.getElementById('send').onclick = send;
-    document.getElementById('input').addEventListener('keydown', (e)=>{
-      if(e.key === 'Enter') send();
-    });
-
-    listConvos();
-  </script>
+    <footer class="foot">
+      © 2025 Superhond — Build 2025-09-23 13:10:23 (Europe/Brussels)
+    </footer>
+  </main>
 </body>
 </html>
