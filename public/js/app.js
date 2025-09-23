@@ -1,14 +1,13 @@
-// Centraal versienummer
-const VERSION = "v0.4";
+// Centrale metadata
+const VERSION = "v0.5";
+const BUILD_TIMESTAMP = "2025-09-23 09:08:31 (Europe/Brussels)";
 
 document.addEventListener("DOMContentLoaded", () => {
-  const versionSpans = document.querySelectorAll(".version");
-  versionSpans.forEach(el => el.textContent = VERSION);
+  document.querySelectorAll(".version").forEach(el => el.textContent = VERSION);
+  document.querySelectorAll("#verLabel").forEach(el => el.textContent = VERSION);
+  document.querySelectorAll(".build").forEach(el => el.textContent = "Build " + BUILD_TIMESTAMP);
 
-  const verLabels = document.querySelectorAll("#verLabel");
-  verLabels.forEach(el => el.textContent = VERSION);
-
-  // Toggle active state knoppen (indien aanwezig)
+  // Toggle active state knoppen (indien aanwezig op home.html)
   document.querySelectorAll('.switch .btn').forEach(button => {
     button.addEventListener('click', () => {
       const group = button.closest('.switch');

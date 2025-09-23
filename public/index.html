@@ -3,28 +3,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Superhond Registratie</title>
-  <meta name="description" content="Honden registreren, zoeken, bewerken en verwijderen.">
+  <title>Superhond — Dashboard</title>
+  <meta name="description" content="Startscherm met navigatie naar modules.">
   <link rel="stylesheet" href="./css/style.css" />
 </head>
 <body>
   <div id="app" data-layout="superhond">
     <header class="topbar">
-      <h1 class="brand">🐶 Superhond Registratie</h1>
-      <nav class="switch" aria-label="Layout wisselaar">
-        <button class="btn active" data-switch="superhond" aria-pressed="true">Superhond</button>
-        <button class="btn" data-switch="raster" aria-pressed="false">Raster</button>
-        <button class="btn" data-switch="blog" aria-pressed="false">Blog</button>
+      <h1 class="brand">🐶 Superhond Dashboard</h1>
+      <nav class="switch" aria-label="Navigatie">
+        <a class="btn" href="./home.html">Home</a>
       </nav>
       <div class="top-actions">
-        <a class="btn dashboard" href="./dashboard.html">Dashboard</a>
         <span class="version" aria-label="Versie"></span>
       </div>
     </header>
     <main>
-      <h2>Welkom in de Superhond lay-out <span id="verLabel"></span></h2>
-      <p>Hier kan je testen of de stijl correct geladen wordt.</p>
+      <h2>Welkom op het Dashboard <span id="verLabel"></span></h2>
+      <section class="tiles">
+        <a class="tile" href="#module-a">
+          <h3>Module A — Dashboard</h3>
+          <p>Startscherm, tegels, stijl en navigatie</p>
+        </a>
+        <a class="tile" href="#module-b">
+          <h3>Module B — Klanten &amp; Honden</h3>
+          <p>Lijsten, zoeken, acties (dummy)</p>
+        </a>
+        <a class="tile" href="#module-c">
+          <h3>Module C — Lessen &amp; Strippenkaarten</h3>
+          <p>Lesplanning en strippen overzichten</p>
+        </a>
+      </section>
     </main>
+    <footer class="footer">
+      <small>© 2025 Superhond — <span class="build"></span></small>
+    </footer>
   </div>
   <script src="./js/app.js"></script>
 </body>
