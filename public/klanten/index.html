@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Superhond – Klantenportaal Lessen</title>
+  <title>Superhond – Klantenportaal</title>
   <meta name="color-scheme" content="light dark">
   <link rel="stylesheet" href="./assets/styles.css">
 </head>
@@ -13,16 +13,48 @@
     <div class="logo">🐾 Superhond</div>
     <span class="chip">Klantenportaal</span>
     <div class="spacer"></div>
-    <form class="id-form" id="idForm" autocomplete="on">
-      <label for="clientId" class="sr-only">Jouw e-mail (voor opslaan)</label>
-      <input id="clientId" name="clientId" type="email" placeholder="jij@voorbeeld.be (optioneel, voor bewaren)"
-             aria-label="E-mail voor bewaren" />
-      <button type="submit" class="btn">Bewaar</button>
-    </form>
+    <button id="openProfile" class="btn">👤 Mijn gegevens</button>
   </header>
 
   <main class="container" id="app">
+    <!-- MIJN GEGEVENS + HONDEN -->
+    <section class="panel" aria-labelledby="gegvHeading">
+      <h2 id="gegvHeading" class="panel-title">Mijn gegevens</h2>
+
+      <div class="profile-grid">
+        <form id="clientForm" class="client-form" autocomplete="on">
+          <div class="field"><label>Voornaam<input name="firstName" required></label></div>
+          <div class="field"><label>Achternaam<input name="lastName" required></label></div>
+          <div class="field wide"><label>E-mail<input type="email" name="email" required></label></div>
+          <div class="field"><label>Telefoon<input name="phone" placeholder="+32…"></label></div>
+          <div class="field"><label>Land<input name="country" placeholder="België"></label></div>
+          <div class="field wide"><label>Straat<input name="street"></label></div>
+          <div class="field"><label>Nr<input name="streetNo"></label></div>
+          <div class="field"><label>Postcode<input name="zip"></label></div>
+          <div class="field"><label>Plaats<input name="city"></label></div>
+          <div class="field wide"><label>Opmerkingen<textarea name="notes" rows="2"></textarea></label></div>
+
+          <div class="actions">
+            <button class="btn primary" type="submit">💾 Bewaren</button>
+            <button class="btn" type="button" id="prefillDemo">⚡ Prefill demo</button>
+            <button class="btn" type="button" id="resetClient">↺ Reset</button>
+          </div>
+        </form>
+
+        <div class="dogs">
+          <div class="dogs-header">
+            <h3>Mijn honden</h3>
+            <button id="addDogBtn" class="btn">➕ Hond toevoegen</button>
+          </div>
+          <ul id="dogsList" class="dogs-list" aria-live="polite"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- LESSEN -->
     <section class="panel" aria-labelledby="lessenHeading">
+      <h2 id="lessenHeading" class="panel-title">Lessen – Overzicht</h2>
+
       <div class="filters" role="region" aria-label="Filters">
         <input id="search" type="search" placeholder="Zoek op les, trainer of trefwoord…" />
         <select id="typeFilter">
@@ -56,6 +88,8 @@
       </div>
     </section>
   </main>
+
+  <footer class="footer"></footer>
 
   <!-- Templates -->
   <template id="tableTemplate">
@@ -94,6 +128,31 @@
       <div class="row-actions"></div>
     </div>
   </template>
+
+  <!-- Dog editor modal -->
+  <dialog id="dogDialog">
+    <form method="dialog" id="dogForm" class="dog-form">
+      <h3>Hond</h3>
+      <div class="grid">
+        <label>Naam<input name="name" required></label>
+        <label>Ras<input name="breed" placeholder="bv. Border Collie"></label>
+        <label>Geboortedatum<input name="dob" type="date"></label>
+        <label>Geslacht
+          <select name="sex">
+            <option value="">–</option>
+            <option>Teef</option>
+            <option>Reu</option>
+          </select>
+        </label>
+        <label>Chipnr<input name="chip" placeholder="(optioneel)"></label>
+        <label>Opmerkingen<textarea name="notes" rows="2"></textarea></label>
+      </div>
+      <menu class="actions">
+        <button value="cancel" class="btn">Annuleren</button>
+        <button value="save" class="btn primary">Opslaan</button>
+      </menu>
+    </form>
+  </dialog>
 
   <script src="./assets/app.js" defer></script>
 </body>
