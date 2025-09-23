@@ -1,30 +1,70 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Superhond Registratie v1.1</title>
-  <link rel="stylesheet" href="./css/style.css" />
-  <script src="./js/app.js" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Superhond.be — Admin Portaal</title>
+  <link rel="stylesheet" href="./css/style.css">
+  <script defer src="./js/app.js"></script>
 </head>
 <body>
-  <header class="topbar">
-    <h1>🐶 Superhond Registratie — v1.1</h1>
+  <header class="sh-topbar">
+    <div class="brand">Superhond<span class="dotbe">.be</span> <span class="muted">Admin Portaal</span></div>
+    <div class="pills">
+      <span class="pill api">🔔 Agenda • <span id="apiStatus">API: ok</span></span>
+      <span class="pill version" id="version">v1.2</span>
+    </div>
   </header>
 
-  <div class="test-banner">🔵 Superhond v1.1 Test — Auto-deploy check</div>
+  <main class="wrap">
+    <h1>Dashboard</h1>
 
-  <main class="container">
-    <h2>Welkom in Superhond v1.1 🎉</h2>
-    <nav class="modules">
-      <a class="module yellow" href="module-a.html">Module A — Dashboard</a>
-      <a class="module blue" href="module-b.html">Module B — Klanten & Honden</a>
-      <a class="module green" href="module-c.html">Module C — Lessen & Strippenkaarten</a>
-    </nav>
+    <section class="cards">
+      <a class="card" href="./module-b.html">
+        <div class="icon">👤</div>
+        <div class="title">Klanten</div>
+        <div class="sub">Zoeken, toevoegen, bewerken</div>
+      </a>
+      <a class="card" href="./module-b.html">
+        <div class="icon">🐾</div>
+        <div class="title">Honden</div>
+        <div class="sub">Per klant, ras, leeftijd</div>
+      </a>
+      <a class="card" href="./module-c.html">
+        <div class="icon">📚</div>
+        <div class="title">Lessen</div>
+        <div class="sub">Puppypack, Pubergroep, Basisgroep</div>
+      </a>
+      <a class="card" href="./module-c.html">
+        <div class="icon">🎟️</div>
+        <div class="title">Strippenkaarten</div>
+        <div class="sub">Saldo, gebruikt, in verwerking</div>
+      </a>
+      <a class="card" href="./module-a.html">
+        <div class="icon">🧑‍🏫</div>
+        <div class="title">Trainers</div>
+        <div class="sub">Beschikbaarheid & locaties</div>
+      </a>
+      <a class="card" href="./home.html">
+        <div class="icon">⚙️</div>
+        <div class="title">Instellingen</div>
+        <div class="sub">Stijl, locaties, prijzen</div>
+      </a>
+      <a class="card" href="./home.html">
+        <div class="icon">📊</div>
+        <div class="title">Rapporten</div>
+        <div class="sub">Overzicht & export (CSV/PDF)</div>
+      </a>
+      <a class="card" href="./home.html">
+        <div class="icon">ℹ️</div>
+        <div class="title">Over</div>
+        <div class="sub">Build en versie-informatie</div>
+      </a>
+    </section>
+
+    <footer class="foot">
+      © 2025 Superhond — Build 2025-09-23 13:10:23 (Europe/Brussels)
+    </footer>
   </main>
-
-  <footer>
-    © 2025 Superhond — Build 2025-09-23 11:01:59 (Europe/Brussels)
-  </footer>
 </body>
 </html>
