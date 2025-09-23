@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Superhond — Admin Klanten</title>
+  <link rel="stylesheet" href="../admin.css">
+</head>
+<body>
+  <header class="topbar">
+    <a href="../dashboard.html" class="btn">⬅️ Terug</a>
+    <h1>👤 Klanten (demo)</h1>
+    <div class="spacer"></div>
+    <button id="prefillBtn" class="btn">⚡ Prefill Demo</button>
+    <button id="resetBtn" class="btn">↺ Reset</button>
+  </header>
+
+  <main class="container">
+    <section class="panel">
+      <table class="table" id="klantenTable">
+        <thead>
+          <tr><th>Naam</th><th>E-mail</th><th>Telefoon</th><th>Honden</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const tbody = document.querySelector("#klantenTable tbody");
+    const demoData = [
+      { naam:"Sara De Smet", email:"sara@example.be", tel:"+32 470 00 00 00", honden:"Boef, Mila" },
+      { naam:"Jan Peeters", email:"jan.peeters@mail.com", tel:"+32 495 12 34 56", honden:"Rocky" },
+      { naam:"Leen Jacobs", email:"leen.jacobs@mail.com", tel:"+32 499 22 11 33", honden:"Luna, Max" }
+    ];
+
+    function renderRows(data){
+      tbody.innerHTML = "";
+      if(data.length===0){
+        tbody.innerHTML = `<tr><td colspan="4">Nog geen klanten geladen.</td></tr>`;
+        return;
+      }
+      data.forEach(c=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${c.naam}</td><td>${c.email}</td><td>${c.tel}</td><td>${c.honden}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById("prefillBtn").addEventListener("click", ()=> renderRows(demoData));
+    document.getElementById("resetBtn").addEventListener("click", ()=> renderRows([]));
+
+    // start leeg
+    renderRows([]);
+  </script>
+</body>
+</html>
