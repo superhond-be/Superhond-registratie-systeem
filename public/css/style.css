@@ -1,12 +1,26 @@
 :root{
-  --bg:#f9f9fb;
-  --card:#fff;
-  --text:#222;
-  --brand:#ff7f50;
+  --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#22d3ee; --bad:#ef4444; --good:#10b981;
+  --radius:12px;
+  font-synthesis-weight:none;
 }
-body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text);}
-.topbar{background:var(--brand);padding:12px;display:flex;justify-content:space-between;align-items:center;color:#fff;}
-.container{max-width:900px;margin:20px auto;padding:0 16px;}
-.card{background:var(--card);padding:16px;margin-bottom:20px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,.1);}
-.version{font-weight:bold;}
-button{margin:4px;padding:8px 12px;border:none;border-radius:6px;cursor:pointer;}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#0b1220,#0f172a);color:var(--text);font:16px/1.5 system-ui,Segoe UI,Roboto,Ubuntu}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:#0b1020;border-bottom:1px solid #1f2937;position:sticky;top:0}
+.topbar h1{margin:0;font-size:18px;letter-spacing:.3px}
+.topbar button{background:var(--panel);border:1px solid #1f2937;color:var(--text);padding:8px 12px;border-radius:8px;cursor:pointer}
+.container{max-width:980px;margin:20px auto;padding:0 16px;display:grid;gap:16px;grid-template-columns:1fr 1fr}
+.card{background:rgba(17,24,39,.7);border:1px solid #1f2937;border-radius:var(--radius);padding:16px;backdrop-filter:blur(6px)}
+label{display:grid;gap:6px;margin:10px 0}
+input{padding:10px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:var(--text)}
+button[type=submit]{margin-top:8px;background:linear-gradient(135deg,#0891b2,#22d3ee);color:#041016;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:700}
+.output{min-height:54px;background:#0b1220;border:1px dashed #334155;border-radius:10px;padding:10px;white-space:pre-wrap}
+ul{list-style:none;padding:0;margin:0}
+li{padding:8px 10px;border-bottom:1px solid #1f2937}
+li:last-child{border-bottom:none}
+
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center}
+.overlay.hidden{display:none}
+.overlay-box{width:min(92vw,720px);background:#111827;border:1px solid #374151;border-radius:12px;padding:16px}
+.overlay h3{margin:0 0 8px 0}
+.overlay pre{max-height:40vh;overflow:auto;background:#0b1220;border:1px solid #334155;border-radius:8px;padding:10px;color:#fca5a5}
+.overlay button{margin-top:10px;border:1px solid #334155;background:#0b1220;color:var(--text);padding:8px 12px;border-radius:8px;cursor:pointer}
