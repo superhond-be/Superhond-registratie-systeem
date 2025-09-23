@@ -3,104 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Superhond – Klanten & Honden (V1.2)</title>
-  <meta name="description" content="Superhond klantenbeheer met gekoppelde honden. V1.2 NL/BE adressen en telefoonnummers.">
+  <title>Superhond – Klanten & Honden (V1.3)</title>
   <link rel="stylesheet" href="./public/css/style.css" />
 </head>
 <body>
-  <div id="app" data-layout="superhond">
-    <header class="topbar">
-      <h1 class="brand">🐶 Superhond Registratie</h1>
-      <span class="version-badge" aria-label="Versie">V1.2</span>
-    </header>
+  <header class="topbar">
+    <h1>🐶 Superhond Klantenbeheer</h1>
+    <span class="version">v1.3</span>
+  </header>
 
-    <main class="container">
-      <section class="card">
-        <h2>Klant</h2>
-        <form id="klantForm">
-          <div class="grid two">
-            <label>Voornaam
-              <input name="voornaam" required autocomplete="given-name">
-            </label>
-            <label>Achternaam
-              <input name="achternaam" required autocomplete="family-name">
-            </label>
-          </div>
+  <main class="container">
+    <section class="card">
+      <h2>Klant & Honden</h2>
+      <form id="klantForm"></form>
+      <div class="actions">
+        <button id="prefillBE" type="button">⚡ Demo BE-klant</button>
+        <button id="prefillNL" type="button">⚡ Demo NL-klant</button>
+      </div>
+    </section>
 
-          <div class="grid two">
-            <label>E-mail
-              <input type="email" name="email" required autocomplete="email">
-            </label>
-            <label>Land
-              <select name="land" id="land" required>
-                <option value="BE">België</option>
-                <option value="NL">Nederland</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="grid three">
-            <label>Straat
-              <input name="straat" required autocomplete="address-line1">
-            </label>
-            <label>Nr
-              <input name="huisnummer" required inputmode="numeric">
-            </label>
-            <label>Toevoeging
-              <input name="toevoeging" placeholder="bus / A">
-            </label>
-          </div>
-
-          <div class="grid two">
-            <label id="pc-label">Postcode
-              <input name="postcode" id="postcode" required placeholder="BE: 2000 · NL: 1234 AB" inputmode="text">
-            </label>
-            <label>Plaats
-              <input name="plaats" required autocomplete="address-level2">
-            </label>
-          </div>
-
-          <div class="grid two">
-            <label>Telefoon
-              <input name="tel" id="tel" placeholder="+32… of 0470… / 06…">
-            </label>
-            <label>Telefoon (2)
-              <input name="tel2" id="tel2">
-            </label>
-          </div>
-
-          <label>Opmerkingen
-            <textarea name="opmerkingen" rows="3"></textarea>
-          </label>
-
-          <hr>
-
-          <section class="dogs">
-            <div class="dogs-head">
-              <h2>Honden (van deze klant)</h2>
-              <button type="button" class="btn" id="addHond">+ Hond toevoegen</button>
-            </div>
-            <div id="hondenList" class="dogs-list" aria-live="polite"></div>
-          </section>
-
-          <div class="actions">
-            <button type="submit" class="btn primary">💾 Opslaan (demo)</button>
-            <button type="button" class="btn ghost" id="prefill">⚡ Prefill demo</button>
-            <button type="reset" class="btn danger">🗑️ Reset</button>
-          </div>
-        </form>
-      </section>
-
-      <section class="card">
-        <h2>Resultaat (demo-output)</h2>
-        <pre id="output" class="output" aria-live="polite">Nog geen data…</pre>
-      </section>
-    </main>
-
-    <footer class="footer">
-      <small>© Superhond • Klanten & Honden • V1.2</small>
-    </footer>
-  </div>
+    <section class="card">
+      <h2>Resultaat</h2>
+      <pre id="output">Nog geen data…</pre>
+    </section>
+  </main>
 
   <script src="./public/js/app.js"></script>
 </body>
