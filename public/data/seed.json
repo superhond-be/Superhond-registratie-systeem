@@ -5,55 +5,56 @@
       "naam": "Jan Janssens",
       "email": "jan@example.com",
       "telefoon": "0470 11 22 33",
-      "hond": {
-        "naam": "Bello",
-        "ras": "Labrador",
-        "leeftijd": 4
-      }
+      "honden": [
+        {
+          "naam": "Bello",
+          "ras": "Labrador",
+          "leeftijd": 4
+        },
+        {
+          "naam": "Pippa",
+          "ras": "Jack Russell",
+          "leeftijd": 1
+        }
+      ]
     },
     {
       "id": 2,
       "naam": "Sofie Peeters",
       "email": "sofie@example.com",
       "telefoon": "0486 55 66 77",
-      "hond": {
-        "naam": "Luna",
-        "ras": "Border Collie",
-        "leeftijd": 2
-      }
+      "honden": [
+        {
+          "naam": "Luna",
+          "ras": "Border Collie",
+          "leeftijd": 2
+        }
+      ]
     },
     {
       "id": 3,
       "naam": "Tom Vermeulen",
       "email": "tom@example.com",
       "telefoon": "0498 12 34 56",
-      "hond": {
-        "naam": "Max",
-        "ras": "Golden Retriever",
-        "leeftijd": 5
-      }
-    },
-    {
-      "id": 4,
-      "naam": "Anke De Vos",
-      "email": "anke@example.com",
-      "telefoon": "0472 90 80 70",
-      "hond": {
-        "naam": "Zoë",
-        "ras": "Beagle",
-        "leeftijd": 3
-      }
-    },
-    {
-      "id": 5,
-      "naam": "Koen De Smet",
-      "email": "koen@example.com",
-      "telefoon": "0471 22 88 66",
-      "hond": {
-        "naam": "Diesel",
-        "ras": "Mechelaar",
-        "leeftijd": 6
-      }
+      "honden": [
+        {
+          "naam": "Max",
+          "ras": "Golden Retriever",
+          "leeftijd": 5
+        },
+        {
+          "naam": "Skye",
+          "ras": "Husky",
+          "leeftijd": 3
+        },
+        {
+          "naam": "Rex",
+          "ras": "Mechelaar",
+          "leeftijd": 6
+        }
+      ]
     }
-  ]
+  ],
+  "lessen": 15,
+  "strippen": 22
 }
