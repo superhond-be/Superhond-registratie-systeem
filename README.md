@@ -1,12 +1,14 @@
-# Superhond V1.6
+# Superhond V1.7
 
 **Nieuw**
-- ✅ Postcode-validatie per land (BE: 4 cijfers; NL: 4 cijfers + 2 letters)
-- 📞 Telefoon normalisatie naar E.164 (+32/+31) + nationale weergave
-- 🧩 Reactieve normalisatie bij blur/wisselen land
-- 🐕 Honden per klant blijven behouden
-- 🎨 Superhond lay-out & automatische versiebadge
+- 🌐 Opslaan naar API (POST /api/klanten)
+- 📦 Mock server (`server/index.js` met Express)
+- ⚙️ Fallback: als API niet draait, blijft JSON in UI getoond
 
-**Render**
-- Build Command: leeg
-- Publish Directory: public
+## Gebruik
+Frontend: `public/` (Render static site of CDN)
+Backend: `server/index.js` (Node + Express)
+
+## Render
+- Voor frontend-only: Build Command leeg, Publish Directory = public
+- Voor fullstack: gebruik Node (npm start met Express)

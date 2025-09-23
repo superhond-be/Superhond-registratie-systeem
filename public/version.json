@@ -1,5 +1,5 @@
 {
-  "version": "v1.6",
-  "build": "2025-09-23 15:07:47",
-  "note": "Validatie BE/NL postcodes + telefoon E.164"
+  "version": "v1.7",
+  "build": "2025-09-23 15:21:42",
+  "note": "Opslaan via API POST /api/klanten + mock server"
 }
