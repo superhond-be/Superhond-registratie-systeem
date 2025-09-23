@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Superhond Registratie</title>
+  <meta name="description" content="Honden registreren, zoeken, bewerken en verwijderen.">
+  <link rel="stylesheet" href="./css/style.css" />
+</head>
+<body>
+  <div id="app" data-layout="superhond">
+    <header class="topbar">
+      <h1 class="brand">🐶 Superhond Registratie</h1>
+      <nav class="switch" aria-label="Layout wisselaar">
+        <button class="btn active" data-switch="superhond" aria-pressed="true">Superhond</button>
+        <button class="btn" data-switch="raster" aria-pressed="false">Raster</button>
+        <button class="btn" data-switch="blog" aria-pressed="false">Blog</button>
+      </nav>
+      <div class="top-actions">
+        <button class="btn dashboard">Dashboard</button>
+        <span class="version" aria-label="Versie"></span>
+      </div>
+    </header>
+    <main>
+      <h2>Welkom in de Superhond lay-out <span id="verLabel"></span></h2>
+      <p>Hier kan je testen of de stijl correct geladen wordt.</p>
+    </main>
+  </div>
+  <script src="./js/app.js"></script>
+</body>
+</html>

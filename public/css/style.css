@@ -1,0 +1,55 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f8f9fa;
+}
+
+.topbar {
+  background-color: #ffcc00;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  position: relative;
+}
+
+.brand {
+  margin: 0;
+  font-size: 1.5em;
+}
+
+.switch .btn {
+  background: #e0e0e0;
+  border: none;
+  padding: 8px 12px;
+  margin-left: 5px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 1em;
+}
+
+.switch .btn.active {
+  background: #ff8800;
+  color: #fff;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-actions .dashboard {
+  background: #007bff;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1em;
+}
+
+.version {
+  font-weight: bold;
+  color: #333;
+}
