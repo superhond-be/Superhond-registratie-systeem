@@ -1,10 +1,14 @@
-# Superhond-registratie-systeem# Superhond – Nieuwe Start
+# Klanten & Honden beheer (1→N)
 
-Schone basis met 3 layouts (superhond, raster, blog).
+Kleine front-end app om **klanten** te beheren en **honden** aan hen te koppelen (één klant → meerdere honden). Geen backend; alles draait in je browser via `localStorage`.
 
-## Gebruik
-Open `index.html` in je browser, of serveer lokaal (bijv. VS Code "Live Server").
+## Functionaliteit
+- Klanten toevoegen/bewerken/verwijderen (met **adres**, **telefoon**, **e-mail**, **notities**)
+- Honden toevoegen/bewerken/verwijderen en koppelen aan klant
+- Zoeken op klant- of hondgegevens
+- Statistieken (tellers, gemiddelde honden per klant, KPI’s)
+- Export/Import naar JSON
+- Demo-data toevoegen
 
-## Layout wisselen
-- Via knoppen rechtsboven
-- Of met `?layout=superhond|raster|blog` in de URL
+## Snel starten
+1. Download/maak de bestanden:
