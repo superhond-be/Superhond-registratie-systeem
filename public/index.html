@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Superhond – V1.4</title>
+  <title>Superhond – Klanten & Honden (V1.5)</title>
   <link rel="stylesheet" href="./css/superhond.css" data-bust>
 </head>
 <body>
@@ -15,16 +15,40 @@
 
   <main class="container">
     <section class="card">
-      <h2>Dashboard V1.4 (Superhond lay-out)</h2>
-      <p>Basisbundel nu in Superhond stijl.</p>
-      <ul>
-        <li>Klanten & Honden voorbereid</li>
-        <li>NL/BE validatie voorbereid</li>
-        <li>Versiebeheer via <code>version.json</code></li>
-      </ul>
+      <h2>Klantgegevens</h2>
+      <form id="klantForm" class="grid two">
+        <label>Voornaam <input name="voornaam" required></label>
+        <label>Achternaam <input name="achternaam" required></label>
+        <label>E-mail <input type="email" name="email" placeholder="naam@voorbeeld.be"></label>
+        <label>Land 
+          <select name="land">
+            <option value="BE">België</option>
+            <option value="NL">Nederland</option>
+          </select>
+        </label>
+        <label>Straat <input name="straat"></label>
+        <label>Nr <input name="huisnummer"></label>
+        <label>Toevoeging <input name="toevoeging"></label>
+        <label>Postcode <input name="postcode" placeholder="BE: 2000 / NL: 1234 AB"></label>
+        <label>Plaats <input name="plaats"></label>
+        <label>Telefoon <input name="tel" placeholder="+32... of 0470.../06..."></label>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="dogs-head">
+        <h2>Honden (van deze klant)</h2>
+        <button id="addDog" class="btn ghost">+ Hond toevoegen</button>
+      </div>
+      <div id="dogsList" class="dogs-list"></div>
+    </section>
+
+    <section class="card">
+      <h2>Resultaat</h2>
+      <pre id="output" class="output">Nog geen data…</pre>
       <div class="actions">
-        <button class="btn primary">Primaire knop</button>
-        <button class="btn ghost">Secundaire knop</button>
+        <button id="saveBtn" class="btn primary">💾 Opslaan (demo)</button>
+        <button id="resetBtn" class="btn ghost">Reset</button>
       </div>
     </section>
   </main>

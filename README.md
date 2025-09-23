@@ -1,9 +1,11 @@
-# Superhond V1.4 (themed)
+# Superhond V1.5
 
-Deze versie bevat nu de **Superhond lay-out**:
-- Donkere stijl + coral accent
-- Topbar, kaarten, knoppen, formulieren consistent
-- Automatische versie-badge via version.json
+Uitbreidingen in deze versie:
+- Volledig klantenformulier (BE/NL) in Superhond-stijl
+- Sectie honden per klant, met '+ Hond toevoegen'
+- Validatie voorbereid
+- Opslaan geeft JSON-output
+- Reset functionaliteit
 
 ## Render instellingen
 - Build Command: leeg
