@@ -1,47 +1,39 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>App Starter</title>
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Superhond – V1.4</title>
+  <link rel="stylesheet" href="./css/superhond.css" data-bust>
 </head>
 <body>
   <header class="topbar">
-    <h1>Mijn App</h1>
-    <button id="runTests" title="Voer zelftests uit">Tests</button>
+    <div class="brand"><span class="dot"></span> 🐶 Superhond Klantenbeheer</div>
+    <span class="version-badge" data-version>v?</span>
+    <small class="build" data-build></small>
   </header>
 
   <main class="container">
     <section class="card">
-      <h2>Demo formulier</h2>
-      <form id="demoForm">
-        <label>Naam
-          <input type="text" id="nameInput" placeholder="Typ je naam..." required />
-        </label>
-        <label>Leeftijd
-          <input type="number" id="ageInput" min="0" max="120" required />
-        </label>
-        <button type="submit">Opslaan</button>
-      </form>
-      <pre id="output" class="output" aria-live="polite"></pre>
-    </section>
-
-    <section class="card">
-      <h2>Data</h2>
-      <ul id="list"></ul>
+      <h2>Dashboard V1.4 (Superhond lay-out)</h2>
+      <p>Basisbundel nu in Superhond stijl.</p>
+      <ul>
+        <li>Klanten & Honden voorbereid</li>
+        <li>NL/BE validatie voorbereid</li>
+        <li>Versiebeheer via <code>version.json</code></li>
+      </ul>
+      <div class="actions">
+        <button class="btn primary">Primaire knop</button>
+        <button class="btn ghost">Secundaire knop</button>
+      </div>
     </section>
   </main>
 
-  <!-- Error overlay -->
-  <div id="overlay" class="overlay hidden" role="alert" aria-live="assertive">
-    <div class="overlay-box">
-      <h3>⛔ Fout</h3>
-      <pre id="errorText"></pre>
-      <button id="closeOverlay">Sluiten</button>
-    </div>
-  </div>
+  <footer class="footer">
+    <small>&copy; 2025 Superhond</small>
+  </footer>
 
-  <script src="app.js" type="module"></script>
+  <script src="./js/app.js" data-bust></script>
+  <script src="./js/version.js" defer></script>
 </body>
 </html>
