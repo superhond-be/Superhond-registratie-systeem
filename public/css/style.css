@@ -1,49 +1,35 @@
-/* Superhond layout v1.2 */
+/* Superhond v1.3 */
 :root{
-  --bg:#f5f6f8;
-  --card:#ffffff;
-  --shadow:0 6px 18px rgba(0,0,0,.08);
-  --text:#222;
-  --muted:#6b7280;
-  --brand:#ffcc00;
-  --pill:#f1f5f9;
-  --pill-text:#111827;
-  --green:#22c55e;
+  --bg:#f5f6f8; --card:#fff; --shadow:0 6px 18px rgba(0,0,0,.08);
+  --text:#222; --muted:#6b7280; --brand:#ffcc00; --pill:#f1f5f9; --pill-text:#111827;
+  --green:#22c55e; --blue:#2563eb; --line:#e5e7eb;
 }
-*{box-sizing:border-box}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
-.sh-topbar{
-  position:sticky;top:0;z-index:10;
-  background:var(--brand);
-  display:flex;justify-content:space-between;align-items:center;
-  padding:10px 16px;border-bottom:1px solid rgba(0,0,0,.06)
-}
-.brand{font-weight:700}
-.brand .dotbe{color:#222}
-.brand .muted{color:#444;margin-left:6px;font-weight:600}
+*{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+.sh-topbar{position:sticky;top:0;z-index:10;background:var(--brand);display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid rgba(0,0,0,.06)}
+.brand{font-weight:700}.brand .dotbe{color:#222}.brand .muted{color:#444;margin-left:6px;font-weight:600}
 .pills{display:flex;gap:8px;align-items:center}
-.pill{
-  background:var(--pill);color:var(--pill-text);
-  padding:6px 10px;border-radius:999px;font-weight:600;text-decoration:none;
-  box-shadow:0 1px 0 rgba(0,0,0,.04)
-}
-.pill.api{background:#e0fbea;color:#065f46;border:1px solid #bbf7d0}
-.pill.version{background:#111827;color:#fff}
-
+.pill{background:var(--pill);color:var(--pill-text);padding:6px 10px;border-radius:999px;font-weight:600;text-decoration:none;box-shadow:0 1px 0 rgba(0,0,0,.04)}
+.pill.api{background:#e0fbea;color:#065f46;border:1px solid #bbf7d0}.pill.version{background:#111827;color:#fff}
 .wrap{max-width:980px;margin:0 auto;padding:16px}
 h1{margin:12px 0 8px 8px;font-size:22px}
-.cards{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
-  gap:16px;margin-top:12px
-}
-.card{
-  display:block;background:var(--card);border-radius:14px;padding:16px;box-shadow:var(--shadow);
-  text-decoration:none;color:inherit;transition:transform .08s ease, box-shadow .08s ease
-}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:12px 0}
+.stat{background:var(--card);border-radius:12px;box-shadow:var(--shadow);padding:16px;text-align:center}
+.stat .big{font-size:28px;font-weight:800}.stat .label{color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-top:12px}
+.card{display:block;background:var(--card);border-radius:14px;padding:16px;box-shadow:var(--shadow);text-decoration:none;color:inherit;transition:transform .08s ease,box-shadow .08s ease}
 .card:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(0,0,0,.12)}
-.card .icon{font-size:22px;margin-bottom:8px}
-.card .title{font-weight:700;margin-bottom:6px}
-.card .sub{color:var(--muted);font-size:14px}
+.card .icon{font-size:22px;margin-bottom:8px}.card .title{font-weight:700;margin-bottom:6px}.card .sub{color:var(--muted);font-size:14px}
 .placeholder{border:2px dashed #d1d5db;border-radius:12px;padding:24px;text-align:center;background:#fff;box-shadow:var(--shadow)}
-
 .foot{color:var(--muted);text-align:center;margin:28px 0 20px}
+
+/* Module B */
+.toolbar{display:flex;gap:8px;align-items:center;margin:10px 0}
+.input{flex:1;max-width:420px;border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.btn{border:0;border-radius:8px;padding:10px 12px;cursor:pointer}
+.btn.primary{background:var(--blue);color:#fff}
+.tablewrap{background:var(--card);border-radius:12px;box-shadow:var(--shadow)}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left}
+.table thead th{background:#fafafa}
+.action{background:transparent;border:0;cursor:pointer;font-size:18px;margin-right:6px}
+.action.edit{color:#2563eb}.action.save{color:#16a34a}.action.delete{color:#dc2626}
