@@ -1,148 +1,286 @@
+// Minimal type helpers for clarity (JSDoc)
+/**
+ * @typedef {{ id: string|number, naam: string, email: string, telefoon?: string, status?: 'actief'|'inactief'|'proef'|string, aangemaakt?: string|number|Date }} Klant
+ */
 
-const form = document.querySelector('#klantForm');
-const dogsList = document.querySelector('#dogsList');
-const out = document.querySelector('#output');
-const btnAddDog = document.querySelector('#addDog');
-const btnSave = document.querySelector('#saveBtn');
-const btnReset = document.querySelector('#resetBtn');
-const elLand = document.querySelector('#land');
-const elPostcode = document.querySelector('#postcode');
-const elTel = document.querySelector('#tel');
-const tBody = document.querySelector('#demoTable tbody');
-const btnBE = document.querySelector('#prefillBE');
-const btnNL = document.querySelector('#prefillNL');
-
-let dogCount = 0;
-
-const onlyDigits = s => (s||'').replace(/[^\d]/g,'');
-function normalizePostcode(value, land) {
-  if (!value) return '';
-  value = value.trim();
-  if (land === 'BE') return onlyDigits(value).slice(0,4);
-  if (land === 'NL') {
-    const d = onlyDigits(value).slice(0,4);
-    const l = value.replace(/[^A-Za-z]/g,'').toUpperCase().slice(0,2);
-    return (d + (l ? ' ' + l : '')).trim();
-  }
-  return value;
-}
-function validatePostcode(value, land){
-  if (land==='BE') return /^[1-9][0-9]{3}$/.test(value);
-  if (land==='NL') return /^[1-9][0-9]{3}\s?[A-Za-z]{2}$/.test(value);
-  return true;
-}
-function normalizePhoneToE164(input, land) {
-  if (!input) return '';
-  let s = input.replace(/[^\d+]/g,'');
-  if (s.startsWith('+')) return '+' + s.slice(1).replace(/[^\d]/g,'');
-  if (s.startsWith('00')) return '+' + s.slice(2).replace(/[^\d]/g,'');
-  const cc = land==='BE'?'+32':'+31';
-  if (s.startsWith('0')) return cc + s.slice(1);
-  return cc + s;
-}
-function mark(el, ok){ el.classList.toggle('invalid', !ok); return ok; }
-
-btnAddDog.onclick = (prefill=null)=>{
-  const card = document.createElement('div');
-  card.className = 'dog-card';
-  card.innerHTML = `
-    <div class="dog-grid">
-      <label>Naam <input name="hond_naam_${dogCount}" required></label>
-      <label>Ras <input name="hond_ras_${dogCount}"></label>
-      <label>Geboorte <input type="date" name="hond_geboorte_${dogCount}"></label>
-      <label>Opmerkingen <input name="hond_note_${dogCount}"></label>
-    </div>`;
-  dogsList.appendChild(card);
-  if (prefill){
-    card.querySelector(`[name="hond_naam_${dogCount}"]`).value = prefill.naam||'';
-    card.querySelector(`[name="hond_ras_${dogCount}"]`).value = prefill.ras||'';
-    card.querySelector(`[name="hond_geboorte_${dogCount}"]`).value = prefill.geboortedatum||'';
-    card.querySelector(`[name="hond_note_${dogCount}"]`).value = prefill.note||'';
-  }
-  dogCount++;
+const state = {
+  klanten: /** @type {Klant[]} */([]),
+  filtered: /** @type {Klant[]} */([]),
+  page: 1,
+  pageSize: 25,
+  sort: /** @type {{key: keyof Klant, dir: 1|-1}|null} */(null),
+  aborter: null /** @type {AbortController|null} */
 };
 
-elLand.addEventListener('change', ()=>{
-  elPostcode.value = normalizePostcode(elPostcode.value, elLand.value);
-  mark(elPostcode, validatePostcode(elPostcode.value, elLand.value));
-  elTel.value = normalizePhoneToE164(elTel.value, elLand.value);
-});
-elPostcode.addEventListener('blur', ()=>{
-  elPostcode.value = normalizePostcode(elPostcode.value, elLand.value);
-  mark(elPostcode, validatePostcode(elPostcode.value, elLand.value));
-});
-elTel.addEventListener('blur', ()=> elTel.value = normalizePhoneToE164(elTel.value, elLand.value));
+// DOM refs
+const tbody = document.querySelector('#tableBody');
+const skeleton = document.querySelector('#skeleton');
+const emptyState = document.querySelector('#emptyState');
+const errorState = document.querySelector('#errorState');
+const errorDetails = document.querySelector('#errorDetails');
+const retryBtn = document.querySelector('#retryBtn');
+const pageInfo = document.querySelector('#pageInfo');
+const prevPage = document.querySelector('#prevPage');
+const nextPage = document.querySelector('#nextPage');
+const pageSizeSel = document.querySelector('#pageSize');
+const searchInput = document.querySelector('#searchInput');
+const rowTpl = /** @type {HTMLTemplateElement} */(document.querySelector('#rowTemplate'));
 
-btnSave.onclick = ()=>{
-  const fd = Object.fromEntries(new FormData(form).entries());
-  const land = fd.land || 'BE';
-  fd.postcode = normalizePostcode(fd.postcode||'', land);
-  const pcOk = validatePostcode(fd.postcode, land);
-  mark(elPostcode, pcOk);
-  if(!pcOk){ alert('Controleer de postcode.'); return; }
-  const tel = normalizePhoneToE164(fd.tel||'', land);
-  fd.tel_e164 = tel || null;
-  delete fd.tel;
+initThemeToggle();
+boot();
 
-  const honden = [];
-  for (let i=0;i<dogCount;i++){
-    honden.push({
-      naam: fd[`hond_naam_${i}`]||'',
-      ras: fd[`hond_ras_${i}`]||'',
-      geboortedatum: fd[`hond_geboorte_${i}`]||'',
-      note: fd[`hond_note_${i}`]||''
+function boot() {
+  bindSorting();
+  bindPagination();
+  bindSearch();
+  fetchKlanten();
+}
+
+// THEME TOGGLE ================================================================
+function initThemeToggle() {
+  const btn = /** @type {HTMLButtonElement} */(document.getElementById('themeToggle'));
+
+  const icons = {
+    sun: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.76 4.84l-1.8-1.79L3.17 4.85l1.79 1.79 1.8-1.8zM1 10.5h3v3H1v-3zm10.5-9h-3v3h3v-3zM4.84 17.24l-1.8 1.8 1.79 1.79 1.8-1.8-1.79-1.79zM10.5 20h3v3h-3v-3zm9-9h3v3h-3v-3zM19.16 4.84l-1.79-1.79-1.8 1.8 1.79 1.79 1.8-1.8zM17.24 19.16l1.79 1.79 1.8-1.8-1.79-1.79-1.8 1.8zM12 7.5A4.5 4.5 0 1 1 7.5 12 4.505 4.505 0 0 1 12 7.5z"/></svg>',
+    moon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.01 2c-1.07 0-2.1.17-3.06.5 5.24 1.77 8.07 7.48 6.3 12.72-1.12 3.32-3.87 5.86-7.29 6.68A10 10 0 1 0 12.01 2z"/></svg>'
+  };
+
+  const stored = localStorage.getItem('theme'); // 'light'|'dark'|null
+  const root = document.documentElement;
+
+  const apply = (mode) => {
+    if (mode === 'light' || mode === 'dark') {
+      root.setAttribute('data-theme', mode);
+    } else {
+      root.setAttribute('data-theme', 'auto');
+    }
+    btn.innerHTML = prefersDark() && mode !== 'light' ? icons.sun : icons.moon;
+    btn.title = `Schakel naar ${isDark() ? 'licht' : 'donker'} thema`;
+    btn.setAttribute('aria-label', `Thema wisselen, nu ${isDark() ? 'donker' : 'licht'}`);
+  };
+
+  const prefersDark = () =>
+    window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  const isDark = () => {
+    const attr = root.getAttribute('data-theme');
+    if (attr === 'dark') return true;
+    if (attr === 'light') return false;
+    return prefersDark();
+  };
+
+  apply(stored ?? 'auto');
+
+  btn.addEventListener('click', () => {
+    const current = root.getAttribute('data-theme'); // 'light'|'dark'|'auto'
+    const next = current === 'light' ? 'dark' : current === 'dark' ? 'auto' : 'light';
+    if (next === 'auto') localStorage.removeItem('theme');
+    else localStorage.setItem('theme', next);
+    apply(next);
+  });
+
+  // Live update if OS theme changes while in 'auto'
+  if (window.matchMedia) {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener?.('change', () => {
+      if (!localStorage.getItem('theme')) apply('auto');
     });
-    delete fd[`hond_naam_${i}`];delete fd[`hond_ras_${i}`];delete fd[`hond_geboorte_${i}`];delete fd[`hond_note_${i}`];
   }
-  const payload = { klant: fd, honden };
-  out.textContent = JSON.stringify(payload, null, 2);
-};
-
-/* Demo klanten + honden */
-const demoBE = {
-  klant: { voornaam:'Jan', achternaam:'Janssens', email:'jan@voorbeeld.be', land:'BE', straat:'Kerkstraat', huisnummer:'12', toevoeging:'bus 3', postcode:'2000', plaats:'Antwerpen', tel:'+32470123456' },
-  honden: [
-    { naam:'Rocco', ras:'Mechelse herder', geboortedatum:'2021-06-15', note:'Energiek' },
-    { naam:'Nora', ras:'Border Collie', geboortedatum:'2020-11-03', note:'' }
-  ]
-};
-const demoNL = {
-  klant: { voornaam:'Piet', achternaam:'de Vries', email:'piet@example.nl', land:'NL', straat:'Dorpsstraat', huisnummer:'5', toevoeging:'A', postcode:'1234 AB', plaats:'Utrecht', tel:'+31612345678' },
-  honden: [
-    { naam:'Luna', ras:'Labrador', geboortedatum:'2019-03-09', note:'' }
-  ]
-};
-
-function loadDemo(demo){
-  form.reset(); dogsList.innerHTML=''; dogCount=0;
-  const k = demo.klant;
-  form.querySelector('[name="voornaam"]').value = k.voornaam;
-  form.querySelector('[name="achternaam"]').value = k.achternaam;
-  form.querySelector('[name="email"]').value = k.email;
-  elLand.value = k.land;
-  form.querySelector('[name="straat"]').value = k.straat;
-  form.querySelector('[name="huisnummer"]').value = k.huisnummer;
-  form.querySelector('[name="toevoeging"]').value = k.toevoeging||'';
-  elPostcode.value = k.postcode;
-  form.querySelector('[name="plaats"]').value = k.plaats;
-  elTel.value = k.tel;
-  demo.honden.forEach(h => btnAddDog.onclick(h));
-  renderDemoTable(); // refresh table below
 }
 
-btnBE.onclick = ()=> loadDemo(demoBE);
-btnNL.onclick = ()=> loadDemo(demoNL);
+// DATA FETCH + RENDER =========================================================
+async function fetchKlanten() {
+  showSkeleton(true);
+  showError(null);
+  emptyState.classList.add('hidden');
 
-/* Demo tabel render */
-const demoRows = [demoBE, demoNL];
-function renderDemoTable(){
-  tBody.innerHTML = '';
-  demoRows.forEach(d=>{
-    const naam = `${d.klant.voornaam} ${d.klant.achternaam}`;
-    const honden = d.honden.map(h=>h.naam).join(', ');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${naam}</td><td>${d.klant.land}</td><td>${d.klant.email}</td><td>${honden}</td>`;
-    tBody.appendChild(tr);
+  // Abort eerdere fetch indien nodig
+  state.aborter?.abort();
+  state.aborter = new AbortController();
+
+  try {
+    const res = await fetch('/api/klanten', {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      signal: state.aborter.signal,
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(()=>'');
+      throw new Error(`HTTP ${res.status} — ${res.statusText}\n${text}`);
+    }
+
+    /** @type {unknown} */
+    const json = await res.json();
+
+    // Zachte validatie + normalisatie
+    const arr = Array.isArray(json) ? json : (json?.data ?? []);
+    state.klanten = arr.map(normalizeKlant).filter(Boolean);
+    state.page = 1;
+    applyFilterSortPaginate();
+  } catch (err) {
+    showError(err);
+  } finally {
+    showSkeleton(false);
+  }
+}
+
+/** @returns {Klant} */
+function normalizeKlant(k) {
+  if (!k) return null;
+  const naam = k.naam ?? k.name ?? `${k.voornaam ?? ''} ${k.achternaam ?? ''}`.trim();
+  const email = k.email ?? k.mail ?? '';
+  const telefoon = k.telefoon ?? k.phone ?? '';
+  const status = (k.status ?? 'actief').toString().toLowerCase();
+  const aangemaakt = k.aangemaakt ?? k.createdAt ?? k.created_at ?? k.created ?? Date.now();
+  const id = k.id ?? k.uuid ?? cryptoRandomId();
+  return { id, naam, email, telefoon, status, aangemaakt };
+}
+
+function cryptoRandomId() {
+  // Fallback eenvoudige ID; prefer real API id
+  const a = crypto?.getRandomValues?.(new Uint32Array(2)) ?? [Date.now(), Math.random()*1e9|0];
+  return `tmp_${a[0].toString(16)}${a[1].toString(16)}`;
+}
+
+// SEARCH / SORT / PAGINATION ==================================================
+function bindSearch() {
+  const debounced = debounce(() => {
+    state.page = 1;
+    applyFilterSortPaginate();
+  }, 180);
+  searchInput.addEventListener('input', debounced);
+}
+
+function bindSorting() {
+  document.querySelectorAll('th[data-sortable="true"]').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.getAttribute('data-key');
+      if (!key) return;
+      if (state.sort?.key === key) {
+        state.sort.dir = /** @type {1|-1} */(state.sort.dir * -1);
+      } else {
+        state.sort = { key, dir: 1 };
+      }
+      applyFilterSortPaginate();
+      // visuele indicator
+      document.querySelectorAll('th[data-sortable]').forEach(el => el.removeAttribute('data-sort'));
+      th.setAttribute('data-sort', state.sort.dir === 1 ? 'asc' : 'desc');
+    });
   });
 }
-renderDemoTable();
+
+function bindPagination() {
+  prevPage.addEventListener('click', () => { if (state.page > 1) { state.page--; render(); }});
+  nextPage.addEventListener('click', () => {
+    const max = Math.max(1, Math.ceil(state.filtered.length / state.pageSize));
+    if (state.page < max) { state.page++; render(); }
+  });
+  pageSizeSel.addEventListener('change', () => {
+    state.pageSize = parseInt(pageSizeSel.value, 10) || 25;
+    state.page = 1;
+    render();
+  });
+}
+
+function applyFilterSortPaginate() {
+  const q = searchInput.value.trim().toLowerCase();
+  state.filtered = !q ? [...state.klanten] : state.klanten.filter(k => {
+    return [k.naam, k.email, k.telefoon].some(v => (v ?? '').toLowerCase().includes(q));
+  });
+
+  if (state.sort) {
+    const { key, dir } = state.sort;
+    state.filtered.sort((a, b) => {
+      const av = a[key] ?? ''; const bv = b[key] ?? '';
+      if (key === 'aangemaakt') {
+        const ad = new Date(av).getTime() || 0;
+        const bd = new Date(bv).getTime() || 0;
+        return (ad - bd) * dir;
+      }
+      return String(av).localeCompare(String(bv), 'nl', { sensitivity: 'base' }) * dir;
+    });
+  }
+
+  render();
+}
+
+// RENDER =====================================================================
+function render() {
+  // pagination
+  const max = Math.max(1, Math.ceil(state.filtered.length / state.pageSize));
+  state.page = Math.min(state.page, max);
+
+  const start = (state.page - 1) * state.pageSize;
+  const slice = state.filtered.slice(start, start + state.pageSize);
+
+  tbody.innerHTML = '';
+  const frag = document.createDocumentFragment();
+
+  if (slice.length === 0) {
+    emptyState.classList.remove('hidden');
+  } else {
+    emptyState.classList.add('hidden');
+    for (const k of slice) {
+      const node = rowTpl.content.cloneNode(true);
+      node.querySelector('[data-col="naam"]').textContent = k.naam || '—';
+      node.querySelector('[data-col="email"]').textContent = k.email || '—';
+      node.querySelector('[data-col="telefoon"]').textContent = k.telefoon || '—';
+
+      const badge = node.querySelector('[data-col="status"] .badge');
+      const st = (k.status || '').toLowerCase();
+      badge.textContent = st ? capitalize(st) : 'Onbekend';
+      badge.style.background = statusColor(st).bg;
+      badge.style.color = statusColor(st).fg;
+
+      const dateCell = node.querySelector('[data-col="aangemaakt"]');
+      dateCell.textContent = formatDate(k.aangemaakt);
+
+      frag.appendChild(node);
+    }
+  }
+
+  tbody.appendChild(frag);
+  pageInfo.textContent = `Pagina ${state.page} van ${max} — ${state.filtered.length} resultaten`;
+  prevPage.disabled = state.page <= 1;
+  nextPage.disabled = state.page >= max;
+}
+
+function statusColor(st) {
+  switch (st) {
+    case 'actief':   return { bg: 'color-mix(in oklab, #22c55e 30%, var(--badge-bg))', fg: 'var(--badge-fg)' };
+    case 'proef':    return { bg: 'color-mix(in oklab, #eab308 30%, var(--badge-bg))', fg: 'var(--badge-fg)' };
+    case 'inactief': return { bg: 'color-mix(in oklab, #ef4444 25%, var(--badge-bg))', fg: 'var(--badge-fg)' };
+    default:         return { bg: 'var(--badge-bg)', fg: 'var(--badge-fg)' };
+  }
+}
+
+function formatDate(d) {
+  const ts = new Date(d).getTime();
+  if (!ts) return '—';
+  return new Intl.DateTimeFormat('nl-BE', {
+    year: 'numeric', month: 'short', day: '2-digit'
+  }).format(ts);
+}
+
+function showSkeleton(on) {
+  skeleton.classList.toggle('hidden', !on);
+  document.querySelector('.data-table').classList.toggle('hidden', on);
+  document.querySelector('.table-footer').classList.toggle('hidden', on);
+}
+
+function showError(err) {
+  if (!err) {
+    errorState.classList.add('hidden'); errorDetails.textContent = '';
+    return;
+  }
+  errorState.classList.remove('hidden');
+  errorDetails.textContent = (err?.stack || err?.message || String(err)).slice(0, 2000);
+}
+retryBtn.addEventListener('click', fetchKlanten);
+
+// UTILS ======================================================================
+function debounce(fn, ms = 200) {
+  let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
