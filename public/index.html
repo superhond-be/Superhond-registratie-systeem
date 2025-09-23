@@ -1,75 +1,153 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Superhond.be — Admin Portaal</title>
-  <link rel="stylesheet" href="./css/style.css">
-  <script defer src="./js/app.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Klanten & Honden beheer</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="sh-topbar">
-    <div class="brand">Superhond<span class="dotbe">.be</span> <span class="muted">Admin Portaal</span></div>
-    <div class="pills">
-      <span class="pill api">🔔 Agenda • <span id="apiStatus">API: demo</span></span>
-      <span class="pill version" id="version">v1.3</span>
+  <header>
+    <div class="brand">
+      <div class="logo" aria-hidden="true"></div>
+      <h1>Klanten & Honden beheer</h1>
+    </div>
+    <div class="stats">
+      <div class="chip" id="statCustomers">Klanten: 0</div>
+      <div class="chip" id="statDogs">Honden: 0</div>
+      <div class="chip" id="statAvg">Gem./klant: 0</div>
     </div>
   </header>
 
-  <main class="wrap">
-    <h1>Dashboard</h1>
+  <main>
+    <div class="grid">
+      <!-- KLANT FORM -->
+      <section class="card" aria-labelledby="hdr-klant">
+        <h2 id="hdr-klant">Nieuwe/te bewerken klant</h2>
+        <form id="customerForm" autocomplete="off">
+          <input type="hidden" id="customerId" />
 
-    <section class="stats">
-      <div class="stat"><div class="big" id="countKlanten">–</div><div class="label">Klanten</div></div>
-      <div class="stat"><div class="big" id="countHonden">–</div><div class="label">Honden</div></div>
-    </section>
+          <div class="row">
+            <div>
+              <label for="customerName">Naam *</label>
+              <input id="customerName" type="text" required placeholder="Voornaam Achternaam" />
+            </div>
+            <div>
+              <label for="customerPhone">Telefoon</label>
+              <input id="customerPhone" type="tel" placeholder="0612345678" />
+            </div>
+          </div>
 
-    <section class="cards">
-      <a class="card" href="./module-b.html">
-        <div class="icon">👤</div>
-        <div class="title">Klanten</div>
-        <div class="sub">Zoeken, toevoegen, bewerken</div>
-      </a>
-      <a class="card" href="./module-b.html">
-        <div class="icon">🐾</div>
-        <div class="title">Honden</div>
-        <div class="sub">Per klant, ras, leeftijd</div>
-      </a>
-      <a class="card" href="./module-c.html">
-        <div class="icon">📚</div>
-        <div class="title">Lessen</div>
-        <div class="sub">Puppypack, Pubergroep, Basisgroep</div>
-      </a>
-      <a class="card" href="./module-c.html">
-        <div class="icon">🎟️</div>
-        <div class="title">Strippenkaarten</div>
-        <div class="sub">Saldo, gebruikt, in verwerking</div>
-      </a>
-      <a class="card" href="./module-a.html">
-        <div class="icon">🧑‍🏫</div>
-        <div class="title">Trainers</div>
-        <div class="sub">Beschikbaarheid & locaties</div>
-      </a>
-      <a class="card" href="./home.html">
-        <div class="icon">⚙️</div>
-        <div class="title">Instellingen</div>
-        <div class="sub">Stijl, locaties, prijzen</div>
-      </a>
-      <a class="card" href="./home.html">
-        <div class="icon">📊</div>
-        <div class="title">Rapporten</div>
-        <div class="sub">Overzicht & export (CSV/PDF)</div>
-      </a>
-      <a class="card" href="./home.html">
-        <div class="icon">ℹ️</div>
-        <div class="title">Over</div>
-        <div class="sub">Build en versie-informatie</div>
-      </a>
-    </section>
+          <div class="row">
+            <div>
+              <label for="customerEmail">E-mail</label>
+              <input id="customerEmail" type="email" placeholder="naam@voorbeeld.nl" />
+            </div>
+            <div>
+              <label for="customerNotes">Notities</label>
+              <input id="customerNotes" type="text" placeholder="Bijv. voorkeur avondlessen" />
+            </div>
+          </div>
 
-    <footer class="foot">
-      © 2025 Superhond — Build 2025-09-23 13:17:27 (Europe/Brussels)
-    </footer>
+          <div class="row">
+            <div>
+              <label for="customerStreet">Straat + nr</label>
+              <input id="customerStreet" type="text" placeholder="Voorbeeldstraat 12" />
+            </div>
+            <div>
+              <label for="customerPostcode">Postcode</label>
+              <input id="customerPostcode" type="text" placeholder="1234 AB" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="customerCity">Plaats</label>
+              <input id="customerCity" type="text" placeholder="Amsterdam" />
+            </div>
+            <div></div>
+          </div>
+
+          <div class="actions">
+            <button class="btn primary" type="submit">💾 Opslaan klant</button>
+            <button class="btn ghost" type="reset" id="resetCustomer">↺ Leegmaken</button>
+            <button class="btn warning" type="button" id="demoDataBtn">⚡ Demo data</button>
+          </div>
+        </form>
+        <p class="footnote">* Verplichte velden. Gegevens worden lokaal opgeslagen (localStorage).</p>
+      </section>
+
+      <!-- HOND FORM -->
+      <section class="card" aria-labelledby="hdr-hond">
+        <h2 id="hdr-hond">Nieuwe/te bewerken hond</h2>
+        <form id="dogForm" autocomplete="off">
+          <input type="hidden" id="dogId" />
+
+          <div class="row">
+            <div>
+              <label for="dogOwner">Klant *</label>
+              <select id="dogOwner" required></select>
+            </div>
+            <div>
+              <label for="dogName">Naam *</label>
+              <input id="dogName" type="text" required placeholder="Bijv. Bobby" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label for="dogBreed">Ras</label>
+              <input id="dogBreed" type="text" placeholder="Bijv. Labrador" />
+            </div>
+            <div>
+              <label for="dogAge">Leeftijd (jaren)</label>
+              <input id="dogAge" type="number" min="0" step="1" placeholder="3" />
+            </div>
+          </div>
+
+          <div>
+            <label for="dogNotes">Notities</label>
+            <input id="dogNotes" type="text" placeholder="Bijv. gevoelig voor vuurwerk" />
+          </div>
+
+          <div class="actions">
+            <button class="btn primary" type="submit">💾 Opslaan hond</button>
+            <button class="btn ghost" type="reset" id="resetDog">↺ Leegmaken</button>
+          </div>
+        </form>
+        <p class="footnote">Koppel honden altijd aan een klant (1→N).</p>
+      </section>
+
+      <!-- OVERZICHT -->
+      <section class="card" aria-labelledby="hdr-overzicht">
+        <h2 id="hdr-overzicht">Overzicht</h2>
+
+        <div class="toolbar">
+          <div class="search">
+            <input id="searchInput" type="text" placeholder="Zoek klant of hond..." />
+            <button class="btn ghost" id="clearSearch">✖</button>
+          </div>
+          <div class="right">
+            <button class="btn" id="exportBtn">⤓ Export</button>
+            <label class="btn ghost" for="importInput">⤒ Import</label>
+            <input id="importInput" type="file" accept="application/json" style="display:none">
+            <button class="btn danger" id="wipeBtn">🗑 Alles wissen</button>
+          </div>
+        </div>
+
+        <div class="list" id="customerList">
+          <div class="empty">Nog geen klanten toegevoegd.</div>
+        </div>
+
+        <div class="sep"></div>
+        <div class="kpi">
+          <div class="chip" id="kpiMostDogs">Meeste honden: –</div>
+          <div class="chip" id="kpiNoDogs">Klanten zonder hond: –</div>
+        </div>
+      </section>
+    </div>
   </main>
+
+  <script src="app.js"></script>
 </body>
 </html>
