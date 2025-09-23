@@ -1,30 +1,20 @@
 // Centraal versienummer
-const VERSION = "v0.3";
+const VERSION = "v0.4";
 
 document.addEventListener("DOMContentLoaded", () => {
-  const versionSpan = document.querySelector(".version");
-  if (versionSpan) versionSpan.textContent = VERSION;
+  const versionSpans = document.querySelectorAll(".version");
+  versionSpans.forEach(el => el.textContent = VERSION);
 
-  const verLabel = document.getElementById("verLabel");
-  if (verLabel) verLabel.textContent = VERSION;
+  const verLabels = document.querySelectorAll("#verLabel");
+  verLabels.forEach(el => el.textContent = VERSION);
 
-  // Toggle active state knoppen
+  // Toggle active state knoppen (indien aanwezig)
   document.querySelectorAll('.switch .btn').forEach(button => {
     button.addEventListener('click', () => {
-      document.querySelectorAll('.switch .btn').forEach(btn => {
-        btn.classList.remove('active');
-        btn.setAttribute('aria-pressed', 'false');
-      });
+      const group = button.closest('.switch');
+      if (!group) return;
+      group.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
       button.classList.add('active');
-      button.setAttribute('aria-pressed', 'true');
     });
   });
-
-  // Dashboard knop actie
-  const dashBtn = document.querySelector('.dashboard');
-  if (dashBtn) {
-    dashBtn.addEventListener('click', () => {
-      alert('Ga naar Dashboard (actie kan later ingevuld worden)');
-    });
-  }
 });
