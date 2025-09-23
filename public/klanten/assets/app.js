@@ -1,10 +1,15 @@
 /* Superhond Klantenportaal – Frontend zonder backend.
-   - Lessen bekijken, filteren, interesse bewaren (localStorage)
-   - Mock "Aanmelden" flow (kan later naar echte API)
+   - Klantgegevens + Honden beheer (localStorage)
+   - Lessen bekijken/filteren, interesse bewaren
+   - Aanmelden voor les: hondselectie uit eigen lijst
+   - Versie + build in footer
 */
 (() => {
-  // ------- Demo data (vervang later door API) -------
-  /** Elke les: id, type, niveau, groepCap, date, start, end, locatie{name, maps}, trainers[], tags[] */
+  // ---------- Config ----------
+  const PORTAAL_VERSION = "V1.2";
+  const BUILD_DATE = "23-09-2025";
+
+  // ---------- Demo data (vervang later door API) ----------
   const LESSONS = [
     {id:"L-250925-01", type:"Basisgroep", niveau:"Gevorderd", groepCap:8, date:"2025-09-25", start:"09:30", end:"10:30",
       locatie:{name:"Dessel Park", maps:"https://maps.google.com/?q=Dessel Park"}, trainers:["Paul"], tags:["sociaal","gehoorzaamheid"]},
@@ -26,65 +31,191 @@
       locatie:{name:"Turnhout Hal", maps:"https://maps.google.com/?q=Turnhout"}, trainers:["Sofie"], tags:["privé","gedrag"]}
   ];
 
-  // --------------- Helpers -------------------
+  // ---------- State ----------
   const $ = (sel, el=document) => el.querySelector(sel);
+  const key = {
+    client: "sh_client",
+    dogs: "sh_dogs",
+    interest: "sh_interest"
+  };
   const state = {
-    clientId: localStorage.getItem("sh_clientId") || "",
-    interest: new Set(JSON.parse(localStorage.getItem("sh_interest") || "[]")),
+    client: load(key.client) || {},
+    dogs: load(key.dogs) || [],
+    interest: new Set(load(key.interest) || []),
     filters: { q:"", type:"", loc:"", trainer:"" }
   };
 
-  // --------------- Elements -------------------
+  // ---------- Elements ----------
   const tableWrap = $("#tableWrap");
   const tableTpl = $("#tableTemplate");
   const rowTpl = $("#rowTemplate");
   const cardTpl = $("#cardTemplate");
-  const interesseDrawer = $("#interesseDrawer");
+  const interestDrawer = $("#interesseDrawer");
   const interestPills = $("#interestPills");
+  const dogsList = $("#dogsList");
+  const dogDialog = $("#dogDialog");
+  const dogForm = $("#dogForm");
+  const clientForm = $("#clientForm");
 
-  // --------------- Init -----------------------
-  function init() {
-    // Topbar ID form
-    $("#clientId").value = state.clientId;
-    $("#idForm").addEventListener("submit", e=>{
+  // Footer + header labels
+  document.title = `Superhond – Klantenportaal ${PORTAAL_VERSION}`;
+  $(".chip").textContent = `Klantenportaal · ${PORTAAL_VERSION}`;
+  $(".footer").textContent = `© Superhond · Klantenportaal · ${PORTAAL_VERSION} · Gebouwd op ${BUILD_DATE}`;
+
+  // ---------- Init ----------
+  function init(){
+    // Prefill client form from state
+    fillClientForm(state.client);
+    renderDogs();
+    renderLessons();
+
+    // Client form handlers
+    clientForm.addEventListener("submit", e=>{
       e.preventDefault();
-      state.clientId = $("#clientId").value.trim();
-      localStorage.setItem("sh_clientId", state.clientId);
-      flash(`Gegevens bewaard${state.clientId ? ` voor ${state.clientId}`:""}.`);
+      const data = formToObj(clientForm);
+      state.client = data;
+      save(key.client, data);
+      flash("Klantgegevens bewaard.");
+    });
+    $("#prefillDemo").addEventListener("click", ()=>{
+      const demo = {
+        firstName:"Sara", lastName:"De Smet", email:"sara@example.be",
+        phone:"+32 470 00 00 00", country:"België", street:"Kleine Baan", streetNo:"12",
+        zip:"2400", city:"Mol", notes:"Houdt van zaterdagen 9u."
+      };
+      fillClientForm(demo);
+      state.client = demo; save(key.client, demo);
+      if(state.dogs.length===0){
+        state.dogs = [
+          {id:uuid(), name:"Boef", breed:"Labrador", dob:"2023-06-01", sex:"Reu", chip:"BE1234", notes:"Vriendelijk"},
+          {id:uuid(), name:"Mila", breed:"Border Collie", dob:"2021-11-20", sex:"Teef", chip:"BE9876", notes:"Energie!"}
+        ];
+        save(key.dogs, state.dogs); renderDogs();
+      }
+      flash("Demo ingevuld.");
+    });
+    $("#resetClient").addEventListener("click", ()=>{
+      clientForm.reset(); state.client = {}; save(key.client, state.client);
+      flash("Klantgegevens gereset.");
     });
 
-    // Filters
-    $("#search").addEventListener("input", ({target}) => {state.filters.q = target.value; render();});
-    $("#typeFilter").addEventListener("change", ({target}) => {state.filters.type = target.value; render();});
-    $("#locFilter").addEventListener("change", ({target}) => {state.filters.loc = target.value; render();});
-    $("#trainerFilter").addEventListener("change", ({target}) => {state.filters.trainer = target.value; render();});
-    $("#resetBtn").addEventListener("click", resetFilters);
+    // Dogs handlers
+    $("#addDogBtn").addEventListener("click", ()=> openDogDialog());
+    dogDialog.addEventListener("close", ()=>{
+      if(dogDialog.returnValue!=="save") return;
+      const form = new FormData(dogForm);
+      const dog = Object.fromEntries(form.entries());
+      // nieuw of edit?
+      const editId = dogForm.dataset.editId;
+      if(editId){
+        const idx = state.dogs.findIndex(d=>d.id===editId);
+        state.dogs[idx] = {...state.dogs[idx], ...dog};
+        delete dogForm.dataset.editId;
+      } else {
+        dog.id = uuid();
+        state.dogs.push(dog);
+      }
+      save(key.dogs, state.dogs);
+      renderDogs();
+      flash("Hond opgeslagen.");
+      dogForm.reset();
+    });
 
-    render();
+    // Filters (lessen)
+    $("#search").addEventListener("input", ({target}) => {state.filters.q = target.value; renderLessons();});
+    $("#typeFilter").addEventListener("change", ({target}) => {state.filters.type = target.value; renderLessons();});
+    $("#locFilter").addEventListener("change", ({target}) => {state.filters.loc = target.value; renderLessons();});
+    $("#trainerFilter").addEventListener("change", ({target}) => {state.filters.trainer = target.value; renderLessons();});
+    $("#resetBtn").addEventListener("click", ()=>{
+      state.filters = {q:"",type:"",loc:"",trainer:""};
+      $("#search").value=""; $("#typeFilter").value=""; $("#locFilter").value=""; $("#trainerFilter").value="";
+      renderLessons();
+    });
+
+    // Quick link to profile section
+    $("#openProfile").addEventListener("click", ()=>{
+      window.scrollTo({top:0, behavior:"smooth"});
+    });
   }
 
-  function resetFilters(){
-    state.filters = {q:"",type:"",loc:"",trainer:""};
-    $("#search").value=""; $("#typeFilter").value=""; $("#locFilter").value=""; $("#trainerFilter").value="";
-    render();
+  // ---------- Render klant + honden ----------
+  function renderDogs(){
+    dogsList.innerHTML = "";
+    if(state.dogs.length===0){
+      dogsList.innerHTML = `<li class="empty">Nog geen honden toegevoegd.</li>`;
+      return;
+    }
+    state.dogs.forEach(d=>{
+      const li = document.createElement("li");
+      li.className = "dogs-item";
+      li.innerHTML = `
+        <div class="info">
+          <strong>${escapeHtml(d.name || "—")}</strong>
+          <span class="badge">${escapeHtml(d.breed || "Onbekend ras")}</span>
+          ${d.sex ? `<span class="badge">${escapeHtml(d.sex)}</span>`:""}
+          ${d.dob ? `<span class="badge">${formatDate(d.dob)}</span>`:""}
+          ${d.chip ? `<span class="badge">Chip: ${escapeHtml(d.chip)}</span>`:""}
+          ${d.notes ? `<div class="muted">${escapeHtml(d.notes)}</div>`:""}
+        </div>
+        <div class="row-actions">
+          <button class="btn" data-act="edit">✎ Bewerken</button>
+          <button class="btn danger" data-act="del">🗑 Verwijderen</button>
+        </div>
+      `;
+      li.querySelector('[data-act="edit"]').addEventListener("click", ()=> openDogDialog(d));
+      li.querySelector('[data-act="del"]').addEventListener("click", ()=>{
+        if(confirm(`Verwijder hond "${d.name}"?`)){
+          state.dogs = state.dogs.filter(x=>x.id!==d.id);
+          save(key.dogs, state.dogs); renderDogs();
+        }
+      });
+      dogsList.appendChild(li);
+    });
   }
 
-  // --------------- Render ---------------------
-  function render(){
+  function openDogDialog(dog){
+    dogForm.reset();
+    if(dog){
+      dogForm.name.value = dog.name || "";
+      dogForm.breed.value = dog.breed || "";
+      dogForm.dob.value = dog.dob || "";
+      dogForm.sex.value = dog.sex || "";
+      dogForm.chip.value = dog.chip || "";
+      dogForm.notes.value = dog.notes || "";
+      dogForm.dataset.editId = dog.id;
+    }
+    dogDialog.showModal();
+  }
+
+  function fillClientForm(c={}){
+    clientForm.firstName.value = c.firstName || "";
+    clientForm.lastName.value = c.lastName || "";
+    clientForm.email.value = c.email || "";
+    clientForm.phone.value = c.phone || "";
+    clientForm.country.value = c.country || "";
+    clientForm.street.value = c.street || "";
+    clientForm.streetNo.value = c.streetNo || "";
+    clientForm.zip.value = c.zip || "";
+    clientForm.city.value = c.city || "";
+    clientForm.notes.value = c.notes || "";
+  }
+
+  // ---------- Render lessen ----------
+  function renderLessons(){
     const list = applyFilters(LESSONS, state.filters);
     tableWrap.innerHTML = "";
     if(list.length===0){
-      tableWrap.innerHTML = `<div class="empty">Geen lessen gevonden met deze filters. Probeer minder streng te filteren.</div>`;
+      tableWrap.innerHTML = `<div class="empty">Geen lessen gevonden met deze filters.</div>`;
+      return;
+    }
+    const isMobile = matchMedia("(max-width: 860px)").matches;
+    if(!isMobile){
+      const table = tableTpl.content.cloneNode(true);
+      const tb = table.querySelector("tbody");
+      list.forEach(lesson => tb.appendChild(renderRow(lesson)));
+      tableWrap.appendChild(table);
     } else {
-      const isMobile = matchMedia("(max-width: 860px)").matches;
-      if(!isMobile){
-        const table = tableTpl.content.cloneNode(true);
-        const tb = table.querySelector("tbody");
-        list.forEach(lesson => tb.appendChild(renderRow(lesson)));
-        tableWrap.appendChild(table);
-      } else {
-        list.forEach(lesson => tableWrap.appendChild(renderCard(lesson)));
-      }
+      list.forEach(lesson => tableWrap.appendChild(renderCard(lesson)));
     }
     renderInterestDrawer();
   }
@@ -141,8 +272,8 @@
 
   function renderInterestDrawer(){
     const ids = [...state.interest];
-    if(ids.length===0){ interesseDrawer.hidden = true; interestPills.innerHTML=""; return; }
-    interesseDrawer.hidden = false;
+    if(ids.length===0){ interestDrawer.hidden = true; interestPills.innerHTML=""; return; }
+    interestDrawer.hidden = false;
     interestPills.innerHTML = "";
     ids.map(id => LESSONS.find(l=>l.id===id)).forEach(lesson=>{
       const pill = document.createElement("span");
@@ -151,7 +282,7 @@
       const x = document.createElement("button");
       x.setAttribute("aria-label","Verwijder interesse");
       x.textContent="✕";
-      x.addEventListener("click", ()=>{ toggleInterest(lesson.id); render(); });
+      x.addEventListener("click", ()=>{ toggleInterest(lesson.id); renderLessons(); });
       pill.appendChild(x);
       interestPills.appendChild(pill);
     });
@@ -160,30 +291,41 @@
   function toggleInterest(id){
     if(state.interest.has(id)) state.interest.delete(id);
     else state.interest.add(id);
-    localStorage.setItem("sh_interest", JSON.stringify([...state.interest]));
+    save(key.interest, [...state.interest]);
   }
 
-  // --------------- Signup flow (mock) ----------
+  // ---------- Signup flow: kies hond ----------
   function signupFlow(lesson){
-    const client = state.clientId || prompt("Jouw e-mail (nodig voor bevestiging):","");
-    if(!client) return;
-    state.clientId = client;
-    localStorage.setItem("sh_clientId", client);
+    if(!state.client.email){
+      flash("Vul eerst je klantgegevens (e-mail) in bij 'Mijn gegevens'.");
+      window.scrollTo({top:0, behavior:"smooth"});
+      return;
+    }
+    if(state.dogs.length===0){
+      flash("Voeg eerst een hond toe bij 'Mijn honden'.");
+      window.scrollTo({top:0, behavior:"smooth"});
+      return;
+    }
+    const picked = promptSelectDog(state.dogs);
+    if(!picked) return;
 
-    const hond = prompt("Naam van je hond:",""); if(!hond) return;
+    // Hier zou je een echte POST doen naar backend
+    // fetch('/api/inschrijvingen', { method:'POST', headers:{'Content-Type':'application/json'},
+    //   body: JSON.stringify({ client:state.client, dogId:picked.id, lesId:lesson.id }) });
 
-    // Hier zou je normaal een fetch POST doen naar je backend.
-    // fetch('/api/inschrijvingen', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({client, hond, lesId:lesson.id})})
-    //   .then(r=>r.json()).then(()=>flash(`Inschrijving ontvangen voor ${lesson.type} op ${formatDate(lesson.date)}.`));
-
-    flash(`✅ Inschrijving opgeslagen (lokaal) voor ${hond} – ${lesson.type} op ${formatDate(lesson.date)}.`, 4200);
-    const key = "sh_signups";
-    const arr = JSON.parse(localStorage.getItem(key) || "[]");
-    arr.push({client,hond,lesId:lesson.id,when:new Date().toISOString()});
-    localStorage.setItem(key, JSON.stringify(arr));
+    flash(`✅ Inschrijving geregistreerd voor ${picked.name} – ${lesson.type} (${formatDate(lesson.date)} ${lesson.start}).`, 4500);
   }
 
-  // --------------- Utilities -------------------
+  function promptSelectDog(dogs){
+    // Simpel chooser met prompt; kan later modal worden
+    const label = dogs.map((d,i)=> `${i+1}) ${d.name} (${d.breed || "ras onbekend"})`).join("\n");
+    const ans = prompt(`Welke hond inschrijven?\n${label}\nGeef het nummer (1–${dogs.length}):`, "1");
+    const idx = parseInt(ans, 10) - 1;
+    if(Number.isNaN(idx) || idx<0 || idx>=dogs.length) return null;
+    return dogs[idx];
+  }
+
+  // ---------- Utilities ----------
   function applyFilters(list, f){
     const q = f.q.trim().toLowerCase();
     return list.filter(l=>{
@@ -213,7 +355,15 @@
     setTimeout(()=>{ n.style.opacity="0"; n.style.transform="translateY(6px)";}, ms);
     setTimeout(()=> n.remove(), ms+220);
   }
+  function formToObj(form){
+    const fd = new FormData(form);
+    return Object.fromEntries(fd.entries());
+  }
+  function save(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
+  function load(k){ try{return JSON.parse(localStorage.getItem(k));}catch{ return null; } }
+  function uuid(){ return (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Math.random().toString(36).slice(2)); }
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
 
-  // ------------ Mount -----------------
+  // ---------- Mount ----------
   init();
 })();
