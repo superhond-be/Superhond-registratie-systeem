@@ -3,23 +3,25 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Superhond — Dashboard</title>
+  <title>Module A — Dashboard</title>
+  <meta name="description" content="Startscherm">
   <link rel="stylesheet" href="./css/style.css" />
 </head>
 <body>
-  <div id="app">
+  <div id="app" data-layout="superhond">
     <header class="topbar">
-      <h1 class="brand">🐶 Superhond Dashboard</h1>
+      <h1 class="brand">🐶 Module A — Dashboard</h1>
+      <nav class="switch" aria-label="Navigatie">
+        <a class="btn" href="./index.html">Dashboard</a>
+      </nav>
       <div class="top-actions">
-        <span class="version"></span>
+        <span class="version" aria-label="Versie"></span>
       </div>
     </header>
     <main>
-      <h2>Welkom op het Dashboard <span id="verLabel"></span></h2>
-      <section class="tiles">
-        <a class="tile" href="./module-a.html">Module A — Dashboard</a>
-        <a class="tile" href="./module-b.html">Module B — Klanten &amp; Honden</a>
-        <a class="tile" href="./module-c.html">Module C — Lessen &amp; Strippenkaarten</a>
+      <h2>Module A <span id="verLabel"></span></h2>
+      <section class="content placeholder">
+        <p>Placeholder — inhoud volgt.</p>
       </section>
     </main>
     <footer class="footer">

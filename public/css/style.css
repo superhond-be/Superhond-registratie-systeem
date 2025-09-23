@@ -11,74 +11,42 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 10px 20px;
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 
-.brand {
-  margin: 0;
-  font-size: 1.5em;
-}
+.brand { margin: 0; font-size: 1.5em; }
+.version { font-weight: bold; color: #333; }
 
-.switch .btn, .switch .btn:link, .switch .btn:visited,
-.top-actions .btn, .top-actions .btn:link, .top-actions .btn:visited,
-.tile, .tile:link, .tile:visited {
+.switch .btn, .tile, .action, .btn {
   background: #e0e0e0;
   border: none;
-  padding: 8px 12px;
-  margin-left: 5px;
+  padding: 6px 10px;
+  margin: 2px;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 4px;
   font-size: 1em;
   text-decoration: none;
   display: inline-block;
   color: inherit;
 }
 
-.switch .btn.active {
-  background: #ff8800;
-  color: #fff;
-}
-
-.top-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.top-actions .dashboard {
-  background: #007bff;
-  color: #fff;
-}
-
-.version {
-  font-weight: bold;
-  color: #333;
-}
+.switch .btn.active { background: #ff8800; color: #fff; }
+.top-actions { display: flex; align-items: center; gap: 10px; }
+.top-actions .dashboard { background: #007bff; color: #fff; }
 
 .tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
-  padding: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px; padding: 20px;
+}
+.tile { background: #fff; border-radius: 6px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,.1); }
+
+.searchbar {
+  margin: 10px 0; padding: 8px; width: 100%; max-width: 400px;
+  border: 1px solid #ccc; border-radius: 4px;
 }
 
-.tile {
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  padding: 16px;
-  transition: transform .1s ease, box-shadow .1s ease;
-}
+.datatable { width: 100%; border-collapse: collapse; background: #fff; margin-top: 10px; }
+.datatable th, .datatable td { border: 1px solid #ddd; padding: 8px; }
+.datatable th { background: #f0f0f0; text-align: left; }
 
-.tile:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.12);
-}
-
-.footer {
-  padding: 20px;
-  text-align: center;
-  color: #666;
-}
+.footer { padding: 20px; text-align: center; color: #666; }
