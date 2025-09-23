@@ -1,56 +1,116 @@
+// --- “Bron van waarheid” (pas dit aan en laat het dáárna met rust) ---
+const SPEC = Object.freeze({
+  appName: "Mijn App",
+  features: [
+    "Formulier: naam + leeftijd -> opslag in memory",
+    "Weergave: lijstitems gesorteerd op naam",
+    "Validatie: leeftijd 0..120, naam ≥ 2 tekens",
+  ]
+});
+// ---------------------------------------------------------------------
 
-const elForm = document.querySelector('#klantForm');
-const elOut = document.querySelector('#output');
-const elBE = document.querySelector('#prefillBE');
-const elNL = document.querySelector('#prefillNL');
+const state = {
+  items: /** @type {Array<{name:string, age:number}>} */ ([]),
+};
 
-function renderForm(data) {
-  elForm.innerHTML = `
-    <label>Voornaam <input name="voornaam" value="${data.voornaam||''}"></label>
-    <label>Achternaam <input name="achternaam" value="${data.achternaam||''}"></label>
-    <label>Email <input name="email" value="${data.email||''}"></label>
-    <label>Land <select name="land">
-      <option value="BE"${data.land==='BE'?' selected':''}>België</option>
-      <option value="NL"${data.land==='NL'?' selected':''}>Nederland</option>
-    </select></label>
-    <label>Straat <input name="straat" value="${data.straat||''}"></label>
-    <label>Nr <input name="huisnummer" value="${data.huisnummer||''}"></label>
-    <label>Toevoeging <input name="toevoeging" value="${data.toevoeging||''}"></label>
-    <label>Postcode <input name="postcode" value="${data.postcode||''}"></label>
-    <label>Plaats <input name="plaats" value="${data.plaats||''}"></label>
-    <label>Telefoon <input name="tel" value="${data.tel||''}"></label>
-    <hr>
-    <h3>Honden</h3>
-    ${data.honden.map((h,i)=>`
-      <div class="dog">
-        <label>Naam <input name="hond_naam_${i}" value="${h.naam}"></label>
-        <label>Ras <input name="hond_ras_${i}" value="${h.ras}"></label>
-        <label>Geboorte <input type="date" name="hond_geboorte_${i}" value="${h.geboortedatum}"></label>
-      </div>
-    `).join('')}
-    <button type="submit">💾 Opslaan (demo)</button>
-  `;
-  elForm.onsubmit = e=>{
-    e.preventDefault();
-    const formData = Object.fromEntries(new FormData(elForm).entries());
-    elOut.textContent = JSON.stringify(formData,null,2);
-  }
+// UI refs
+const els = {
+  form: /** @type {HTMLFormElement} */ (document.getElementById('demoForm')),
+  name: /** @type {HTMLInputElement} */ (document.getElementById('nameInput')),
+  age:  /** @type {HTMLInputElement} */ (document.getElementById('ageInput')),
+  out:  /** @type {HTMLElement} */ (document.getElementById('output')),
+  list: /** @type {HTMLElement} */ (document.getElementById('list')),
+  run:  /** @type {HTMLButtonElement} */ (document.getElementById('runTests')),
+  overlay: document.getElementById('overlay'),
+  closeOverlay: document.getElementById('closeOverlay'),
+  errorText: document.getElementById('errorText')
+};
+
+// Hard fail -> overlay, zodat fouten niet “stil” blijven
+window.addEventListener('error', (e) => showError(e.error ? e.error.stack : String(e.message)));
+window.addEventListener('unhandledrejection', (e) => showError(e.reason?.stack ?? String(e.reason)));
+
+function showError(msg){
+  els.errorText.textContent = msg;
+  els.overlay.classList.remove('hidden');
+}
+els.closeOverlay.addEventListener('click', () => els.overlay.classList.add('hidden'));
+
+// Pure functie: valideer invoer
+function validate(name, age){
+  const errors = [];
+  if(!name || name.trim().length < 2) errors.push("Naam moet minstens 2 tekens hebben.");
+  const nAge = Number(age);
+  if(!Number.isFinite(nAge) || nAge < 0 || nAge > 120) errors.push("Leeftijd moet tussen 0 en 120 liggen.");
+  return errors;
 }
 
-const demoBE = {
-  voornaam:"Jan", achternaam:"Janssens", email:"jan@voorbeeld.be",
-  land:"BE", straat:"Kerkstraat", huisnummer:"12", toevoeging:"bus 3",
-  postcode:"2000", plaats:"Antwerpen", tel:"0470123456",
-  honden:[{naam:"Rocco", ras:"Mechelse herder", geboortedatum:"2021-06-15"}]
-};
-const demoNL = {
-  voornaam:"Piet", achternaam:"de Vries", email:"piet@example.nl",
-  land:"NL", straat:"Dorpsstraat", huisnummer:"5", toevoeging:"A",
-  postcode:"1234 AB", plaats:"Utrecht", tel:"0612345678",
-  honden:[{naam:"Luna", ras:"Labrador", geboortedatum:"2019-03-09"}]
-};
+// Pure functie: insert + sort
+function upsert(items, entry){
+  const next = items.slice();
+  next.push(entry);
+  next.sort((a,b)=> a.name.localeCompare(b.name, 'nl', {sensitivity:'base'}));
+  return next;
+}
 
-elBE.onclick=()=>renderForm(demoBE);
-elNL.onclick=()=>renderForm(demoNL);
+// Render
+function render(){
+  els.list.innerHTML = '';
+  for(const it of state.items){
+    const li = document.createElement('li');
+    li.textContent = `${it.name} — ${it.age}`;
+    els.list.appendChild(li);
+  }
+  els.out.textContent = JSON.stringify(state.items, null, 2);
+}
 
-renderForm({voornaam:"",achternaam:"",email:"",land:"BE",straat:"",huisnummer:"",toevoeging:"",postcode:"",plaats:"",tel:"",honden:[]});
+// Submit
+els.form.addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const name = els.name.value.trim();
+  const age = Number(els.age.value);
+  const errs = validate(name, age);
+  if(errs.length){ showError(errs.join("\n")); return; }
+  state.items = upsert(state.items, {name, age});
+  render();
+  els.form.reset();
+  els.name.focus();
+});
+
+// --- Mini-testjes om regressies te voorkomen ---
+els.run.addEventListener('click', ()=>{
+  const t = createTestRunner();
+  t.eq(validate("", 10).length > 0, true, "lege naam afgekeurd");
+  t.eq(validate("Bo", 999).length > 0, true, "te hoge leeftijd afgekeurd");
+  const sorted = upsert([], {name:"Zoe", age:1});
+  const sorted2 = upsert(sorted, {name:"Ali", age:2});
+  t.eq(sorted2[0].name, "Ali", "sorteert alfabetisch");
+  t.report();
+});
+
+// Testhulp
+function createTestRunner(){
+  /** @type {Array<{name:string, ok:boolean, msg?:string}>} */
+  const results = [];
+  return {
+    eq(actual, expected, name){
+      const ok = Object.is(actual, expected);
+      results.push({name, ok, msg: ok ? undefined : `Expected ${String(expected)}, got ${String(actual)}`});
+    },
+    report(){
+      const okCount = results.filter(r=>r.ok).length;
+      const fail = results.filter(r=>!r.ok);
+      const icon = fail.length ? "❌" : "✅";
+      const summary = `${icon} ${okCount}/${results.length} tests geslaagd`;
+      if(fail.length){
+        showError(summary + "\n\n" + fail.map(f=>`• ${f.name}: ${f.msg}`).join("\n"));
+      } else {
+        els.out.textContent = summary;
+      }
+    }
+  };
+}
+
+// Eerste render
+render();
+console.info("SPEC:", SPEC);
