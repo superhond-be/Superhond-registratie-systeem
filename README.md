@@ -1,15 +1,20 @@
-# Superhond V1.3 – Klanten met Honden (BE/NL)
+# Superhond – Klanten & Honden (V1.2)
 
-Deze bundel breidt V1.2 uit:
-- Klantdetail met volledige gegevens (adres, tel, land).
-- BE/NL ondersteuning.
-- Honden gekoppeld aan klant.
-- Dummy data voor 1 BE-klant en 1 NL-klant.
+Deze bundel bevat een minimale, werkende demo voor het beheren van **klanten** en hun **honden**, met **NL/BE**-specifieke adres- en telefoonvalidatie.
 
-## Bestanden
-- index.html
-- public/css/style.css
-- public/js/app.js
-- server/schema.sql
+## Inhoud
+- `index.html` — formulier + demo-output
+- `public/css/style.css` — Superhond-stijl
+- `public/js/app.js` — postcode/telefoon normalisatie & hondenbeheer (client-side)
+- `server/schema.sql` — database-tabellen (klanten, honden, landen)
 
-Open `index.html` lokaal en gebruik de knoppen **Demo BE-klant** of **Demo NL-klant** om snel te testen.
+## Testen
+Open `index.html` in je browser. Gebruik de knop **⚡ Prefill demo** voor snel testen.
+De **Opslaan (demo)** knop toont de JSON-payload (alsof die naar je backend gaat).
+
+## Integratie-notes
+- Sla telefoonnummers **altijd** op in E.164 (kolommen `tel_e164`, `tel2_e164`).
+- Toon in de UI desgewenst het nationale formaat (client-side helper zit in `app.js`).
+- Voor echte opslag: POST `payload` uit `app.js` naar je API (bijv. `/api/klanten`).
+
+Veel succes! 🐶
