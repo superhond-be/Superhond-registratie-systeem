@@ -25,4 +25,127 @@
     </section>
   </main>
 </body>
+
+  <!doctype html>
+<html lang="nl" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Superhond • Klanten</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="icon" href="data:," />
+  <meta name="color-scheme" content="light dark">
+</head>
+<body>
+  <!-- Superhond Topbar -->
+  <header class="sh-topbar" role="banner">
+    <div class="sh-brand">
+      <div class="sh-logo" aria-hidden="true">
+        <!-- simple dog head logo -->
+        <svg viewBox="0 0 64 64" width="28" height="28" aria-hidden="true">
+          <defs>
+            <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#f59e0b"/><stop offset="1" stop-color="#ef4444"/>
+            </linearGradient>
+          </defs>
+          <circle cx="32" cy="32" r="28" fill="url(#g)"/>
+          <path d="M19 28c0-4 3-9 8-9 4 0 7 3 7 7v1c0-4 3-7 7-7 5 0 8 5 8 9 0 9-10 15-15 18-5-3-15-9-15-18z" fill="#fff"/>
+          <circle cx="28" cy="31" r="2.6" fill="#0b0f14"/>
+          <circle cx="42" cy="31" r="2.6" fill="#0b0f14"/>
+          <path d="M31 37c2 1 4 1 6 0" stroke="#0b0f14" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="sh-titles">
+        <h1 class="sh-app">Superhond</h1>
+        <p class="sh-sub">Klantenbeheer</p>
+      </div>
+    </div>
+
+    <div class="sh-actions">
+      <label class="sh-search">
+        <input id="searchInput" type="search" placeholder="Zoek klanten… (naam, e-mail, telefoon)" aria-label="Zoeken" />
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 10-.71.71l.27.28v.79l5 5L20.49 19l-5-5zm-5 0C8.01 14 6 11.99 6 9.5S8.01 5 10.5 5 15 7.01 15 9.5 12.99 14 10.5 14z"/></svg>
+      </label>
+
+      <button id="themeToggle" class="sh-icon-btn" type="button" aria-live="polite" aria-label="Thema wisselen">
+        <!-- icon via JS -->
+      </button>
+    </div>
+  </header>
+
+  <!-- Decorative paw background -->
+  <div class="sh-bg" aria-hidden="true"></div>
+
+  <main class="sh-main">
+    <section aria-labelledby="lijst-heading" class="sh-card">
+      <div class="sh-card-head">
+        <div class="sh-card-title">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm7 1a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM5 7a2 2 0 1 1 4 0 2 2 0 0 1-4 0zm8.5 10c0-2.2 3-3.5 3-6.5a4.5 4.5 0 0 0-9 0c0 3 3 4.3 3 6.5 0 .8 1 1 1.5 1s1.5-.2 1.5-1z"/></svg>
+          <h2 id="lijst-heading">Klantenlijst</h2>
+        </div>
+        <div class="sh-card-tools">
+          <label class="pagesize">
+            <span>Per pagina</span>
+            <select id="pageSize">
+              <option>10</option>
+              <option selected>25</option>
+              <option>50</option>
+              <option>100</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="sh-tablewrap" role="region" aria-labelledby="lijst-heading" tabindex="0">
+        <table id="klantenTable" class="sh-table">
+          <thead>
+            <tr>
+              <th data-key="naam" data-sortable="true">Naam</th>
+              <th data-key="email" data-sortable="true">E-mail</th>
+              <th data-key="telefoon" data-sortable="true">Telefoon</th>
+              <th data-key="status" data-sortable="true">Status</th>
+              <th data-key="aangemaakt" data-sortable="true">Aangemaakt</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody" aria-live="polite"></tbody>
+        </table>
+
+        <!-- Skeleton -->
+        <div id="skeleton" class="sh-skeleton" aria-hidden="true">
+          <div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div><div class="row"></div>
+        </div>
+
+        <!-- Empty / Error -->
+        <div id="emptyState" class="sh-empty hidden" role="status">
+          <p>Geen resultaten gevonden.</p>
+        </div>
+        <div id="errorState" class="sh-empty hidden" role="alert">
+          <p>Ophalen mislukt. <button id="retryBtn" class="sh-link" type="button">Opnieuw proberen</button></p>
+          <pre id="errorDetails" class="sh-error-details"></pre>
+        </div>
+      </div>
+
+      <footer class="sh-tablefoot">
+        <div class="sh-pagination">
+          <button class="sh-page-btn" id="prevPage" type="button" aria-label="Vorige pagina">‹</button>
+          <span id="pageInfo" aria-live="polite"></span>
+          <button class="sh-page-btn" id="nextPage" type="button" aria-label="Volgende pagina">›</button>
+        </div>
+      </footer>
+    </section>
+  </main>
+
+  <template id="rowTemplate">
+    <tr>
+      <td data-col="naam"></td>
+      <td data-col="email"></td>
+      <td data-col="telefoon"></td>
+      <td data-col="status"><span class="sh-badge"></span></td>
+      <td data-col="aangemaakt"></td>
+    </tr>
+  </template>
+
+  <script src="./app.js" type="module"></script>
+</body>
+</html>
 </html>
