@@ -1,6 +1,7 @@
 (function(){
   const els=document.querySelectorAll('[data-version]');
-  fetch('./version.json?v='+Date.now())
+fetch('version.json?v='+Date.now())
+
     .then(r=>r.json())
     .then(meta=>{
       els.forEach(el=>el.textContent=meta.version);
