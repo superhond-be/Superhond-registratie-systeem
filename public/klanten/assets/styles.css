@@ -23,19 +23,32 @@ a:hover{text-decoration:underline}
 }
 .logo{font-weight:800;letter-spacing:.3px}
 .topbar .spacer{flex:1}
-.id-form{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
-.id-form input{
-  padding:.55rem .7rem;border-radius:999px;border:1px solid rgba(0,0,0,.15);min-width:220px;
-  background:rgba(255,255,255,.9)
-}
 .chip{padding:.35rem .7rem;border-radius:999px;background:rgba(255,255,255,.6);border:1px solid rgba(0,0,0,.08);font-size:.9rem}
 
 /* Layout */
 .container{max-width:1100px;margin:1.2rem auto;padding:0 1rem}
 .panel{
-  background:#fff;border:1px solid #e8ecf3;border-radius:var(--radius);box-shadow:var(--shadow);
+  background:#fff;border:1px solid #e8ecf3;border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:1rem;
 }
-.filters{display:grid;grid-template-columns:1.2fr repeat(3,1fr) 150px;gap:.65rem;padding:1rem;border-bottom:1px solid #eef2f8}
+.panel-title{margin:.9rem 1rem;border-bottom:1px solid #eef2f8;padding-bottom:.6rem}
+
+/* Mijn gegevens grid */
+.profile-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:1rem;padding:0 1rem 1rem}
+.client-form .field{margin:.35rem 0}
+.client-form .field.wide{grid-column:1/-1}
+.client-form input, .client-form textarea{
+  width:100%;padding:.55rem .7rem;border-radius:10px;border:1px solid #d7dde6;background:var(--bg)
+}
+.client-form .actions{display:flex;gap:.5rem;margin-top:.5rem}
+
+.dogs .dogs-header{display:flex;align-items:center;justify-content:space-between}
+.dogs-list{list-style:none;padding:0;margin:.5rem 0 0}
+.dogs-item{display:flex;align-items:flex-start;gap:.6rem;padding:.6rem;border:1px solid #e8ecf3;border-radius:10px;margin-bottom:.5rem;background:#fff}
+.dogs-item .info{flex:1}
+.badge{display:inline-block;background:#eef2f8;border:1px solid #e5e7eb;border-radius:999px;padding:.1rem .5rem;font-size:.8rem;margin-right:.25rem}
+
+/* Filters & tabel */
+.filters{display:grid;grid-template-columns:1.2fr repeat(3,1fr) 150px;gap:.65rem;padding:1rem;border-top:1px dashed #eef2f8;border-bottom:1px solid #eef2f8}
 .filters input,.filters select,.filters button{
   width:100%;padding:.6rem .7rem;border-radius:10px;border:1px solid #d7dde6;background:var(--bg)
 }
@@ -43,7 +56,6 @@ a:hover{text-decoration:underline}
 .filters button.secondary{background:#eef2f8;color:#1f2937;border-color:#e5e7eb}
 .filters .legend{grid-column:1/-1;font-size:.9rem;color:var(--muted);margin-top:-.35rem}
 
-/* Table / Cards */
 .table{width:100%;border-collapse:separate;border-spacing:0}
 .table th,.table td{padding:.85rem .9rem;border-bottom:1px solid #eef2f8;text-align:left;vertical-align:top}
 .table th{font-size:.84rem;color:#556070;text-transform:uppercase;letter-spacing:.04em}
@@ -55,18 +67,30 @@ a:hover{text-decoration:underline}
   display:inline-flex;align-items:center;gap:.45rem
 }
 .btn.primary{background:#16a34a;border-color:#16a34a;color:#fff}
+.btn.danger{background:#fee2e2;border-color:#fecaca;color:#b91c1c}
 .btn.heart[aria-pressed="true"]{background:#fee2e2;border-color:#fecaca;color:#b91c1c}
 .btn:focus-visible{outline:none;box-shadow:var(--ring)}
 .empty{padding:2rem;text-align:center;color:var(--muted)}
 
-/* “Mijn interesse” drawer */
 .drawer{margin-top:1rem;padding:1rem;border-top:1px dashed #e5e7eb;background:var(--bg-soft);border-bottom-left-radius:var(--radius);border-bottom-right-radius:var(--radius)}
 .drawer h3{margin:.2rem 0 .6rem 0}
 .pill{display:inline-flex;align-items:center;gap:.4rem;background:#fff;border:1px solid #e5e7eb;border-radius:999px;padding:.35rem .65rem;margin:.25rem .35rem .25rem 0}
 .pill button{border:0;background:transparent;cursor:pointer;color:#dc2626}
 
-/* Card layout on small screens */
+/* Dog dialog */
+dialog{border:1px solid #e8ecf3;border-radius:12px;padding:0;box-shadow:var(--shadow);max-width:560px}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+.dog-form{padding:1rem}
+.dog-form h3{margin:.2rem 0 .6rem}
+.dog-form .grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.dog-form input, .dog-form textarea, .dog-form select{width:100%;padding:.55rem .7rem;border-radius:10px;border:1px solid #d7dde6;background:var(--bg)}
+.dog-form .actions{display:flex;justify-content:flex-end;gap:.5rem;padding:.6rem 1rem;border-top:1px solid #eef2f8}
+
+.footer {text-align:center;font-size:.85rem;color:var(--muted);margin: 1.4rem 0}
+
+/* Responsive */
 @media (max-width: 860px){
+  .profile-grid{grid-template-columns:1fr}
   .filters{grid-template-columns:1fr 1fr;grid-auto-rows:auto}
   .filters :nth-child(3){grid-column:1/2}
   .filters :nth-child(4){grid-column:2/3}
@@ -83,13 +107,12 @@ a:hover{text-decoration:underline}
   :root{--bg:#0b0d11;--bg-soft:#0e1117;--ink:#e8eef6;--muted:#9aa7b6}
   .panel{background:#0f131a;border-color:#1a2030}
   .table th,.table td{border-bottom-color:#1a2030}
-  .filters input,.filters select,.filters button{border-color:#243047;background:#0b0d11;color:var(--ink)}
-  .filters button.secondary{background:#121826;color:#dbe3ec;border-color:#243047}
+  .filters input,.filters select,.filters button,.client-form input,.client-form textarea{border-color:#243047;background:#0b0d11;color:var(--ink)}
   .drawer{border-color:#1a2030}
   a{color:#8ab4ff}
 }
 
-/* Small helper for screen readers */
+/* SR-only */
 .sr-only{
   position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
 }
