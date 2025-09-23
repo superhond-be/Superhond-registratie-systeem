@@ -10,21 +10,49 @@
   <header class="topbar">
     <a href="../dashboard.html" class="btn">⬅️ Terug</a>
     <h1>🐶 Honden (demo)</h1>
+    <div class="spacer"></div>
+    <button id="prefillBtn" class="btn">⚡ Prefill Demo</button>
+    <button id="resetBtn" class="btn">↺ Reset</button>
   </header>
 
   <main class="container">
     <section class="panel">
-      <table class="table">
+      <table class="table" id="hondenTable">
         <thead>
           <tr><th>Naam</th><th>Ras</th><th>Geslacht</th><th>Eigenaar</th></tr>
         </thead>
-        <tbody>
-          <tr><td>Boef</td><td>Labrador</td><td>Reu</td><td>Sara De Smet</td></tr>
-          <tr><td>Mila</td><td>Border Collie</td><td>Teef</td><td>Sara De Smet</td></tr>
-          <tr><td>Rocky</td><td>Duitse Herder</td><td>Reu</td><td>Jan Peeters</td></tr>
-        </tbody>
+        <tbody></tbody>
       </table>
     </section>
   </main>
+
+  <script>
+    const tbody = document.querySelector("#hondenTable tbody");
+    const demoDogs = [
+      { naam:"Boef", ras:"Labrador", geslacht:"Reu", eigenaar:"Sara De Smet" },
+      { naam:"Mila", ras:"Border Collie", geslacht:"Teef", eigenaar:"Sara De Smet" },
+      { naam:"Rocky", ras:"Duitse Herder", geslacht:"Reu", eigenaar:"Jan Peeters" },
+      { naam:"Luna", ras:"Golden Retriever", geslacht:"Teef", eigenaar:"Leen Jacobs" }
+    ];
+
+    function renderRows(data){
+      tbody.innerHTML = "";
+      if(data.length===0){
+        tbody.innerHTML = `<tr><td colspan="4">Nog geen honden geladen.</td></tr>`;
+        return;
+      }
+      data.forEach(d=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${d.naam}</td><td>${d.ras}</td><td>${d.geslacht}</td><td>${d.eigenaar}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById("prefillBtn").addEventListener("click", ()=> renderRows(demoDogs));
+    document.getElementById("resetBtn").addEventListener("click", ()=> renderRows([]));
+
+    // start leeg
+    renderRows([]);
+  </script>
 </body>
 </html>
