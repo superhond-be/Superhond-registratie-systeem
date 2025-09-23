@@ -1,5 +1,5 @@
 {
-  "version": "v1.5",
-  "build": "2025-09-23 15:03:49",
-  "note": "Fixed path for version.json"
+  "version": "v1.6",
+  "build": "2025-09-23 15:07:47",
+  "note": "Validatie BE/NL postcodes + telefoon E.164"
 }

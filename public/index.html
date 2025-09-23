@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Superhond – Klanten & Honden (V1.5)</title>
+  <title>Superhond – Klanten & Honden (V1.6)</title>
   <link rel="stylesheet" href="./css/superhond.css" data-bust>
 </head>
 <body>
@@ -16,22 +16,31 @@
   <main class="container">
     <section class="card">
       <h2>Klantgegevens</h2>
-      <form id="klantForm" class="grid two">
+      <form id="klantForm" class="grid two" novalidate>
         <label>Voornaam <input name="voornaam" required></label>
         <label>Achternaam <input name="achternaam" required></label>
         <label>E-mail <input type="email" name="email" placeholder="naam@voorbeeld.be"></label>
         <label>Land 
-          <select name="land">
+          <select name="land" id="land">
             <option value="BE">België</option>
             <option value="NL">Nederland</option>
           </select>
         </label>
         <label>Straat <input name="straat"></label>
         <label>Nr <input name="huisnummer"></label>
-        <label>Toevoeging <input name="toevoeging"></label>
-        <label>Postcode <input name="postcode" placeholder="BE: 2000 / NL: 1234 AB"></label>
+        <label>Toevoeging <input name="toevoeging" placeholder="bus / A"></label>
+        <label>Postcode
+          <input name="postcode" id="postcode" placeholder="BE: 2000 / NL: 1234 AB">
+          <small class="helper">Automatische controle per land</small>
+        </label>
         <label>Plaats <input name="plaats"></label>
-        <label>Telefoon <input name="tel" placeholder="+32... of 0470.../06..."></label>
+        <label>Telefoon
+          <input name="tel" id="tel" placeholder="+32… of 0470… / 06…">
+          <small class="helper">Opslag in E.164; we tonen nationaal formaat</small>
+        </label>
+        <label>Telefoon (2)
+          <input name="tel2" id="tel2">
+        </label>
       </form>
     </section>
 
