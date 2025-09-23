@@ -3,157 +3,37 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Superhond – Klantenportaal</title>
-  <meta name="color-scheme" content="light dark">
-  <link rel="stylesheet" href="./assets/styles.css">
+  <title>Superhond — Admin Klanten</title>
+  <link rel="stylesheet" href="../admin.css">
 </head>
 <body>
-  <!-- Superhond gele balk -->
-  <header class="topbar" role="banner" aria-label="Superhond navigatie">
-    <div class="logo">🐾 Superhond</div>
-    <span class="chip">Klantenportaal</span>
-    <div class="spacer"></div>
-    <button id="openProfile" class="btn">👤 Mijn gegevens</button>
+  <header class="topbar">
+    <a href="../dashboard.html" class="btn">⬅️ Terug</a>
+    <h1>👤 Klanten (demo)</h1>
   </header>
 
-  <main class="container" id="app">
-    <!-- MIJN GEGEVENS + HONDEN -->
-    <section class="panel" aria-labelledby="gegvHeading">
-      <h2 id="gegvHeading" class="panel-title">Mijn gegevens</h2>
-
-      <div class="profile-grid">
-        <form id="clientForm" class="client-form" autocomplete="on">
-          <div class="field"><label>Voornaam<input name="firstName" required></label></div>
-          <div class="field"><label>Achternaam<input name="lastName" required></label></div>
-          <div class="field wide"><label>E-mail<input type="email" name="email" required></label></div>
-          <div class="field"><label>Telefoon<input name="phone" placeholder="+32…"></label></div>
-          <div class="field"><label>Land<input name="country" placeholder="België"></label></div>
-          <div class="field wide"><label>Straat<input name="street"></label></div>
-          <div class="field"><label>Nr<input name="streetNo"></label></div>
-          <div class="field"><label>Postcode<input name="zip"></label></div>
-          <div class="field"><label>Plaats<input name="city"></label></div>
-          <div class="field wide"><label>Opmerkingen<textarea name="notes" rows="2"></textarea></label></div>
-
-          <div class="actions">
-            <button class="btn primary" type="submit">💾 Bewaren</button>
-            <button class="btn" type="button" id="prefillDemo">⚡ Prefill demo</button>
-            <button class="btn" type="button" id="resetClient">↺ Reset</button>
-          </div>
-        </form>
-
-        <div class="dogs">
-          <div class="dogs-header">
-            <h3>Mijn honden</h3>
-            <button id="addDogBtn" class="btn">➕ Hond toevoegen</button>
-          </div>
-          <ul id="dogsList" class="dogs-list" aria-live="polite"></ul>
-        </div>
-      </div>
-    </section>
-
-    <!-- LESSEN -->
-    <section class="panel" aria-labelledby="lessenHeading">
-      <h2 id="lessenHeading" class="panel-title">Lessen – Overzicht</h2>
-
-      <div class="filters" role="region" aria-label="Filters">
-        <input id="search" type="search" placeholder="Zoek op les, trainer of trefwoord…" />
-        <select id="typeFilter">
-          <option value="">Alle types</option>
-          <option>Puppy Start</option>
-          <option>Basisgroep</option>
-          <option>Gevorderd</option>
-          <option>Privé</option>
-        </select>
-        <select id="locFilter">
-          <option value="">Alle locaties</option>
-          <option>Retie Terrein</option>
-          <option>Dessel Park</option>
-          <option>Turnhout Hal</option>
-        </select>
-        <select id="trainerFilter">
-          <option value="">Alle trainers</option>
-          <option>Paul</option>
-          <option>Sofie</option>
-          <option>Maas</option>
-        </select>
-        <button id="resetBtn" class="secondary" type="button">Reset</button>
-        <div class="legend">Tip: klik op ❤️ om je interesse te bewaren. Alleen zichtbaar voor jou.</div>
-      </div>
-
-      <div id="tableWrap" aria-live="polite"></div>
-
-      <div class="drawer" id="interesseDrawer" hidden>
-        <h3>Mijn interesse</h3>
-        <div id="interestPills"></div>
-      </div>
+  <main class="container">
+    <section class="panel">
+      <table class="table">
+        <thead>
+          <tr><th>Naam</th><th>E-mail</th><th>Telefoon</th><th>Honden</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Sara De Smet</td>
+            <td>sara@example.be</td>
+            <td>+32 470 00 00 00</td>
+            <td>Boef, Mila</td>
+          </tr>
+          <tr>
+            <td>Jan Peeters</td>
+            <td>jan.peeters@mail.com</td>
+            <td>+32 495 12 34 56</td>
+            <td>Rocky</td>
+          </tr>
+        </tbody>
+      </table>
     </section>
   </main>
-
-  <footer class="footer"></footer>
-
-  <!-- Templates -->
-  <template id="tableTemplate">
-    <table class="table" aria-describedby="lessenHeading">
-      <thead>
-        <tr>
-          <th>Status</th>
-          <th>Klas</th>
-          <th>Datum</th>
-          <th>Uren</th>
-          <th>Locatie</th>
-          <th>Trainer(s)</th>
-          <th>Acties</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </template>
-
-  <template id="rowTemplate">
-    <tr>
-      <td><span class="status">Actief</span></td>
-      <td class="caps"></td>
-      <td class="date"></td>
-      <td class="time"></td>
-      <td class="loc"></td>
-      <td class="trainer"></td>
-      <td class="row-actions"></td>
-    </tr>
-  </template>
-
-  <template id="cardTemplate">
-    <div class="card">
-      <div class="title"></div>
-      <div class="meta"></div>
-      <div class="row-actions"></div>
-    </div>
-  </template>
-
-  <!-- Dog editor modal -->
-  <dialog id="dogDialog">
-    <form method="dialog" id="dogForm" class="dog-form">
-      <h3>Hond</h3>
-      <div class="grid">
-        <label>Naam<input name="name" required></label>
-        <label>Ras<input name="breed" placeholder="bv. Border Collie"></label>
-        <label>Geboortedatum<input name="dob" type="date"></label>
-        <label>Geslacht
-          <select name="sex">
-            <option value="">–</option>
-            <option>Teef</option>
-            <option>Reu</option>
-          </select>
-        </label>
-        <label>Chipnr<input name="chip" placeholder="(optioneel)"></label>
-        <label>Opmerkingen<textarea name="notes" rows="2"></textarea></label>
-      </div>
-      <menu class="actions">
-        <button value="cancel" class="btn">Annuleren</button>
-        <button value="save" class="btn primary">Opslaan</button>
-      </menu>
-    </form>
-  </dialog>
-
-  <script src="./assets/app.js" defer></script>
 </body>
 </html>
