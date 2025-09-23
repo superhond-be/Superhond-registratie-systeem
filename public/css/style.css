@@ -1,3 +1,16 @@
+
+
+
+:root { color-scheme: light dark; --bg:#0b1020; --fg:#e6ebff; --accent:#6ae3ff; --badge:#1e2a55; }
+* { box-sizing: border-box; }
+body { margin:0; font:16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--fg); }
+.topbar { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid #2a355f; background:linear-gradient(180deg,#0f1630,#0b1020); }
+.badge { font-size:12px; padding:4px 8px; border-radius:999px; background:var(--badge); color:#cfd8ff; border:1px solid #31407b; }
+.container { padding:24px; max-width:860px; margin:auto; }
+button { margin:8px 8px 8px 0; padding:10px 14px; border-radius:8px; border:1px solid #2a355f; background:#121a36; color:#dfe6ff; cursor:pointer; }
+button:hover { border-color:#3a4aa0; box-shadow:0 0 0 3px rgba(106,227,255,.15); }
+.log { background:#0f1733; border:1px solid #233068; padding:12px; border-radius:8px; min-height:130px; overflow:auto; }
+
 /* ============ Superhond Design Tokens ============ */
 :root{
   --sh-bg: #fffaf2;            /* warm wit */
