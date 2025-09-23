@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Superhond – Klanten & Honden (V1.7)</title>
-  <link rel="stylesheet" href="./css/superhond.css" data-bust>
+  <title>Superhond – Klanten & Honden (V1.8)</title>
+  <link rel="stylesheet" href="./css/superhond-light.css" data-bust>
 </head>
 <body>
   <header class="topbar">
-    <div class="brand"><span class="dot"></span> 🐶 Superhond Klantenbeheer</div>
+    <div class="brand"><span class="dot"></span> 🐶 Superhond Registratie</div>
     <span class="version-badge" data-version>v?</span>
-    <small class="build" data-build></small>
   </header>
 
   <main class="container">
@@ -19,7 +18,7 @@
       <form id="klantForm" class="grid two" novalidate>
         <label>Voornaam <input name="voornaam" required></label>
         <label>Achternaam <input name="achternaam" required></label>
-        <label>E-mail <input type="email" name="email"></label>
+        <label>E-mail <input type="email" name="email" placeholder="naam@voorbeeld.be"></label>
         <label>Land 
           <select name="land" id="land">
             <option value="BE">België</option>
@@ -28,32 +27,49 @@
         </label>
         <label>Straat <input name="straat"></label>
         <label>Nr <input name="huisnummer"></label>
-        <label>Toevoeging <input name="toevoeging"></label>
-        <label>Postcode <input name="postcode" id="postcode"></label>
+        <label>Toevoeging <input name="toevoeging" placeholder="bus / A"></label>
+        <label>Postcode
+          <input name="postcode" id="postcode" placeholder="BE: 2000 / NL: 1234 AB">
+        </label>
         <label>Plaats <input name="plaats"></label>
-        <label>Telefoon <input name="tel" id="tel"></label>
+        <label>Telefoon
+          <input name="tel" id="tel" placeholder="+32… of 0470… / 06…">
+        </label>
       </form>
+      <div class="actions">
+        <button class="btn" id="prefillBE">⚡ Demo BE-klant</button>
+        <button class="btn" id="prefillNL">⚡ Demo NL-klant</button>
+      </div>
     </section>
 
     <section class="card">
-      <div class="dogs-head">
+      <div class="dogs-head" style="display:flex;align-items:center;justify-content:space-between">
         <h2>Honden (van deze klant)</h2>
-        <button id="addDog" class="btn ghost">+ Hond toevoegen</button>
+        <button id="addDog" class="btn">+ Hond toevoegen</button>
       </div>
       <div id="dogsList" class="dogs-list"></div>
     </section>
 
     <section class="card">
-      <h2>Resultaat</h2>
+      <h2>Resultaat (demo-output)</h2>
       <pre id="output" class="output">Nog geen data…</pre>
       <div class="actions">
-        <button id="saveBtn" class="btn primary">💾 Opslaan (POST)</button>
+        <button id="saveBtn" class="btn primary">💾 Opslaan (demo)</button>
         <button id="resetBtn" class="btn ghost">Reset</button>
       </div>
+    </section>
+
+    <section class="card">
+      <h2>Demo klanten</h2>
+      <table class="table" id="demoTable">
+        <thead><tr><th>Naam</th><th>Land</th><th>E-mail</th><th>Honden</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </section>
   </main>
 
   <footer class="footer"><small>&copy; 2025 Superhond</small></footer>
+
   <script src="./js/app.js" data-bust></script>
   <script src="./js/version.js" defer></script>
 </body>
