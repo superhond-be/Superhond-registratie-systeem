@@ -1,0 +1,95 @@
+:root{
+  --brand:#f7c948;          /* Superhond geel */
+  --brand-ink:#2b2b2b;
+  --ink:#1d232a;
+  --muted:#6b7480;
+  --bg:#ffffff;
+  --bg-soft:#f5f7fb;
+  --radius:12px;
+  --shadow:0 6px 20px rgba(0,0,0,.08);
+  --ring:0 0 0 2px rgba(32,99,255,.18), 0 0 1px 1px rgba(32,99,255,.12);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+a{color:#2563eb;text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* Topbar */
+.topbar{
+  position:sticky;top:0;z-index:30;
+  display:flex;align-items:center;gap:.75rem;
+  padding:.75rem 1rem;background:var(--brand);color:var(--brand-ink);
+  box-shadow:0 1px 0 rgba(0,0,0,.08);
+}
+.logo{font-weight:800;letter-spacing:.3px}
+.topbar .spacer{flex:1}
+.id-form{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.id-form input{
+  padding:.55rem .7rem;border-radius:999px;border:1px solid rgba(0,0,0,.15);min-width:220px;
+  background:rgba(255,255,255,.9)
+}
+.chip{padding:.35rem .7rem;border-radius:999px;background:rgba(255,255,255,.6);border:1px solid rgba(0,0,0,.08);font-size:.9rem}
+
+/* Layout */
+.container{max-width:1100px;margin:1.2rem auto;padding:0 1rem}
+.panel{
+  background:#fff;border:1px solid #e8ecf3;border-radius:var(--radius);box-shadow:var(--shadow);
+}
+.filters{display:grid;grid-template-columns:1.2fr repeat(3,1fr) 150px;gap:.65rem;padding:1rem;border-bottom:1px solid #eef2f8}
+.filters input,.filters select,.filters button{
+  width:100%;padding:.6rem .7rem;border-radius:10px;border:1px solid #d7dde6;background:var(--bg)
+}
+.filters button{background:#1f6feb;color:#fff;border-color:#1f6feb;cursor:pointer}
+.filters button.secondary{background:#eef2f8;color:#1f2937;border-color:#e5e7eb}
+.filters .legend{grid-column:1/-1;font-size:.9rem;color:var(--muted);margin-top:-.35rem}
+
+/* Table / Cards */
+.table{width:100%;border-collapse:separate;border-spacing:0}
+.table th,.table td{padding:.85rem .9rem;border-bottom:1px solid #eef2f8;text-align:left;vertical-align:top}
+.table th{font-size:.84rem;color:#556070;text-transform:uppercase;letter-spacing:.04em}
+.status{display:inline-flex;align-items:center;gap:.4rem;padding:.2rem .55rem;border-radius:999px;background:#ecfdf5;color:#047857;font-weight:600;font-size:.8rem;border:1px solid #bbf7d0}
+.caps{color:#0f172a;font-weight:600}
+.row-actions{display:flex;gap:.45rem;flex-wrap:wrap}
+.btn{
+  appearance:none;border:1px solid #d7dde6;background:#fff;border-radius:999px;padding:.45rem .8rem;cursor:pointer;
+  display:inline-flex;align-items:center;gap:.45rem
+}
+.btn.primary{background:#16a34a;border-color:#16a34a;color:#fff}
+.btn.heart[aria-pressed="true"]{background:#fee2e2;border-color:#fecaca;color:#b91c1c}
+.btn:focus-visible{outline:none;box-shadow:var(--ring)}
+.empty{padding:2rem;text-align:center;color:var(--muted)}
+
+/* “Mijn interesse” drawer */
+.drawer{margin-top:1rem;padding:1rem;border-top:1px dashed #e5e7eb;background:var(--bg-soft);border-bottom-left-radius:var(--radius);border-bottom-right-radius:var(--radius)}
+.drawer h3{margin:.2rem 0 .6rem 0}
+.pill{display:inline-flex;align-items:center;gap:.4rem;background:#fff;border:1px solid #e5e7eb;border-radius:999px;padding:.35rem .65rem;margin:.25rem .35rem .25rem 0}
+.pill button{border:0;background:transparent;cursor:pointer;color:#dc2626}
+
+/* Card layout on small screens */
+@media (max-width: 860px){
+  .filters{grid-template-columns:1fr 1fr;grid-auto-rows:auto}
+  .filters :nth-child(3){grid-column:1/2}
+  .filters :nth-child(4){grid-column:2/3}
+  .filters :nth-child(5){grid-column:1/-1}
+  .table, .table thead{display:none}
+  .card{display:grid;grid-template-columns:1fr;gap:.55rem;padding:1rem;border-bottom:1px solid #eef2f8}
+  .card .title{font-weight:700}
+  .card .meta{color:var(--muted);font-size:.93rem}
+  .card .row-actions{margin-top:.4rem}
+}
+
+/* Dark mode */
+@media (prefers-color-scheme:dark){
+  :root{--bg:#0b0d11;--bg-soft:#0e1117;--ink:#e8eef6;--muted:#9aa7b6}
+  .panel{background:#0f131a;border-color:#1a2030}
+  .table th,.table td{border-bottom-color:#1a2030}
+  .filters input,.filters select,.filters button{border-color:#243047;background:#0b0d11;color:var(--ink)}
+  .filters button.secondary{background:#121826;color:#dbe3ec;border-color:#243047}
+  .drawer{border-color:#1a2030}
+  a{color:#8ab4ff}
+}
+
+/* Small helper for screen readers */
+.sr-only{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
