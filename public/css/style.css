@@ -1,80 +1,180 @@
-
+/* ============ Superhond Design Tokens ============ */
 :root{
-  --bg:#0f1115;
-  --card:#171a21;
-  --muted:#aeb4c0;
-  --text:#e7ecf2;
-  --brand:#ff7f50; /* coral accent in Superhond style */
-  --brand-2:#ffd8cc;
-  --ok:#26c281;
-  --warn:#f6c343;
-  --danger:#ef476f;
-  --ring: 0 0 0 3px rgba(255,127,80,.35);
-  --radius:12px;
-  --pad:16px;
-  --gap:14px;
-  font-size:16px;
+  --sh-bg: #fffaf2;            /* warm wit */
+  --sh-ink: #161616;
+  --sh-muted: #6b6b6b;
+  --sh-surface: #ffffff;
+  --sh-surface-2:#fff5e6;
+  --sh-border:#f0e2cf;
+  --sh-brand:#f59e0b;          /* amber */
+  --sh-brand-2:#ef4444;        /* rood accent */
+  --sh-ink-onbrand:#1a1205;
+  --sh-success:#22c55e;
+  --sh-warning:#eab308;
+  --sh-danger:#ef4444;
+  --sh-shadow: 0 2px 8px rgba(0,0,0,.06), 0 16px 40px rgba(0,0,0,.08);
 }
+@media (prefers-color-scheme: dark){
+  :root{
+    --sh-bg:#0b0f14;
+    --sh-ink:#f3f4f6;
+    --sh-muted:#9aa3af;
+    --sh-surface:#11151c;
+    --sh-surface-2:#121821;
+    --sh-border:#1f2937;
+    --sh-brand:#f59e0b;
+    --sh-brand-2:#ef4444;
+    --sh-ink-onbrand:#0b0f14;
+    --sh-shadow: 0 2px 8px rgba(0,0,0,.5), 0 20px 50px rgba(0,0,0,.45);
+  }
+}
+[data-theme="light"]{
+  --sh-bg: #fffaf2 !important;
+  --sh-ink:#161616 !important;
+  --sh-muted:#6b6b6b !important;
+  --sh-surface:#ffffff !important;
+  --sh-surface-2:#fff5e6 !important;
+  --sh-border:#f0e2cf !important;
+}
+[data-theme="dark"]{
+  --sh-bg:#0b0f14 !important;
+  --sh-ink:#f3f4f6 !important;
+  --sh-muted:#9aa3af !important;
+  --sh-surface:#11151c !important;
+  --sh-surface-2:#121821 !important;
+  --sh-border:#1f2937 !important;
+}
+
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
   margin:0;
-  background:linear-gradient(180deg,#0e1014,#0b0d11 40%,#080a0d);
-  color:var(--text);
-  font:500 16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;
+  background: radial-gradient(1200px 800px at 10% -10%, color-mix(in oklab, var(--sh-brand) 12%, transparent), transparent) ,
+              radial-gradient(800px 600px at 100% 0%, color-mix(in oklab, var(--sh-brand-2) 10%, transparent), transparent),
+              var(--sh-bg);
+  color:var(--sh-ink);
+  font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
 }
-.container{max-width:1000px;margin:24px auto;padding:0 16px}
-.topbar{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:12px 16px;border-bottom:1px solid #232734;background:#0e1117;
-  position:sticky;top:0;z-index:10;
+
+/* ============ Topbar ============ */
+.sh-topbar{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:12px 16px;
+  background:linear-gradient(180deg, color-mix(in oklab, var(--sh-surface) 86%, transparent), var(--sh-surface));
+  border-bottom:1px solid var(--sh-border);
+  backdrop-filter: saturate(1.2) blur(6px);
 }
-.brand{margin:0;font-size:20px;letter-spacing:.2px}
-.version-badge{
-  background:var(--brand);color:#111;padding:6px 10px;border-radius:999px;
-  font-weight:700;box-shadow:0 1px 0 rgba(0,0,0,.25);
+.sh-brand{display:flex; gap:10px; align-items:center}
+.sh-logo{display:grid; place-items:center; width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,var(--sh-brand),var(--sh-brand-2)); box-shadow: var(--sh-shadow)}
+.sh-titles .sh-app{margin:0; font-weight:800; letter-spacing:.2px; font-size:16px}
+.sh-titles .sh-sub{margin:0; color:var(--sh-muted); font-size:12px}
+
+.sh-actions{display:flex; align-items:center; gap:8px}
+.sh-search{position:relative; display:inline-flex; align-items:center}
+.sh-search input{
+  width:min(44vw, 460px); padding:10px 38px 10px 12px;
+  background: var(--sh-surface-2);
+  color:var(--sh-ink);
+  border:1px solid var(--sh-border);
+  border-radius:12px;
+  outline:none; transition: box-shadow .2s, border-color .2s;
 }
-.card{
-  background:var(--card);padding:20px;border-radius:var(--radius);
-  box-shadow:0 8px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.02);
-  border:1px solid #242a35;margin-bottom:20px;
+.sh-search input:focus{ border-color: color-mix(in oklab, var(--sh-brand) 60%, var(--sh-border)); box-shadow:0 0 0 4px color-mix(in oklab, var(--sh-brand) 25%, transparent); }
+.sh-search svg{position:absolute; right:10px; width:20px; height:20px; fill:var(--sh-muted)}
+
+.sh-icon-btn{
+  display:grid; place-items:center; width:38px; height:38px;
+  background:var(--sh-surface-2); color:var(--sh-ink);
+  border:1px solid var(--sh-border); border-radius:12px; box-shadow:var(--sh-shadow);
+  cursor:pointer;
 }
-h2{margin-top:0;font-size:18px}
-label{display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--muted)}
-input,select,textarea{
-  background:#0c0f14;color:var(--text);border:1px solid #2a2f3a;border-radius:10px;
-  padding:10px 12px;outline:none;
+.sh-icon-btn:focus-visible{outline:3px solid color-mix(in oklab, var(--sh-brand) 50%, transparent); outline-offset:2px}
+.sh-icon-btn svg{width:20px; height:20px}
+
+/* Decorative pootjes achtergrond */
+.sh-bg{
+  position:fixed; inset:0; pointer-events:none; opacity:.08;
+  background:
+    radial-gradient(12px 10px at 20% 18%, var(--sh-ink) 40%, transparent 41%) 0 0/120px 120px,
+    radial-gradient(12px 10px at 60% 38%, var(--sh-ink) 40%, transparent 41%) 40px 40px/120px 120px,
+    radial-gradient(12px 10px at 80% 18%, var(--sh-ink) 40%, transparent 41%) 80px 0/120px 120px,
+    radial-gradient(20px 16px at 70% 80%, var(--sh-ink) 40%, transparent 41%) 40px 70px/120px 120px;
+  mix-blend-mode: multiply;
 }
-input:focus,select:focus,textarea:focus{box-shadow:var(--ring);border-color:var(--brand)}
-.grid{display:grid;gap:var(--gap)}
-.grid.two{grid-template-columns:1fr 1fr}
-.grid.three{grid-template-columns:2fr 1fr 1fr}
-@media (max-width:700px){
-  .grid.two,.grid.three{grid-template-columns:1fr}
+
+/* ============ Main & Card ============ */
+.sh-main{ padding: 18px; }
+.sh-card{
+  position:relative; overflow:hidden;
+  border:1px solid var(--sh-border); border-radius:16px; background:var(--sh-surface); box-shadow:var(--sh-shadow);
 }
-hr{border:none;border-top:1px solid #2a2f3a;margin:18px 0}
-.dogs-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.btn{
-  border:1px solid #2a2f3a;background:#11151c;color:var(--text);padding:8px 12px;
-  border-radius:10px;cursor:pointer;font-weight:600;
+.sh-card-head{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:12px 14px; border-bottom:1px dashed var(--sh-border);
+  background: linear-gradient(90deg, color-mix(in oklab, var(--sh-brand) 9%, transparent), transparent 40%);
 }
-.btn:hover{border-color:#3a4150}
-.btn.primary{background:var(--brand);color:#111;border-color:transparent}
-.btn.ghost{background:transparent}
-.btn.danger{background:transparent;border-color:var(--danger);color:var(--danger)}
-.actions{display:flex;gap:10px;margin-top:12px}
-.dogs-list{display:flex;flex-direction:column;gap:12px}
-.dog-card{
-  border:1px dashed #324; border-radius:12px;padding:12px;background:#0e1117;
+.sh-card-title{display:flex; gap:8px; align-items:center}
+.sh-card-title h2{margin:0; font-size:15px}
+.sh-card-title svg{color: color-mix(in oklab, var(--sh-brand) 70%, var(--sh-ink))}
+.pagesize select{
+  margin-left:6px; padding:6px 8px; border-radius:10px;
+  border:1px solid var(--sh-border); background:var(--sh-surface-2); color:var(--sh-ink);
 }
-.dog-grid{display:grid;gap:12px;grid-template-columns:repeat(4,1fr)}
-@media (max-width:900px){ .dog-grid{grid-template-columns:1fr 1fr} }
-@media (max-width:520px){ .dog-grid{grid-template-columns:1fr} }
-.dog-actions{display:flex;gap:8px;margin-top:8px}
-.output{
-  background:#0c0f14;border:1px solid #2a2f3a;border-radius:10px;padding:12px;
-  min-height:120px;white-space:pre-wrap;word-break:break-word;
+
+/* ============ Table ============ */
+.sh-tablewrap{ position:relative; }
+.sh-table{ width:100%; border-collapse: collapse; }
+.sh-table thead th{
+  position:sticky; top:64px; /* below topbar */
+  background:var(--sh-surface);
+  border-bottom:1px solid var(--sh-border);
+  padding:12px; text-align:left; font-weight:800; letter-spacing:.2px;
+  cursor:pointer; user-select:none;
 }
-.footer{padding:24px;color:var(--muted);text-align:center}
-.invalid{border-color:var(--danger) !important}
-.helper{color:var(--muted);font-size:12px;margin-top:-6px}
+.sh-table tbody td{ padding:11px 12px; border-bottom:1px dashed var(--sh-border); }
+.sh-table tbody tr:hover{ background: color-mix(in oklab, var(--sh-brand) 7%, transparent); }
+
+.sh-badge{
+  display:inline-block; padding:5px 10px; border-radius:999px;
+  font-size:12px; line-height:1;
+  background: color-mix(in oklab, var(--sh-brand) 18%, var(--sh-surface-2));
+  color: var(--sh-ink-onbrand); border: 1px solid var(--sh-border);
+}
+
+/* Skeleton */
+.sh-skeleton{ padding:8px 12px; }
+.sh-skeleton .row{
+  height:46px; border-bottom:1px dashed var(--sh-border);
+  background:linear-gradient(90deg, transparent, color-mix(in oklab, var(--sh-brand) 20%, var(--sh-surface-2)), transparent);
+  animation: shimmer 1.2s infinite;
+}
+@keyframes shimmer{0%{background-position:-200px 0}100%{background-position:calc(200px + 100%) 0}}
+
+.sh-empty{ padding:22px; text-align:center; color:var(--sh-muted); }
+.hidden{ display:none !important; }
+
+.sh-tablefoot{
+  display:flex; justify-content:flex-end; align-items:center;
+  gap:10px; padding:10px 12px; border-top:1px dashed var(--sh-border);
+  background:var(--sh-surface);
+}
+.sh-pagination{ display:flex; align-items:center; gap:10px; }
+.sh-page-btn{
+  width:34px; height:34px; border-radius:10px; border:1px solid var(--sh-border);
+  background:var(--sh-surface-2); color:var(--sh-ink); cursor:pointer;
+}
+#pageInfo{ color:var(--sh-muted) }
+
+.sh-link{ border:0; background:none; color:var(--sh-brand-2); text-decoration: underline; cursor:pointer }
+.sh-error-details{
+  margin:8px auto 0; max-width:820px; background: color-mix(in oklab, var(--sh-danger) 16%, var(--sh-surface-2));
+  padding:8px 10px; border-radius:10px; overflow:auto;
+}
+
+/* Responsiveness */
+@media (max-width: 720px){
+  .sh-search input{ width:min(58vw, 440px); }
+  .sh-table thead th:nth-child(3),
+  .sh-table tbody td:nth-child(3){ display:none } /* verberg Telefoon */
+}
