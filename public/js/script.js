@@ -1,8 +1,4 @@
 
-<!-- Voeg toe in <head> of net voor </body> -->
-<link rel="stylesheet" href="/assets/demo-tools.css">
-<script type="module" src="/assets/demo-tools.js"></script>
-
 
 let dogCount = 0;
 
