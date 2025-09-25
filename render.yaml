@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: superhond-api
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+# Tip: voeg DATABASE_URL toe zodra je een Render Postgres instance hebt.
