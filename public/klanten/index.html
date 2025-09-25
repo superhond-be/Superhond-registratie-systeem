@@ -1,3 +1,21 @@
+
+
+© Superhond · Klanten & Honden · <span id="appVersion">laden…</span>
+
+<script>
+(async () => {
+  try {
+    const r = await fetch('/api/version?b=' + Date.now()); // cache-buster
+    const j = await r.json();
+    const t = j.buildTime ? new Date(j.buildTime).toLocaleString() : '—';
+    document.getElementById('appVersion').textContent = `v${j.version} • ${t}`;
+  } catch {
+    document.getElementById('appVersion').textContent = 'API offline';
+  }
+})();
+</script>
+
+
 <!doctype html>
 <html lang="nl">
 <head>
