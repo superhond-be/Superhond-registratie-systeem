@@ -1,26 +1,12 @@
 {
-  "name": "superhond-chat-starter",
-  "version": "0.1.0",
-  "private": false,
-  "type": "module",
-  "scripts": {
-    "start": "node server/index.js",
-    "dev": "node server/index.js"
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
-    "sqlite3": "^5.1.6",
-    "node-fetch": "^3.3.2"
-  }
-}
-{
+  "name": "superhond-mini",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
   }
 }
