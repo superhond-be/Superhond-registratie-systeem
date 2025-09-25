@@ -1,13 +1,14 @@
-import express from 'express';
-import bodyParser from 'body-parser';
+import express from "express";
 
 const app = express();
-app.use(bodyParser.json());
 
-app.post('/api/klanten', (req,res)=>{
-  console.log('Ontvangen payload:', req.body);
-  res.json({ status:'ok', ontvangen:req.body });
+// Testroute
+app.get("/", (req, res) => {
+  res.send("✅ Superhond draait op StackBlitz!");
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, ()=> console.log('Superhond mock API actief op poort', port));
+// Belangrijk: altijd PORT uit environment gebruiken
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server gestart op poort ${PORT}`);
+});
