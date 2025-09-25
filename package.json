@@ -1,15 +1,13 @@
 {
-  "name": "superhond-webapi",
-  "version": "1.0.0",
+  "name": "superhond",
+  "version": "0.18.5",
   "type": "module",
   "engines": { "node": ">=18" },
   "scripts": {
-    "start": "node server/index.js",
-    "migrate": "node server/storage/postgres.js migrate"
+    "start": "node server/index.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.19.2",
-    "pg": "^8.11.3"
+    "express": "^4.19.2"
   }
 }
