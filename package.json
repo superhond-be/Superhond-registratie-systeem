@@ -15,3 +15,12 @@
     "node-fetch": "^3.3.2"
   }
 }
+{
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
