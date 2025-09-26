@@ -1,4 +1,4 @@
-// Toont versie in footer + badge; werkt met API én met statisch /version.json
+// Footer + badge met Belgische tijd; API-first met fallback naar version.json
 async function updateFooterVersion() {
   const footerEl = document.getElementById("version-info");
   const badgeEl  = document.getElementById("header-version");
@@ -11,8 +11,8 @@ async function updateFooterVersion() {
           hour: "2-digit", minute: "2-digit", second: "2-digit"
         })
       : "";
-    const footerText = `v${d.version} (${d.commit || "?"})${t ? " — " + t : ""}`;
-    if (footerEl) footerEl.textContent = footerText;
+    const text = `v${d.version} (${d.commit || "?"})${t ? " — " + t : ""}`;
+    if (footerEl) footerEl.textContent = text;
     if (badgeEl)  badgeEl.textContent  = `v${d.version}`;
   };
 
@@ -33,5 +33,4 @@ async function updateFooterVersion() {
     if (badgeEl)  badgeEl.textContent  = "v?";
   }
 }
-
 document.addEventListener("DOMContentLoaded", updateFooterVersion);
