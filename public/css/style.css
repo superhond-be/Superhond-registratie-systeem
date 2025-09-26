@@ -1,12 +1,103 @@
+/* ===== Superhond basis ===== */
 :root {
-  --bg: #f9f9fb;
-  --text: #222;
+  --bg: #f7f8fb;
+  --text: #1f2328;
+  --muted: #6b7280;
   --accent: #4b9ce2;
   --accent-hover: #357ab7;
-  --card-bg: #fff;
-  --card-border: #ddd;
+  --card-bg: #ffffff;
+  --card-border: #e6e8ef;
+  --shadow: 0 8px 20px rgba(0,0,0,.06);
 
   /* Superhond lay-out */
-  --superhond-yellow: #ffd633;   /* titelbalk geel */
-  --superhond-yellow-dark: #e6c300; /* hover/druk variant */
+  --superhond-yellow: #ffd633;
+  --superhond-yellow-dark: #e6c300;
+
+  --radius: 12px;
+  --container: 1100px;
+  --space: 20px;
 }
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 0 var(--space);
+}
+
+/* ===== Topbar ===== */
+.topbar {
+  background: var(--accent);
+  color: #fff;
+}
+body.dashboard-page .topbar {               /* alleen dashboard geel */
+  background: var(--superhond-yellow);
+  color: #222;
+}
+.topbar .brand {
+  padding: 18px 0;
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+
+/* ===== Page title ===== */
+.page-title {
+  margin: 28px 0 16px;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+/* ===== Tiles grid ===== */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-bottom: 40px;
+}
+.tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  text-decoration: none;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.tile span { font-size: 22px; line-height: 1; }
+.tile:hover {
+  transform: translateY(-2px);
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(0,0,0,.08);
+}
+.tile:active { transform: translateY(0); }
+
+/* ===== Footer ===== */
+.footer {
+  border-top: 1px solid var(--card-border);
+  background: #f1f3f7;
+  color: var(--muted);
+  font-size: .95rem;
+}
+.footer .container { padding: 14px var(--space); }
+
+/* ===== Utilities ===== */
+.hidden { display: none !important; }
+
+/* Small tweaks */
+a { color: inherit; }
