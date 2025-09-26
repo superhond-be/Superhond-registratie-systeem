@@ -40,5 +40,33 @@
     "postcode": "3500",
     "plaats": "Hasselt",
     "opmerkingen": "Hond is bang voor vuurwerk."
+  },
+  {
+    "id": "K2001",
+    "voornaam": "Pieter",
+    "achternaam": "Van Dijk",
+    "email": "p.vandijk@example.nl",
+    "telefoon": "+31 6 1234 5678",
+    "land": "Nederland",
+    "straat": "Hoofdstraat",
+    "nr": "22",
+    "toevoeging": "",
+    "postcode": "1011 AB",
+    "plaats": "Amsterdam",
+    "opmerkingen": "Komt vaak met de trein naar lessen."
+  },
+  {
+    "id": "K2002",
+    "voornaam": "Marieke",
+    "achternaam": "Jansen",
+    "email": "marieke.jansen@example.nl",
+    "telefoon": "+31 6 8765 4321",
+    "land": "Nederland",
+    "straat": "Markt",
+    "nr": "15",
+    "toevoeging": "B",
+    "postcode": "3511 DC",
+    "plaats": "Utrecht",
+    "opmerkingen": "Hond heeft medische notities."
   }
 ]
