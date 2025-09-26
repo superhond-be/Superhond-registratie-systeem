@@ -4,30 +4,18 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Superhond Registratie</title>
-  <link rel="stylesheet" href="./css/style.css" />
-  <style>
-    /* Kleine layout‐hulpjes specifiek voor de home */
-    .dashboard-page .topbar { background: #f4c400; } /* geel */
-    .topbar-flex { display:flex; align-items:center; gap:10px; }
-    .brand { margin:0; font-weight:800; }
-    .tiles { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:16px; }
-    .tile { display:block; padding:14px 16px; border:1px solid var(--card-border, #ddd);
-            background: var(--card-bg, #fff); border-radius:10px; text-decoration:none; color:inherit;
-            box-shadow: 0 2px 8px rgba(0,0,0,.05); }
-    .tile:hover { transform: translateY(-1px); }
-    .tile > span { opacity:.8; margin-left:8px; }
-    .version-badge { background:#1f2328; color:#fff; font-size:12px; padding:4px 8px; border-radius:8px; }
-    .page-title { margin:24px 0 12px; }
-    .footer { margin-top:24px; padding:16px 0; border-top:1px solid #e5e5e5; color:#555; }
-    .footer small { opacity:.85; }
-  </style>
+
+  <!-- Basis styles eerst -->
+  <link rel="stylesheet" href="./css/style.css">
+  <!-- Gedeelde lay-out als laatste (wint van style.css) -->
+  <link rel="stylesheet" href="./css/superhond.css">
 </head>
 <body class="dashboard-page">
 
-  <!-- Header -->
+  <!-- Header: titel + hondje gecentreerd, versiebadge rechts -->
   <header class="topbar">
-    <div class="container topbar-flex">
-      <h1 class="brand">🐶 Superhond Registratie</h1>
+    <div class="container topbar-home-center">
+      <h1 class="brand brand--center">🐶 Superhond Registratie</h1>
       <span class="version-badge" id="header-version">v…</span>
     </div>
   </header>
@@ -51,59 +39,55 @@
   <!-- Footer -->
   <footer class="footer">
     <div class="container">
-      <small>© Superhond 2025 — <span id="version-info">Versie laden…</span></small>
-      <div id="apiHealth" style="margin-top:6px;"></div>
+      © Superhond 2025 — <span id="version-info">Versie laden…</span>
+      <div id="apiHealth" class="sub" style="margin-top:6px;"></div>
     </div>
   </footer>
 
-  <!-- Shared footer helper (optioneel; houdt health/commit bij als je dat script hebt) -->
+  <!-- Optioneel: jouw gedeelde footer helpers -->
   <script src="./js/footer.js?b=1"></script>
 
-  <!-- Robuuste versie‐fetch: API → fallback naar version.json → graceful degrade -->
+  <!-- Versie-loader: API -> fallback -> none -->
   <script>
     (async function () {
-      const headerEl  = document.getElementById('header-version');
-      const footerEl  = document.getElementById('version-info');
-      const healthEl  = document.getElementById('apiHealth');
+      const headerEl = document.getElementById('header-version');
+      const footerEl = document.getElementById('version-info');
+      const healthEl = document.getElementById('apiHealth');
 
-      const fmtBuild = ts => {
+      const pad = n => String(n).padStart(2,'0');
+      const fmt = ts => {
         try {
           const d = new Date(ts);
           if (isNaN(+d)) return '';
-          // dd/mm/yyyy, hh:mm:ss
-          const pad = n => (''+n).padStart(2,'0');
           return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}, `
                + `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
         } catch { return ''; }
       };
 
-      const setVersion = (src, j) => {
-        const v = j?.version ? `v${j.version}` : 'v?';
-        const t = j?.buildTime ? fmtBuild(j.buildTime) : '';
-        if (headerEl) headerEl.textContent = v;
-        if (footerEl) footerEl.textContent = `${v} (${src}) ${t ? '— ' + t : ''}`;
+      const setV = (src, j) => {
+        const chip = j?.version ? `v${j.version}` : 'v?';
+        const t = j?.buildTime ? fmt(j.buildTime) : '';
+        if (headerEl) headerEl.textContent = chip;
+        if (footerEl) footerEl.textContent = `${chip} (${src})${t ? ' — ' + t : ''}`;
       };
 
       try {
-        // 1) Probeer API
         const r = await fetch('/api/version?b=' + Date.now());
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const j = await r.json();
-        setVersion('api', j);
+        setV('static', j); // laat "static" staan als je buildTime uit Render meegeeft
         if (healthEl) healthEl.textContent = 'API online ✓';
       } catch (e1) {
         try {
-          // 2) Fallback naar statische version.json
           const r2 = await fetch('./version.json?b=' + Date.now());
           if (!r2.ok) throw new Error('HTTP ' + r2.status);
           const j2 = await r2.json();
-          setVersion('static', j2);
+          setV('static', j2);
           if (healthEl) healthEl.textContent = 'API offline — static versie gebruikt';
         } catch (e2) {
-          // 3) Graceful degrade
           if (headerEl) headerEl.textContent = 'v?';
           if (footerEl) footerEl.textContent = 'v? — (geen versiebron beschikbaar)';
-          if (healthEl) healthEl.textContent = 'API offline — geen version.json gevonden';
+          if (healthEl) healthEl.textContent = 'API offline — geen versie-info';
           console.warn('Version fetch failed:', e1, e2);
         }
       }
