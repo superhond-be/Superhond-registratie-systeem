@@ -3,34 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>🐶 Superhond Registratie Systeem</title>
-  <meta name="description" content="Dashboard voor klanten, honden, lessen en administratie.">
+  <title>🐶 Superhond Registratie</title>
+  <meta name="description" content="Dashboard voor klanten, honden, lessen en administratie." />
   <link rel="stylesheet" href="./css/style.css" />
 </head>
-<body>
+<body class="dashboard-page">
   <header class="topbar">
-    <h1 class="brand">🐶 Superhond Registratie</h1>
+    <div class="container">
+      <h1 class="brand">🐶 Superhond Registratie</h1>
+    </div>
   </header>
 
-  <main class="dashboard">
-    <h2>Hoofdmenu</h2>
-    <div class="tiles">
-      <a href="klanten.html" class="tile">👤 Klanten</a>
-      <a href="honden.html" class="tile">🐕 Honden</a>
-      <a href="lessen.html" class="tile">📅 Lessen</a>
-      <a href="trainers.html" class="tile">👩‍🏫 Trainers</a>
-      <a href="strippenkaarten.html" class="tile">🎟️ Strippenkaarten</a>
-      <a href="rapporten.html" class="tile">📊 Rapporten</a>
-      <a href="instellingen.html" class="tile">⚙️ Instellingen</a>
-      <a href="over.html" class="tile">ℹ️ Over</a>
-    </div>
+  <main class="container">
+    <h2 class="page-title">Hoofdmenu</h2>
+
+    <nav class="tiles">
+      <a href="./klanten/" class="tile"><span>👤</span> Klanten</a>
+      <a href="./honden/" class="tile"><span>🐕</span> Honden</a>
+      <a href="./lessen/" class="tile"><span>📅</span> Lessen</a>
+      <a href="./trainers/" class="tile"><span>👩‍🏫</span> Trainers</a>
+      <a href="./strippenkaarten/" class="tile"><span>🎟️</span> Strippenkaarten</a>
+      <a href="./rapporten/" class="tile"><span>📊</span> Rapporten</a>
+      <a href="./instellingen/" class="tile"><span>⚙️</span> Instellingen</a>
+      <a href="./over/" class="tile"><span>ℹ️</span> Over</a>
+    </nav>
   </main>
 
-  <footer>
-    <p>© Superhond 2025 — <span id="version-info">Versie laden...</span></p>
+  <footer class="footer">
+    <div class="container">
+      © Superhond 2025 — <span id="version-info">Versie laden...</span>
+    </div>
   </footer>
 
-  <!-- Shared footer script -->
   <script src="./js/footer.js?b=12345"></script>
 </body>
 </html>
