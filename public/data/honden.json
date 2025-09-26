@@ -4,20 +4,27 @@
     "naam": "Rex",
     "ras": "Mechelse Herder",
     "geboorte": "2020-05-12",
-    "eigenaar": "Jan Janssens"
+    "klantId": "K1001"
   },
   {
     "id": "H1002",
     "naam": "Bella",
     "ras": "Labrador Retriever",
     "geboorte": "2019-11-03",
-    "eigenaar": "Ann Peeters"
+    "klantId": "K1004"
   },
   {
     "id": "H1003",
     "naam": "Max",
     "ras": "Border Collie",
     "geboorte": "2021-02-18",
-    "eigenaar": "Sofie De Smet"
+    "klantId": "K1002"
+  },
+  {
+    "id": "H1004",
+    "naam": "Luna",
+    "ras": "Golden Retriever",
+    "geboorte": "2018-07-07",
+    "klantId": "K1003"
   }
 ]
