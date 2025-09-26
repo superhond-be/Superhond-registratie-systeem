@@ -1,58 +1,89 @@
-<footer>
-  <p>Superhond © 2025 — <span id="version-info">Versie laden...</span></p>
-</footer>
-
-
-<script>
-(async () => {
-  try {
-    const r = await fetch('/api/version?b=' + Date.now()); // cache-buster
-    const j = await r.json();
-    const t = j.buildTime ? new Date(j.buildTime).toLocaleString() : '—';
-    document.getElementById('appVersion').textContent = `v${j.version} • ${t}`;
-  } catch {
-    document.getElementById('appVersion').textContent = 'API offline';
-  }
-})();
-</script>
-
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Superhond — Admin Klanten</title>
-  <link rel="stylesheet" href="../admin.css">
+  <title>👤 Klanten – Superhond</title>
+  <link rel="stylesheet" href="../css/style.css" />
 </head>
 <body>
   <header class="topbar">
-    <a href="../dashboard.html" class="btn">⬅️ Terug</a>
-    <h1>👤 Klanten (demo)</h1>
+    <div class="container topbar-flex">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <a href="../" class="btn-back" aria-label="Terug naar dashboard">← Terug</a>
+        <h1 class="brand">👤 Klanten</h1>
+      </div>
+      <span class="version-badge" id="header-version">v…</span>
+    </div>
   </header>
 
   <main class="container">
-    <section class="panel">
-      <table class="table">
-        <thead>
-          <tr><th>Naam</th><th>E-mail</th><th>Telefoon</th><th>Honden</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Sara De Smet</td>
-            <td>sara@example.be</td>
-            <td>+32 470 00 00 00</td>
-            <td>Boef, Mila</td>
-          </tr>
-          <tr>
-            <td>Jan Peeters</td>
-            <td>jan.peeters@mail.com</td>
-            <td>+32 495 12 34 56</td>
-            <td>Rocky</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
+    <h2 class="page-title">Nieuwe klant</h2>
+
+    <form id="klantForm" class="form-card" autocomplete="on">
+      <div class="grid-2">
+        <label>Voornaam
+          <input name="voornaam" required placeholder="Jan" />
+        </label>
+        <label>Achternaam
+          <input name="achternaam" required placeholder="Janssens" />
+        </label>
+
+        <label>E-mail
+          <input type="email" name="email" required placeholder="jan@example.com" />
+        </label>
+        <label>Telefoon
+          <input name="telefoon" inputmode="tel" placeholder="+32 470 12 34 56" />
+        </label>
+
+        <label>Land
+          <select name="land">
+            <option value="België" selected>België</option>
+            <option value="Nederland">Nederland</option>
+          </select>
+        </label>
+        <span></span>
+
+        <label>Straat
+          <input name="straat" placeholder="Kerkstraat" />
+        </label>
+        <label>Nr / toevoeging
+          <div class="grid-2 tight">
+            <input name="nr" placeholder="12" />
+            <input name="toevoeging" placeholder="bus A" />
+          </div>
+        </label>
+
+        <label>Postcode
+          <input name="postcode" placeholder="2000" />
+        </label>
+        <label>Plaats
+          <input name="plaats" placeholder="Antwerpen" />
+        </label>
+
+        <label class="full">Opmerkingen
+          <textarea name="opmerkingen" rows="3" placeholder="Bijv. voorkeur tijdslot, hond allergieën, ..."></textarea>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-primary">💾 Opslaan (demo)</button>
+        <button type="button" id="prefillBtn" class="btn">⚡ Prefill demo</button>
+        <button type="reset" class="btn">↺ Reset</button>
+      </div>
+    </form>
+
+    <h3 style="margin-top:24px;">Resultaat (demo-output)</h3>
+    <pre id="resultBox" class="result-box">Nog geen data…</pre>
   </main>
+
+  <footer class="footer">
+    <div class="container">
+      © Superhond 2025 — <span id="version-info">Versie laden...</span>
+    </div>
+  </footer>
+
+  <script src="../js/footer.js?b=12345"></script>
+  <script src="../js/klanten.js?b=12345"></script>
 </body>
 </html>
