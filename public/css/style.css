@@ -37,20 +37,32 @@ body {
 }
 
 /* ===== Topbar ===== */
-.topbar {
-  background: var(--accent);
-  color: #fff;
-}
-body.dashboard-page .topbar {               /* alleen dashboard geel */
-  background: var(--superhond-yellow);
-  color: #222;
-}
+.topbar { background: var(--accent); color: #fff; }
+body.dashboard-page .topbar { background: var(--superhond-yellow); color: #222; }
+
 .topbar .brand {
   padding: 18px 0;
   margin: 0;
   font-weight: 800;
   letter-spacing: .2px;
 }
+
+/* Flexbox in topbar + versiebadge */
+.topbar-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.version-badge {
+  background: #222;
+  color: #fff;
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0,0,0,.2);
+}
+body.dashboard-page .version-badge { background: var(--superhond-yellow-dark); color: #222; }
 
 /* ===== Page title ===== */
 .page-title {
@@ -98,6 +110,4 @@ body.dashboard-page .topbar {               /* alleen dashboard geel */
 
 /* ===== Utilities ===== */
 .hidden { display: none !important; }
-
-/* Small tweaks */
 a { color: inherit; }
