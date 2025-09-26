@@ -1,14 +1,21 @@
-# Superhond V1.7
+# 🐶 Superhond Registratie Systeem
 
-**Nieuw**
-- 🌐 Opslaan naar API (POST /api/klanten)
-- 📦 Mock server (`server/index.js` met Express)
-- ⚙️ Fallback: als API niet draait, blijft JSON in UI getoond
+## 📂 Structuur
+- **/public** → frontend (HTML, CSS, JS)
+- **/server** → backend (Express API)
+- **/db** → database schema's & seeddata
+- **package.json** → versiebeheer + scripts
 
-## Gebruik
-Frontend: `public/` (Render static site of CDN)
-Backend: `server/index.js` (Node + Express)
+---
 
-## Render
-- Voor frontend-only: Build Command leeg, Publish Directory = public
-- Voor fullstack: gebruik Node (npm start met Express)
+## 🚀 Workflow: GitHub → Render → Live
+
+### 1. Code aanpassen
+- Maak wijzigingen in frontend of backend.
+- Update versienummer in `package.json` (bv. `0.18.6`).
+
+### 2. Commit & push naar GitHub
+```bash
+git add .
+git commit -m "Update klanten API + versie 0.18.6"
+git push origin main
