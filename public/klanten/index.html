@@ -1,84 +1,41 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>👤 Klanten – Superhond</title>
-  <link rel="stylesheet" href="../css/style.css" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Klanten – Superhond</title>
 </head>
 <body>
-  <header class="topbar">
-    <div class="container topbar-flex">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <a href="../" class="btn-back" aria-label="Terug naar dashboard">← Terug</a>
-        <h1 class="brand">👤 Klanten</h1>
-      </div>
-      <span class="version-badge" id="header-version">v…</span>
-    </div>
-  </header>
-
   <main class="container">
     <h2 class="page-title">Klantenlijst</h2>
 
-    <!-- Zoek/filter -->
-    <div class="form-card" style="margin-bottom:14px;">
-      
-      <div class="grid-2">
-  <label>Zoek (naam/e-mail)
-    <input id="zoekInput" placeholder="Typ om te filteren…" />
-  </label>
-  <label>Min. aantal honden
-    <input id="minDogs" type="number" min="0" value="0" />
-  </label>
-  <label>Land
-    <select id="landFilter">
-      <option value="">Alle landen</option>
-      <option value="België">België</option>
-      <option value="Nederland">Nederland</option>
-    </select>
-  </label>
-</div>
-    </div>
+    <section class="form-card" style="margin-bottom:12px;">
+      <div style="display:grid;grid-template-columns:1fr 120px 200px;gap:12px;">
+        <input id="zoekInput" placeholder="Zoek (naam/e-mail)…">
+        <input id="minDogs" type="number" min="0" value="0">
+        <select id="landFilter">
+          <option value="">Alle landen</option>
+          <option>België</option>
+          <option>Nederland</option>
+        </select>
+      </div>
+      <div class="sub" id="dataStatus" style="margin-top:8px;">Klanten laden…</div>
+    </section>
 
-    <!-- Tabel -->
-    <div class="form-card" style="padding:0;">
-      <div style="overflow:auto">
-        <table class="table" id="klantenTable">
+    <section class="form-card">
+      <div class="table-wrapper">
+        <table id="klantenTable" class="table">
           <thead>
-            <tr>
-              <th style="min-width:160px">Klant</th>
-              <th>E-mail</th>
-              <th>Plaats</th>
-              <th style="text-align:center">Honden</th>
-              <th style="min-width:160px">Acties</th>
-            </tr>
+            <tr><th>Klant</th><th>E-mail</th><th>Plaats</th><th>Honden</th><th>Acties</th></tr>
           </thead>
-          <tbody><!-- gevuld door JS --></tbody>
+          <tbody></tbody>
         </table>
       </div>
-    </div>
+    </section>
+  </main>
 
-    <h2 class="page-title">Nieuwe klant</h2>
-    <form id="klantForm" class="form-card" autocomplete="on">
-      <div class="grid-2">
-        <label>Voornaam <input name="voornaam" required placeholder="Jan" /></label>
-        <label>Achternaam <input name="achternaam" required placeholder="Janssens" /></label>
-        <label>E-mail <input type="email" name="email" required placeholder="jan@example.com" /></label>
-        <label>Telefoon <input name="telefoon" inputmode="tel" placeholder="+32 470 12 34 56" /></label>
-        <label>Land
-          <select name="land">
-            <option value="België" selected>België</option>
-            <option value="Nederland">Nederland</option>
-          </select>
-        </label><span></span>
-        <label>Straat <input name="straat" placeholder="Kerkstraat" /></label>
-        <label>Nr / toevoeging
-          <div class="grid-2 tight">
-            <input name="nr" placeholder="12" />
-            <input name="toevoeging" placeholder="bus A" />
-          </div>
-        </label>
-        <label>Postcode <input name="postcode" placeholder="2000" /></label>
-        <label>Plaats <input name="plaats" placeholder="Antwerpen" /></label>
-        <label class="full">Opmerkingen
-          <textarea name="opmerk
+  <script src="/ui/layout.js?b=1"></script>
+  <script>SuperhondUI.mount({ title:'Klanten', icon:'👤', back:'../index.html' });</script>
+  <script src="/js/klanten.js?b=1"></script>
+</body>
+</html>
