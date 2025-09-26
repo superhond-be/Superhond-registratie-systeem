@@ -1,61 +1,42 @@
 [
   {
-    "id": "K1001",
+    "id": 1,
     "voornaam": "Jan",
     "achternaam": "Janssens",
     "email": "jan.janssens@example.com",
     "telefoon": "+32 470 12 34 56",
     "land": "België",
-    "straat": "Kerkstraat",
-    "nr": "12",
-    "toevoeging": "bus A",
-    "postcode": "2470",
-    "plaats": "Retie",
-    "opmerkingen": "Wil later puberlessen volgen."
+    "plaats": "Antwerpen",
+    "honden": [1, 2]
   },
   {
-    "id": "K1002",
+    "id": 2,
+    "voornaam": "Ann",
+    "achternaam": "Peeters",
+    "email": "ann.peeters@example.com",
+    "telefoon": "+32 475 11 22 33",
+    "land": "België",
+    "plaats": "Retie",
+    "honden": [3]
+  },
+  {
+    "id": 3,
     "voornaam": "Sofie",
     "achternaam": "De Smet",
     "email": "sofie.desmet@example.com",
     "telefoon": "+32 488 99 77 11",
     "land": "België",
-    "straat": "Stationslaan",
-    "nr": "3",
-    "toevoeging": "",
-    "postcode": "3500",
     "plaats": "Hasselt",
-    "opmerkingen": "Beschikbaar vooral in weekends."
+    "honden": []
   },
   {
-    "id": "K1003",
-    "voornaam": "Peter",
-    "achternaam": "Van Dijk",
-    "email": "peter.vandijk@example.nl",
-    "telefoon": "+31 6 12 34 56 78",
+    "id": 4,
+    "voornaam": "Tom",
+    "achternaam": "Vermeulen",
+    "email": "tom.vermeulen@example.com",
+    "telefoon": "+31 6 1234 5678",
     "land": "Nederland",
-    "straat": "Dorpsstraat",
-    "nr": "7",
-    "toevoeging": "",
-    "postcode": "1012 AB",
-    "plaats": "Amsterdam",
-    "opmerkingen": "Komt meestal met twee honden."
-  },
-  {
-    "id": "K1004",
-    "voornaam": "Ann",
-    "achternaam": "Peeters",
-    "email": "ann.peeters@example.com",
-    "telefoon": "+32 475 22 44 66",
-    "land": "België",
-    "straat": "Dorpstraat",
-    "nr": "9",
-    "toevoeging": "",
-    "postcode": "2000",
-    "plaats": "Antwerpen",
-    "opmerkingen": "Interesse puppy-lessen. Beschikbaar wo/za."
+    "plaats": "Eindhoven",
+    "honden": [4]
   }
 ]
-<script src="../js/footer.js?b=1"></script>
-<script src="/js/klanten.js?b=1"></script>
-
