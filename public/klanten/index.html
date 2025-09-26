@@ -18,72 +18,59 @@
   </header>
 
   <main class="container">
-    <h2 class="page-title">Nieuwe klant</h2>
+    <h2 class="page-title">Klantenlijst</h2>
 
+    <!-- Zoek/filter -->
+    <div class="form-card" style="margin-bottom:14px;">
+      <div class="grid-2">
+        <label>Zoek (naam/e-mail)
+          <input id="zoekInput" placeholder="Typ om te filteren…" />
+        </label>
+        <label>Min. aantal honden
+          <input id="minDogs" type="number" min="0" value="0" />
+        </label>
+      </div>
+    </div>
+
+    <!-- Tabel -->
+    <div class="form-card" style="padding:0;">
+      <div style="overflow:auto">
+        <table class="table" id="klantenTable">
+          <thead>
+            <tr>
+              <th style="min-width:160px">Klant</th>
+              <th>E-mail</th>
+              <th>Plaats</th>
+              <th style="text-align:center">Honden</th>
+              <th style="min-width:160px">Acties</th>
+            </tr>
+          </thead>
+          <tbody><!-- gevuld door JS --></tbody>
+        </table>
+      </div>
+    </div>
+
+    <h2 class="page-title">Nieuwe klant</h2>
     <form id="klantForm" class="form-card" autocomplete="on">
       <div class="grid-2">
-        <label>Voornaam
-          <input name="voornaam" required placeholder="Jan" />
-        </label>
-        <label>Achternaam
-          <input name="achternaam" required placeholder="Janssens" />
-        </label>
-
-        <label>E-mail
-          <input type="email" name="email" required placeholder="jan@example.com" />
-        </label>
-        <label>Telefoon
-          <input name="telefoon" inputmode="tel" placeholder="+32 470 12 34 56" />
-        </label>
-
+        <label>Voornaam <input name="voornaam" required placeholder="Jan" /></label>
+        <label>Achternaam <input name="achternaam" required placeholder="Janssens" /></label>
+        <label>E-mail <input type="email" name="email" required placeholder="jan@example.com" /></label>
+        <label>Telefoon <input name="telefoon" inputmode="tel" placeholder="+32 470 12 34 56" /></label>
         <label>Land
           <select name="land">
             <option value="België" selected>België</option>
             <option value="Nederland">Nederland</option>
           </select>
-        </label>
-        <span></span>
-
-        <label>Straat
-          <input name="straat" placeholder="Kerkstraat" />
-        </label>
+        </label><span></span>
+        <label>Straat <input name="straat" placeholder="Kerkstraat" /></label>
         <label>Nr / toevoeging
           <div class="grid-2 tight">
             <input name="nr" placeholder="12" />
             <input name="toevoeging" placeholder="bus A" />
           </div>
         </label>
-
-        <label>Postcode
-          <input name="postcode" placeholder="2000" />
-        </label>
-        <label>Plaats
-          <input name="plaats" placeholder="Antwerpen" />
-        </label>
-
+        <label>Postcode <input name="postcode" placeholder="2000" /></label>
+        <label>Plaats <input name="plaats" placeholder="Antwerpen" /></label>
         <label class="full">Opmerkingen
-          <textarea name="opmerkingen" rows="3" placeholder="Bijv. voorkeur tijdslot, hond allergieën, ..."></textarea>
-        </label>
-      </div>
-
-      <div class="form-actions">
-        <button type="submit" class="btn-primary">💾 Opslaan (demo)</button>
-        <button type="button" id="prefillBtn" class="btn">⚡ Prefill demo</button>
-        <button type="reset" class="btn">↺ Reset</button>
-      </div>
-    </form>
-
-    <h3 style="margin-top:24px;">Resultaat (demo-output)</h3>
-    <pre id="resultBox" class="result-box">Nog geen data…</pre>
-  </main>
-
-  <footer class="footer">
-    <div class="container">
-      © Superhond 2025 — <span id="version-info">Versie laden...</span>
-    </div>
-  </footer>
-
-  <script src="../js/footer.js?b=12345"></script>
-  <script src="../js/klanten.js?b=12345"></script>
-</body>
-</html>
+          <textarea name="opmerk
