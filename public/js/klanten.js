@@ -1,113 +1,87 @@
-// /public/js/klanten.js — Klantenlijst met honden-telling + filters
-(function () {
-  // --- Elementen ---
-  const TBL_BODY   = document.querySelector('#klantenTable tbody');
-  const STATUS_EL  = document.getElementById('dataStatus');
-  const zoekInput  = document.getElementById('zoekInput');
-  const minDogs    = document.getElementById('minDogs');
-  const landFilter = document.getElementById('landFilter');
+(async function () {
+  const $ = s => document.querySelector(s);
+  const log = (...a) => { try { console.log('[Klant]', ...a); } catch {} };
 
-  // --- Data buffers ---
-  let KLANTEN = [];
-  let HONDEN  = [];
-  let HONDEN_PER_KLANT = {};
+  const TBL = $('#klanten-tabel');        // <table id="klanten-tabel">
+  const STATUS = $('#klantenStatus');     // <div id="klantenStatus">
+  const LAND_FILTER = $('#filterLand');   // <select id="filterLand">
+  const MIN_HONDEN = $('#filterMinHonden'); // <input id="filterMinHonden">
+  const SEARCH = $('#filterZoek');        // <input id="filterZoek">
 
-  // --- Helpers ---
-  const setStatus = (txt, ok = true) => {
-    if (!STATUS_EL) return;
-    STATUS_EL.textContent = txt;
-    STATUS_EL.style.color = ok ? '#1f2328' : '#b42318';
-  };
+  function showError(msg, detail) {
+    if (STATUS) STATUS.innerHTML =
+      `<div class="form-card" style="border-left:4px solid #d83a3a">
+         <b>Kon demo-data niet laden:</b> ${msg}<br>
+         <span class="sub">${detail || ''}</span>
+       </div>`;
+  }
 
-  const keyName = k => `${k.voornaam || ''} ${k.achternaam || ''}`.trim();
-  const fmtPlaats = k => [k.postcode, k.plaats].filter(Boolean).join(' ');
-
-  const buildHondenTeller = () => {
-    HONDEN_PER_KLANT = HONDEN.reduce((acc, h) => {
-      const id = h.klantId;
-      if (!id) return acc;
-      acc[id] = (acc[id] || 0) + 1;
-      return acc;
-    }, {});
-  };
-
-  // --- Loaders ---
-  const loadJson = async (url) => {
-    const r = await fetch(url + '?b=' + Date.now());
-    if (!r.ok) throw new Error(`${url} → HTTP ${r.status}`);
+  async function loadJson(url) {
+    const u = `${url}${url.includes('?') ? '&' : '?'}b=${Date.now()}`;
+    const r = await fetch(u);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.json();
-  };
+  }
 
-  const initData = async () => {
-    setStatus('Data laden…');
-    try {
-      // Absolute paden, want we zitten op /klanten/
-      const [k, h] = await Promise.all([
-        loadJson('/data/klanten.json'),
-        loadJson('/data/honden.json'),
-      ]);
-      KLANTEN = Array.isArray(k) ? k : [];
-      HONDEN  = Array.isArray(h) ? h : [];
-      buildHondenTeller();
-      setStatus(`Geladen: ${KLANTEN.length} klanten, ${HONDEN.length} honden ✔️`);
-    } catch (e) {
-      setStatus('❌ Kon demo-data niet laden: ' + e.message, false);
-      KLANTEN = [];
-      HONDEN  = [];
-      HONDEN_PER_KLANT = {};
-    }
-  };
+  function renderRows(items) {
+    const tbody = TBL && TBL.tBodies[0];
+    if (!tbody) return;
+    tbody.innerHTML = items.map(k => {
+      const honden = (k.honden || []).length;
+      const plaats = [k.postcode, k.plaats].filter(Boolean).join(' ');
+      return `<tr>
+        <td>${(k.voornaam || '')} ${(k.achternaam || '')}</td>
+        <td>${k.email || ''}</td>
+        <td>${plaats || ''}</td>
+        <td style="text-align:right">${honden}</td>
+        <td></td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="5" class="sub">Geen resultaten…</td></tr>`;
+  }
 
-  // --- Filtering + Render ---
-  const getFiltered = () => {
-    const zoek = (zoekInput?.value || '').toLowerCase();
-    const min  = parseInt(minDogs?.value || '0', 10);
-    const land = landFilter?.value || '';
+  function applyFilters(data) {
+    const zoek = (SEARCH?.value || '').toLowerCase().trim();
+    const minH = parseInt(MIN_HONDEN?.value || '0', 10) || 0;
+    const land = LAND_FILTER?.value || '';
 
-    return KLANTEN.filter(k => {
-      const naam  = keyName(k).toLowerCase();
-      const mail  = (k.email || '').toLowerCase();
-      const dogs  = HONDEN_PER_KLANT[k.id] || 0;
-
-      const matchZoek = naam.includes(zoek) || mail.includes(zoek);
-      const matchDogs = dogs >= min;
-      const matchLand = !land || k.land === land;
-
-      return matchZoek && matchDogs && matchLand;
+    return data.filter(k => {
+      if (land && land !== 'ALL' && (k.land || '').toLowerCase() !== land.toLowerCase()) return false;
+      const count = (k.honden || []).length;
+      if (count < minH) return false;
+      if (zoek) {
+        const hay = [k.voornaam, k.achternaam, k.email].join(' ').toLowerCase();
+        if (!hay.includes(zoek)) return false;
+      }
+      return true;
     });
-  };
+  }
 
-  const render = () => {
-    if (!TBL_BODY) return;
-    const data = getFiltered();
+  try {
+    if (STATUS) STATUS.textContent = 'Demo-data laden…';
+    // pad is absoluut omdat /public de webroot is
+    const klanten = await loadJson('/data/klanten.json');
 
-    TBL_BODY.innerHTML = data.map(k => {
-      const dogs = HONDEN_PER_KLANT[k.id] || 0;
-      return `
-        <tr>
-          <td>${keyName(k)}<div class="sub">${k.land || ''}</div></td>
-          <td>${k.email || ''}</td>
-          <td>${fmtPlaats(k)}</td>
-          <td style="text-align:center">${dogs}</td>
-          <td>
-            <button class="btn btn-small" data-edit="${k.id}">✏️ Bewerken</button>
-            <button class="btn btn-small" data-del="${k.id}">🗑️ Verwijderen</button>
-          </td>
-        </tr>
-      `;
-    }).join('') || `
-      <tr>
-        <td colspan="5" style="text-align:center;color:#888">Geen resultaten…</td>
-      </tr>
-    `;
-  };
+    // Normaliseer velden een tikje, maar raak datums niet aan (Safari is streng)
+    const norm = klanten.map(k => ({
+      id: k.id || '',
+      voornaam: k.voornaam || '',
+      achternaam: k.achternaam || '',
+      email: k.email || '',
+      land: k.land || '',
+      postcode: k.postcode || '',
+      plaats: k.plaats || '',
+      honden: Array.isArray(k.honden) ? k.honden : []
+    }));
 
-  // --- Events ---
-  [zoekInput, minDogs, landFilter].forEach(el => el && el.addEventListener('input', render));
+    const update = () => renderRows(applyFilters(norm));
+    [SEARCH, MIN_HONDEN, LAND_FILTER].forEach(el => el && el.addEventListener('input', update));
+    update();
 
-  // --- Init ---
-  (async function start() {
-    await initData();
-    render();
-  })();
+    if (STATUS) STATUS.textContent = `Geladen: ${norm.length} klanten ✓`;
+    log('OK', norm);
+  } catch (e) {
+    log('ERR', e);
+    showError(e.message || 'Onbekende fout', 'Controleer /data/klanten.json & netwerk');
+    if (STATUS) STATUS.classList.add('sub');
+  }
 })();
