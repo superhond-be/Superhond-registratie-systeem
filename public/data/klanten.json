@@ -1,0 +1,44 @@
+[
+  {
+    "id": "K1001",
+    "voornaam": "An",
+    "achternaam": "Peeters",
+    "email": "an.peeters@example.com",
+    "telefoon": "+32 470 12 34 56",
+    "land": "België",
+    "straat": "Dorpsstraat",
+    "nr": "7",
+    "toevoeging": "bus 2",
+    "postcode": "2470",
+    "plaats": "Retie",
+    "opmerkingen": "Interesse puppy-lessen. Beschikbaar woe/za."
+  },
+  {
+    "id": "K1002",
+    "voornaam": "Jan",
+    "achternaam": "Janssens",
+    "email": "jan.janssens@example.com",
+    "telefoon": "+32 475 22 44 66",
+    "land": "België",
+    "straat": "Kerkstraat",
+    "nr": "12",
+    "toevoeging": "",
+    "postcode": "2000",
+    "plaats": "Antwerpen",
+    "opmerkingen": ""
+  },
+  {
+    "id": "K1003",
+    "voornaam": "Sofie",
+    "achternaam": "De Smet",
+    "email": "sofie.desmet@example.com",
+    "telefoon": "+32 488 99 77 11",
+    "land": "België",
+    "straat": "Stationslaan",
+    "nr": "3",
+    "toevoeging": "A",
+    "postcode": "3500",
+    "plaats": "Hasselt",
+    "opmerkingen": "Hond is bang voor vuurwerk."
+  }
+]
