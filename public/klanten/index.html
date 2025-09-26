@@ -22,14 +22,22 @@
 
     <!-- Zoek/filter -->
     <div class="form-card" style="margin-bottom:14px;">
+      
       <div class="grid-2">
-        <label>Zoek (naam/e-mail)
-          <input id="zoekInput" placeholder="Typ om te filteren…" />
-        </label>
-        <label>Min. aantal honden
-          <input id="minDogs" type="number" min="0" value="0" />
-        </label>
-      </div>
+  <label>Zoek (naam/e-mail)
+    <input id="zoekInput" placeholder="Typ om te filteren…" />
+  </label>
+  <label>Min. aantal honden
+    <input id="minDogs" type="number" min="0" value="0" />
+  </label>
+  <label>Land
+    <select id="landFilter">
+      <option value="">Alle landen</option>
+      <option value="België">België</option>
+      <option value="Nederland">Nederland</option>
+    </select>
+  </label>
+</div>
     </div>
 
     <!-- Tabel -->
