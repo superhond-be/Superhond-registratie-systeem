@@ -1,14 +1,51 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="nl">
-<meta charset="utf-8"/>
-<title>Over — Superhond</title>
-<body style="font-family:system-ui,Arial;margin:24px;max-width:780px">
-  <h1>Over / Versie</h1>
-  <pre id="out" style="background:#111;color:#dfe; padding:12px; border-radius:8px;"></pre>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Over - Superhond</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="brand">ℹ️ Over Superhond</h1>
+  </header>
+
+  <main class="dashboard">
+    <h2>Systeeminformatie</h2>
+    <pre id="version-box">Versie laden...</pre>
+    <pre id="health-box">Health laden...</pre>
+  </main>
+
+  <footer>
+    <p>© Superhond 2025 — <span id="version-info">Versie laden...</span></p>
+  </footer>
+
+  <!-- Shared footer script -->
+  <script src="../js/footer.js?b=12345"></script>
   <script>
-    fetch("/api/version").then(r=>r.json()).then(j=>{
-      document.getElementById("out").textContent = JSON.stringify(j,null,2);
-    }).catch(()=>{ document.getElementById("out").textContent = "API offline"; });
+    // Versie ophalen
+    fetch('/api/version?b=' + Date.now())
+      .then(r => r.json())
+      .then(d => {
+        document.getElementById('version-box').textContent =
+          JSON.stringify(d, null, 2);
+      })
+      .catch(() => {
+        document.getElementById('version-box').textContent =
+          "⚠️ Kon versie niet laden";
+      });
+
+    // Health ophalen
+    fetch('/health?b=' + Date.now())
+      .then(r => r.text())
+      .then(d => {
+        document.getElementById('health-box').textContent = d;
+      })
+      .catch(() => {
+        document.getElementById('health-box').textContent =
+          "⚠️ Health check mislukt";
+      });
   </script>
 </body>
 </html>
