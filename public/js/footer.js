@@ -1,25 +1,26 @@
-// /public/js/footer.js
+// Toont versie in footer; werkt met API én met statisch /version.json
 async function updateFooterVersion() {
+  const el = document.getElementById("version-info");
+  const set = d => {
+    const t = d.buildTime ? new Date(d.buildTime).toLocaleString() : "";
+    if (el) el.textContent = `v${d.version} (${d.commit || "?"})${t ? " – " + t : ""}`;
+  };
+
+  // 1) Probeer backend endpoint
   try {
-    // Cache-buster om Safari/iPad te slim af te zijn
-    const res = await fetch(`/api/version?b=${Date.now()}`);
-    if (!res.ok) throw new Error("API error");
+    const r = await fetch(`/api/version?b=${Date.now()}`);
+    if (!r.ok) throw 0;
+    set(await r.json());
+    return;
+  } catch {}
 
-    const data = await res.json();
-    const footer = document.getElementById("version-info");
-
-    if (footer) {
-      const buildTime = new Date(data.buildTime).toLocaleString();
-      footer.textContent = `v${data.version} (${data.commit || "?"}) – ${buildTime}`;
-    }
-  } catch (err) {
-    console.error("Versie ophalen mislukt:", err);
-    const footer = document.getElementById("version-info");
-    if (footer) {
-      footer.textContent = "⚠️ API offline";
-    }
+  // 2) Fallback: statisch bestand
+  try {
+    const r2 = await fetch(`/version.json?b=${Date.now()}`);
+    set(await r2.json());
+  } catch {
+    if (el) el.textContent = "⚠️ versie niet beschikbaar";
   }
 }
 
-// Automatisch starten zodra de pagina geladen is
 document.addEventListener("DOMContentLoaded", updateFooterVersion);
