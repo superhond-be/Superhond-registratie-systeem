@@ -1,98 +1,113 @@
 // /public/js/klanten.js
 (function () {
+  const TBL = document.querySelector('#klantenTable tbody');
+  const zoekInput = document.getElementById('zoekInput');
+  const minDogs   = document.getElementById('minDogs');
+  const landFilter= document.getElementById('landFilter');
+  const form      = document.getElementById('klantForm');
+  const out       = document.getElementById('resultBox');
+  const prefillBtn= document.getElementById('prefillBtn');
 
+  let KLANTEN = [];
+  let HONDEN  = [];
 
-const landFilter = document.getElementById('landFilter');
+  // --- helpers ---
+  const toKey = (k) => k.voornaam + ' ' + k.achternaam;
+  const countDogs = (klantId) => HONDEN.filter(h => h.klantId === klantId).length;
 
-function filterData(klanten, honden) {
-  const zoek = zoekInput.value.toLowerCase();
-  const minDogsVal = parseInt(minDogs.value || "0", 10);
-  const landVal = landFilter.value;
+  function show(json){ out.textContent = JSON.stringify(json, null, 2); }
 
-  return klanten.filter(k => {
-    const dogs = honden.filter(h => h.klantId === k.id);
-    const matchZoek =
-      k.voornaam.toLowerCase().includes(zoek) ||
-      k.achternaam.toLowerCase().includes(zoek) ||
-      k.email.toLowerCase().includes(zoek);
-    const matchDogs = dogs.length >= minDogsVal;
-    const matchLand = !landVal || k.land === landVal;
-    return matchZoek && matchDogs && matchLand;
-  });
-}
+  // filters
+  function filterData() {
+    const zoek = (zoekInput.value || '').toLowerCase();
+    const min  = parseInt(minDogs.value || '0', 10);
+    const land = landFilter ? landFilter.value : '';
 
-[zoekInput, minDogs, landFilter].forEach(el =>
-  el.addEventListener('input', renderTable)
-);
-  
-  const form = document.getElementById('klantForm');
-  const out  = document.getElementById('resultBox');
-  const prefillBtn = document.getElementById('prefillBtn');
-
-  function serializeForm(fd) {
-    const obj = {};
-    for (const [k, v] of fd.entries()) obj[k] = v.trim();
-    // eenvoudige normalisaties
-    if (obj.email) obj.email = obj.email.toLowerCase();
-    return obj;
+    return KLANTEN.filter(k => {
+      const dogs = countDogs(k.id);
+      const matchZoek =
+        toKey(k).toLowerCase().includes(zoek) ||
+        (k.email || '').toLowerCase().includes(zoek);
+      const matchDogs = dogs >= min;
+      const matchLand = !land || k.land === land;
+      return matchZoek && matchDogs && matchLand;
+    });
   }
 
-  function show(json) {
-    out.textContent = JSON.stringify(json, null, 2);
+  // render
+  function renderTable() {
+    if (!TBL) return;
+    const data = filterData();
+    TBL.innerHTML = data.map(k => {
+      const dogs = countDogs(k.id);
+      const naam = `${k.voornaam} ${k.achternaam}`;
+      const plaats = [k.postcode, k.plaats].filter(Boolean).join(' ');
+      return `
+        <tr>
+          <td>${naam}<div class="sub">${k.land}</div></td>
+          <td>${k.email || ''}</td>
+          <td>${plaats}</td>
+          <td style="text-align:center">${dogs}</td>
+          <td>
+            <button class="btn btn-small" data-edit="${k.id}">✏️ Bewerken</button>
+            <button class="btn btn-small" data-del="${k.id}">🗑️ Verwijderen</button>
+          </td>
+        </tr>`;
+    }).join('') || `<tr><td colspan="5" style="text-align:center;color:#888">Geen resultaten…</td></tr>`;
   }
 
+  // events
+  [zoekInput, minDogs, landFilter].forEach(el => el && el.addEventListener('input', renderTable));
+
+  // demo prefill
   prefillBtn?.addEventListener('click', () => {
     const demo = {
-      voornaam: "An",
-      achternaam: "Peeters",
-      email: "an.peeters@example.com",
-      telefoon: "+32 470 12 34 56",
-      land: "België",
-      straat: "Dorpsstraat",
-      nr: "7",
-      toevoeging: "bus 2",
-      postcode: "2470",
-      plaats: "Retie",
+      voornaam: "An", achternaam: "Peeters", email: "an.peeters@example.com",
+      telefoon: "+32 470 12 34 56", land: "België",
+      straat: "Dorpsstraat", nr: "7", toevoeging: "bus 2",
+      postcode: "2470", plaats: "Retie",
       opmerkingen: "Interesse puppy-lessen. Beschikbaar woe/za."
     };
-    Object.entries(demo).forEach(([k, v]) => {
-      const el = form.querySelector(`[name="${k}"]`);
-      if (!el) return;
-      if (el.tagName === 'SELECT' || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
-        el.value = v;
-      }
+    Object.entries(demo).forEach(([k,v])=>{
+      const el = form.querySelector(`[name="${k}"]`); if (el) el.value = v;
     });
-    show({ mode: "prefill", klant: demo });
+    show({mode:"prefill", klant:demo});
   });
 
+  // submit (demo)
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const data = serializeForm(new FormData(form));
-
-    // simpele validatie
-    if (!data.voornaam || !data.achternaam || !data.email) {
-      show({ error: "Gelieve voornaam, achternaam en e-mail in te vullen." });
+    const fd = new FormData(form);
+    const obj = {}; fd.forEach((v,k)=>obj[k]=String(v||'').trim());
+    if (!obj.voornaam || !obj.achternaam || !obj.email) {
+      show({error:"Gelieve voornaam, achternaam en e-mail in te vullen."});
       return;
     }
+    show({mode:"demo-save", klant:obj, ts:new Date().toISOString()});
 
-    // DEMO: toon lokaal
-    show({ mode: "demo-save", klant: data, timestamp: new Date().toISOString() });
-
-    // ✅ Klaar voor backend — later omschakelen naar echte API:
-    /*
-    try {
-      const res = await fetch('/api/klanten', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (!res.ok) throw new Error('API error');
-      const saved = await res.json();
-      show({ mode: "saved", klant: saved });
-      form.reset();
-    } catch (err) {
-      show({ error: "Opslaan mislukt", details: String(err) });
-    }
-    */
+    // Later: echte POST /api/klanten
+    // const res = await fetch('/api/klanten',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(obj)})
   });
+
+  // --- data laden (LET OP: absolute paden vanaf /) ---
+  async function loadData() {
+    // Omdat we op /klanten/ zitten, gebruiken we absolute paden:
+    // /data/klanten.json en /data/honden.json
+    const [kRes, hRes] = await Promise.all([
+      fetch('/data/klanten.json?b=' + Date.now()),
+      fetch('/data/honden.json?b=' + Date.now())
+    ]);
+    KLANTEN = await kRes.json();
+    HONDEN  = await hRes.json();
+  }
+
+  (async function init(){
+    try {
+      await loadData();
+    } catch (e) {
+      show({error:"Kon demo-data niet laden", details:String(e)});
+      KLANTEN = []; HONDEN = [];
+    }
+    renderTable();
+  })();
 })();
