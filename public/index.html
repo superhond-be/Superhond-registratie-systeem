@@ -1,68 +1,36 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
-  <title>Superhond — Admin Portaal</title>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root { --bg:#0f0f13; --card:#1a1f29; --muted:#9fb0c0; --text:#eaf2ff; --shadow:0 8px 20px rgba(0,0,0,.25); }
-    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
-    header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid #20242e}
-    .brand{display:flex;gap:10px;align-items:center;font-weight:700}.dot{width:10px;height:10px;border-radius:50%;background:#00c07a;box-shadow:0 0 10px #00c07a}
-    .badge{font-size:12px;background:#162033;border:1px solid #27456f;color:#cfe3ff;padding:6px 8px;border-radius:8px;display:flex;gap:8px;align-items:center}
-    main{max-width:1060px;margin:24px auto;padding:0 16px} h1{font-size:22px;margin:8px 0 18px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
-    .tile{display:block;background:var(--card);border:1px solid #222a36;border-radius:14px;padding:18px;color:inherit;text-decoration:none;box-shadow:var(--shadow)}
-    .tile:hover{border-color:#2a3750;transform:translateY(-2px)} .title{font-weight:700;margin-bottom:6px}.desc{color:var(--muted);font-size:13px}
-    footer{max-width:1060px;margin:20px auto 24px;padding:0 16px;color:#9fb0c0;font-size:12px;display:flex;gap:12px}
-    .chip{padding:4px 8px;border-radius:999px;background:#162033;border:1px solid #27456f;color:#b9d1ff}
-  </style>
+  <title>🐶 Superhond Registratie Systeem</title>
+  <meta name="description" content="Dashboard voor klanten, honden, lessen en administratie.">
+  <link rel="stylesheet" href="./css/style.css" />
 </head>
 <body>
-  <header>
-    <div class="brand"><span class="dot"></span><div>Superhond.be — Admin Portaal</div></div>
-    <div class="badge">Versie <b id="vNum">—</b> <small id="vTime">—</small></div>
+  <header class="topbar">
+    <h1 class="brand">🐶 Superhond Registratie</h1>
   </header>
 
-  <main>
-    <h1>Dashboard</h1>
-    <div class="grid">
-      <a class="tile" href="/klanten/index.html"><div class="title">👤 Klanten</div><div class="desc">Zoeken, toevoegen, bewerken</div></a>
-      <a class="tile" href="/honden/index.html"><div class="title">🐶 Honden</div><div class="desc">Per klant, ras, leeftijd</div></a>
-      <a class="tile" href="/lessen/index.html"><div class="title">📚 Lessen</div><div class="desc">Puppypack, Puber, Basisgroep</div></a>
-      <a class="tile" href="/strippenkaarten/index.html"><div class="title">🎟️ Strippenkaarten</div><div class="desc">Saldo & gebruik</div></a>
-      <a class="tile" href="/trainers/index.html"><div class="title">🧑‍🏫 Trainers</div><div class="desc">Beschikbaarheid & locaties</div></a>
-      <a class="tile" href="/instellingen/index.html"><div class="title">⚙️ Instellingen</div><div class="desc">Stijl, locaties, prijzen</div></a>
-      <a class="tile" href="/rapporten/index.html"><div class="title">📈 Rapporten</div><div class="desc">Overzicht & export</div></a>
-      <a class="tile" href="/over/index.html"><div class="title">ℹ️ Over</div><div class="desc">Build- en versie-info</div></a>
+  <main class="dashboard">
+    <h2>Hoofdmenu</h2>
+    <div class="tiles">
+      <a href="klanten.html" class="tile">👤 Klanten</a>
+      <a href="honden.html" class="tile">🐕 Honden</a>
+      <a href="lessen.html" class="tile">📅 Lessen</a>
+      <a href="trainers.html" class="tile">👩‍🏫 Trainers</a>
+      <a href="strippenkaarten.html" class="tile">🎟️ Strippenkaarten</a>
+      <a href="rapporten.html" class="tile">📊 Rapporten</a>
+      <a href="instellingen.html" class="tile">⚙️ Instellingen</a>
+      <a href="over.html" class="tile">ℹ️ Over</a>
     </div>
   </main>
 
   <footer>
-    <span class="chip">API: <span id="apiStatus">…</span></span>
-    <span class="chip">Commit: <span id="commit">—</span></span>
+    <p>© Superhond 2025 — <span id="version-info">Versie laden...</span></p>
   </footer>
 
-  <script>
-    (async () => {
-      try {
-        const r = await fetch("/api/version?b="+Date.now()); // cache-buster
-        const j = await r.json();
-        document.getElementById("vNum").textContent = j.version || "-";
-        document.getElementById("vTime").textContent = j.buildTime ? new Date(j.buildTime).toLocaleString() : "-";
-        document.getElementById("apiStatus").textContent = "ok";
-        document.getElementById("commit").textContent = (j.commit || "—").slice(0,7);
-      } catch {
-        document.getElementById("apiStatus").textContent = "offline";
-      }
-    })();
-  </script>
-
-  <footer>
-  <p>Superhond © 2025 — <span id="version-info">Versie laden...</span></p>
-</footer>
-
-<!-- Laad shared footer script -->
-<script src="/js/footer.js"></script>
+  <!-- Shared footer script -->
+  <script src="./js/footer.js?b=12345"></script>
 </body>
 </html>
