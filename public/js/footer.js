@@ -1,6 +1,7 @@
 // /public/js/footer.js
 async function updateFooterVersion() {
   try {
+    // Cache-buster om Safari/iPad te slim af te zijn
     const res = await fetch(`/api/version?b=${Date.now()}`);
     if (!res.ok) throw new Error("API error");
 
@@ -8,7 +9,8 @@ async function updateFooterVersion() {
     const footer = document.getElementById("version-info");
 
     if (footer) {
-      footer.textContent = `v${data.version} (${data.commit || "?"})`;
+      const buildTime = new Date(data.buildTime).toLocaleString();
+      footer.textContent = `v${data.version} (${data.commit || "?"}) – ${buildTime}`;
     }
   } catch (err) {
     console.error("Versie ophalen mislukt:", err);
@@ -19,5 +21,5 @@ async function updateFooterVersion() {
   }
 }
 
-// Start automatisch zodra de pagina geladen is
+// Automatisch starten zodra de pagina geladen is
 document.addEventListener("DOMContentLoaded", updateFooterVersion);
