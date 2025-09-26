@@ -1,4 +1,27 @@
 // /public/js/klanten.js
+
+
+
+
+
+
+// Voeg bovenaan bij het laden toe:
+const [resKlanten, resHonden] = await Promise.all([
+  fetch('/data/klanten.json?b=' + Date.now()),
+  fetch('/data/honden.json?b=' + Date.now())
+]);
+const [klanten, honden] = await Promise.all([resKlanten.json(), resHonden.json()]);
+
+// Maak een teller: klantId -> aantal honden
+const hondenPerKlant = honden.reduce((acc, h) => {
+  acc[h.klantId] = (acc[h.klantId] || 0) + 1;
+  return acc;
+}, {});
+
+// …en in je tabel-weergave per klant:
+const count = hondenPerKlant[k.id] || 0;
+// toon `count` in de kolom “Honden”
+
 (function () {
   const TBL = document.querySelector('#klantenTable tbody');
   const zoekInput = document.getElementById('zoekInput');
