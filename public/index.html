@@ -1,13 +1,30 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>🐶 Superhond Registratie</title>
-  <meta name="description" content="Dashboard voor klanten, honden, lessen en administratie." />
+  <title>Superhond Registratie</title>
   <link rel="stylesheet" href="./css/style.css" />
+  <style>
+    /* Kleine layout‐hulpjes specifiek voor de home */
+    .dashboard-page .topbar { background: #f4c400; } /* geel */
+    .topbar-flex { display:flex; align-items:center; gap:10px; }
+    .brand { margin:0; font-weight:800; }
+    .tiles { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap:16px; }
+    .tile { display:block; padding:14px 16px; border:1px solid var(--card-border, #ddd);
+            background: var(--card-bg, #fff); border-radius:10px; text-decoration:none; color:inherit;
+            box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+    .tile:hover { transform: translateY(-1px); }
+    .tile > span { opacity:.8; margin-left:8px; }
+    .version-badge { background:#1f2328; color:#fff; font-size:12px; padding:4px 8px; border-radius:8px; }
+    .page-title { margin:24px 0 12px; }
+    .footer { margin-top:24px; padding:16px 0; border-top:1px solid #e5e5e5; color:#555; }
+    .footer small { opacity:.85; }
+  </style>
 </head>
 <body class="dashboard-page">
+
+  <!-- Header -->
   <header class="topbar">
     <div class="container topbar-flex">
       <h1 class="brand">🐶 Superhond Registratie</h1>
@@ -15,26 +32,82 @@
     </div>
   </header>
 
+  <!-- Main -->
   <main class="container">
     <h2 class="page-title">Hoofdmenu</h2>
+
     <nav class="tiles">
-      <a href="./klanten/" class="tile"><span>👤</span> Klanten</a>
-      <a href="./honden/" class="tile"><span>🐕</span> Honden</a>
-      <a href="./lessen/" class="tile"><span>📅</span> Lessen</a>
-      <a href="./trainers/" class="tile"><span>👩‍🏫</span> Trainers</a>
-      <a href="./strippenkaarten/" class="tile"><span>🎟️</span> Strippenkaarten</a>
-      <a href="./rapporten/" class="tile"><span>📊</span> Rapporten</a>
-      <a href="./instellingen/" class="tile"><span>⚙️</span> Instellingen</a>
-      <a href="./over/" class="tile"><span>ℹ️</span> Over</a>
+      <a href="./klanten/" class="tile">👤<span>Klanten</span></a>
+      <a href="./honden/" class="tile">🐕<span>Honden</span></a>
+      <a href="./lessen/" class="tile">📅<span>Lessen</span></a>
+      <a href="./trainers/" class="tile">🏅<span>Trainers</span></a>
+      <a href="./strippenkaarten/" class="tile">🎟️<span>Strippenkaarten</span></a>
+      <a href="./rapporten/" class="tile">📊<span>Rapporten</span></a>
+      <a href="./instellingen/" class="tile">⚙️<span>Instellingen</span></a>
+      <a href="./over/" class="tile">ℹ️<span>Over</span></a>
     </nav>
   </main>
 
+  <!-- Footer -->
   <footer class="footer">
     <div class="container">
-      © Superhond 2025 — <span id="version-info">Versie laden...</span>
+      <small>© Superhond 2025 — <span id="version-info">Versie laden…</span></small>
+      <div id="apiHealth" style="margin-top:6px;"></div>
     </div>
   </footer>
 
-  <script src="./js/footer.js?b=12345"></script>
+  <!-- Shared footer helper (optioneel; houdt health/commit bij als je dat script hebt) -->
+  <script src="./js/footer.js?b=1"></script>
+
+  <!-- Robuuste versie‐fetch: API → fallback naar version.json → graceful degrade -->
+  <script>
+    (async function () {
+      const headerEl  = document.getElementById('header-version');
+      const footerEl  = document.getElementById('version-info');
+      const healthEl  = document.getElementById('apiHealth');
+
+      const fmtBuild = ts => {
+        try {
+          const d = new Date(ts);
+          if (isNaN(+d)) return '';
+          // dd/mm/yyyy, hh:mm:ss
+          const pad = n => (''+n).padStart(2,'0');
+          return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}, `
+               + `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+        } catch { return ''; }
+      };
+
+      const setVersion = (src, j) => {
+        const v = j?.version ? `v${j.version}` : 'v?';
+        const t = j?.buildTime ? fmtBuild(j.buildTime) : '';
+        if (headerEl) headerEl.textContent = v;
+        if (footerEl) footerEl.textContent = `${v} (${src}) ${t ? '— ' + t : ''}`;
+      };
+
+      try {
+        // 1) Probeer API
+        const r = await fetch('/api/version?b=' + Date.now());
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const j = await r.json();
+        setVersion('api', j);
+        if (healthEl) healthEl.textContent = 'API online ✓';
+      } catch (e1) {
+        try {
+          // 2) Fallback naar statische version.json
+          const r2 = await fetch('./version.json?b=' + Date.now());
+          if (!r2.ok) throw new Error('HTTP ' + r2.status);
+          const j2 = await r2.json();
+          setVersion('static', j2);
+          if (healthEl) healthEl.textContent = 'API offline — static versie gebruikt';
+        } catch (e2) {
+          // 3) Graceful degrade
+          if (headerEl) headerEl.textContent = 'v?';
+          if (footerEl) footerEl.textContent = 'v? — (geen versiebron beschikbaar)';
+          if (healthEl) healthEl.textContent = 'API offline — geen version.json gevonden';
+          console.warn('Version fetch failed:', e1, e2);
+        }
+      }
+    })();
+  </script>
 </body>
 </html>
