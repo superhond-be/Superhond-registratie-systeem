@@ -8,44 +8,40 @@
 </head>
 <body>
   <header class="topbar">
-    <h1 class="brand">ℹ️ Over Superhond</h1>
+    <div class="container topbar-flex">
+      <h1 class="brand">ℹ️ Over Superhond</h1>
+      <span class="version-badge" id="header-version">v…</span>
+    </div>
   </header>
 
-  <main class="dashboard">
-    <h2>Systeeminformatie</h2>
+  <main class="container">
+    <h2 class="page-title">Systeeminformatie</h2>
     <pre id="version-box">Versie laden...</pre>
     <pre id="health-box">Health laden...</pre>
   </main>
 
-  <footer>
-    <p>© Superhond 2025 — <span id="version-info">Versie laden...</span></p>
+  <footer class="footer">
+    <div class="container">
+      © Superhond 2025 — <span id="version-info">Versie laden...</span>
+    </div>
   </footer>
 
-  <!-- Shared footer script -->
   <script src="../js/footer.js?b=12345"></script>
   <script>
-    // Versie ophalen
+    // Versie (API of static)
     fetch('/api/version?b=' + Date.now())
-      .then(r => r.json())
-      .then(d => {
-        document.getElementById('version-box').textContent =
-          JSON.stringify(d, null, 2);
-      })
-      .catch(() => {
-        document.getElementById('version-box').textContent =
-          "⚠️ Kon versie niet laden";
-      });
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(d => document.getElementById('version-box').textContent = JSON.stringify(d, null, 2))
+      .catch(() => fetch('/version.json?b=' + Date.now())
+        .then(r => r.json())
+        .then(d => document.getElementById('version-box').textContent = JSON.stringify(d, null, 2))
+        .catch(() => document.getElementById('version-box').textContent = '⚠️ Geen versie-informatie'));
 
-    // Health ophalen
+    // Health (bestaat alleen als je later een backend hebt)
     fetch('/health?b=' + Date.now())
       .then(r => r.text())
-      .then(d => {
-        document.getElementById('health-box').textContent = d;
-      })
-      .catch(() => {
-        document.getElementById('health-box').textContent =
-          "⚠️ Health check mislukt";
-      });
+      .then(t => document.getElementById('health-box').textContent = t)
+      .catch(() => document.getElementById('health-box').textContent = 'ℹ️ Geen backend health endpoint (Static Site).');
   </script>
 </body>
 </html>
