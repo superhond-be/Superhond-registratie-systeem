@@ -1,30 +1,6 @@
 [
-  {
-    "id": "H1001",
-    "naam": "Rex",
-    "ras": "Mechelse Herder",
-    "geboorte": "2020-05-12",
-    "klantId": "K1001"
-  },
-  {
-    "id": "H1002",
-    "naam": "Bella",
-    "ras": "Labrador Retriever",
-    "geboorte": "2019-11-03",
-    "klantId": "K1004"
-  },
-  {
-    "id": "H1003",
-    "naam": "Max",
-    "ras": "Border Collie",
-    "geboorte": "2021-02-18",
-    "klantId": "K1002"
-  },
-  {
-    "id": "H1004",
-    "naam": "Luna",
-    "ras": "Golden Retriever",
-    "geboorte": "2018-07-07",
-    "klantId": "K1003"
-  }
+  { "id": 1, "naam": "Rex",  "ras": "Mechelse Herder",    "geboortedatum": "2020-05-12", "eigenaarId": 1 },
+  { "id": 2, "naam": "Max",  "ras": "Border Collie",      "geboortedatum": "2021-02-18", "eigenaarId": 1 },
+  { "id": 3, "naam": "Bella","ras": "Labrador Retriever", "geboortedatum": "2019-11-03", "eigenaarId": 2 },
+  { "id": 4, "naam": "Luna", "ras": "Golden Retriever",   "geboortedatum": "2022-06-20", "eigenaarId": 4 }
 ]
