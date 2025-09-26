@@ -1,5 +1,30 @@
 // /public/js/klanten.js
 (function () {
+
+
+const landFilter = document.getElementById('landFilter');
+
+function filterData(klanten, honden) {
+  const zoek = zoekInput.value.toLowerCase();
+  const minDogsVal = parseInt(minDogs.value || "0", 10);
+  const landVal = landFilter.value;
+
+  return klanten.filter(k => {
+    const dogs = honden.filter(h => h.klantId === k.id);
+    const matchZoek =
+      k.voornaam.toLowerCase().includes(zoek) ||
+      k.achternaam.toLowerCase().includes(zoek) ||
+      k.email.toLowerCase().includes(zoek);
+    const matchDogs = dogs.length >= minDogsVal;
+    const matchLand = !landVal || k.land === landVal;
+    return matchZoek && matchDogs && matchLand;
+  });
+}
+
+[zoekInput, minDogs, landFilter].forEach(el =>
+  el.addEventListener('input', renderTable)
+);
+  
   const form = document.getElementById('klantForm');
   const out  = document.getElementById('resultBox');
   const prefillBtn = document.getElementById('prefillBtn');
