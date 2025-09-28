@@ -48,5 +48,15 @@
     "land": "NL",
     "plaats": "Tilburg",
     "honden": ["H2005"]
+  },
+  {
+    "id": "K1006",
+    "voornaam": "Mark",
+    "achternaam": "Vermeer",
+    "email": "mark.vermeer@example.nl",
+    "telefoon": "+31 6 1122 3344",
+    "land": "NL",
+    "plaats": "Breda",
+    "honden": ["H2006"]
   }
 ]
