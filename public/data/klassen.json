@@ -1,0 +1,22 @@
+[
+  {
+    "id": "C100",
+    "naam": "Puppy Klas",
+    "type": "groep",
+    "thema": "puppy",
+    "afbeelding": "/img/klassen/puppy.jpg",
+    "beschrijving": "Socialisatie en basis voor pups.",
+    "mailBlue": "MB_LIST_PUPPY",
+    "status": "actief"
+  },
+  {
+    "id": "C110",
+    "naam": "Pubers",
+    "type": "groep",
+    "thema": "puber",
+    "afbeelding": "/img/klassen/puber.jpg",
+    "beschrijving": "Impulscontrole en focus.",
+    "mailBlue": "MB_LIST_PUBER",
+    "status": "actief"
+  }
+]
