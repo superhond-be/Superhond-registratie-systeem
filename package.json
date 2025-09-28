@@ -12,7 +12,10 @@
   }
 }
 {
-  "scripts": {
-    "bump": "node tools/bump-version.js"
+    "scripts": {
+  "bump": "node tools/bump-version.js",
+  "bump:minor": "node tools/bump-version.js minor",
+  "bump:major": "node tools/bump-version.js major"
+}
   }
 }
