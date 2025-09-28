@@ -1,39 +1,108 @@
--- Maak tabellen
-DROP TABLE IF EXISTS honden;
-DROP TABLE IF EXISTS klanten;
-
-CREATE TABLE klanten (
-  id VARCHAR(10) PRIMARY KEY,
-  voornaam     VARCHAR(50) NOT NULL,
-  achternaam   VARCHAR(50) NOT NULL,
-  email        VARCHAR(100),
-  telefoon     VARCHAR(30),
-  land         VARCHAR(2),
-  plaats       VARCHAR(50)
-);
-
-CREATE TABLE honden (
-  id VARCHAR(10) PRIMARY KEY,
-  naam          VARCHAR(50) NOT NULL,
-  ras           VARCHAR(50),
-  geboortedatum DATE,
-  eigenaarId    VARCHAR(10) REFERENCES klanten(id)
-);
-
--- Vul klanten
-INSERT INTO klanten (id, voornaam, achternaam, email, telefoon, land, plaats) VALUES
-('K1001','An','Peeters','an.peeters@example.be','+32 475 11 22 33','BE','Retie'),
-('K1002','Tom','Janssens','tom.janssens@example.be','+32 486 66 77 88','BE','Dessel'),
-('K1003','Sofie','De Smet','sofie.desmet@example.be','+32 478 12 34 56','BE','Turnhout'),
-('K1004','Jan','van Dijk','jan.vandijk@example.nl','+31 6 1234 5678','NL','Eindhoven'),
-('K1005','Lisa','de Boer','lisa.deboer@example.nl','+31 6 8765 4321','NL','Tilburg'),
-('K1006','Mark','Vermeer','mark.vermeer@example.nl','+31 6 1122 3344','NL','Breda');
-
--- Vul honden
-INSERT INTO honden (id, naam, ras, geboortedatum, eigenaarId) VALUES
-('H2001','Rex','Mechelse Herder','2020-05-12','K1001'),
-('H2002','Max','Border Collie','2021-02-18','K1001'),
-('H2003','Bella','Labrador Retriever','2019-11-03','K1002'),
-('H2004','Luna','Golden Retriever','2022-06-20','K1004'),
-('H2005','Nora','Australian Shepherd','2021-09-10','K1005'),
-('H2006','Milo','Beagle','2018-03-15','K1006');
+{
+  "klanten": [
+    {
+      "id": "K1001",
+      "voornaam": "An",
+      "achternaam": "Peeters",
+      "email": "an.peeters@example.be",
+      "telefoon": "+32 475 11 22 33",
+      "land": "BE",
+      "plaats": "Retie",
+      "honden": ["H2001", "H2002"]
+    },
+    {
+      "id": "K1002",
+      "voornaam": "Tom",
+      "achternaam": "Janssens",
+      "email": "tom.janssens@example.be",
+      "telefoon": "+32 486 66 77 88",
+      "land": "BE",
+      "plaats": "Dessel",
+      "honden": ["H2003"]
+    },
+    {
+      "id": "K1003",
+      "voornaam": "Sofie",
+      "achternaam": "De Smet",
+      "email": "sofie.desmet@example.be",
+      "telefoon": "+32 478 12 34 56",
+      "land": "BE",
+      "plaats": "Turnhout",
+      "honden": []
+    },
+    {
+      "id": "K1004",
+      "voornaam": "Jan",
+      "achternaam": "van Dijk",
+      "email": "jan.vandijk@example.nl",
+      "telefoon": "+31 6 1234 5678",
+      "land": "NL",
+      "plaats": "Eindhoven",
+      "honden": ["H2004"]
+    },
+    {
+      "id": "K1005",
+      "voornaam": "Lisa",
+      "achternaam": "de Boer",
+      "email": "lisa.deboer@example.nl",
+      "telefoon": "+31 6 8765 4321",
+      "land": "NL",
+      "plaats": "Tilburg",
+      "honden": ["H2005"]
+    },
+    {
+      "id": "K1006",
+      "voornaam": "Mark",
+      "achternaam": "Vermeer",
+      "email": "mark.vermeer@example.nl",
+      "telefoon": "+31 6 1122 3344",
+      "land": "NL",
+      "plaats": "Breda",
+      "honden": ["H2006"]
+    }
+  ],
+  "honden": [
+    {
+      "id": "H2001",
+      "naam": "Rex",
+      "ras": "Mechelse Herder",
+      "geboortedatum": "2020-05-12",
+      "eigenaarId": "K1001"
+    },
+    {
+      "id": "H2002",
+      "naam": "Max",
+      "ras": "Border Collie",
+      "geboortedatum": "2021-02-18",
+      "eigenaarId": "K1001"
+    },
+    {
+      "id": "H2003",
+      "naam": "Bella",
+      "ras": "Labrador Retriever",
+      "geboortedatum": "2019-11-03",
+      "eigenaarId": "K1002"
+    },
+    {
+      "id": "H2004",
+      "naam": "Luna",
+      "ras": "Golden Retriever",
+      "geboortedatum": "2022-06-20",
+      "eigenaarId": "K1004"
+    },
+    {
+      "id": "H2005",
+      "naam": "Nora",
+      "ras": "Australian Shepherd",
+      "geboortedatum": "2021-09-10",
+      "eigenaarId": "K1005"
+    },
+    {
+      "id": "H2006",
+      "naam": "Milo",
+      "ras": "Beagle",
+      "geboortedatum": "2018-03-15",
+      "eigenaarId": "K1006"
+    }
+  ]
+}
