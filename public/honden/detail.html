@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
   <style>
     .kv{display:grid;grid-template-columns:140px 1fr;gap:8px 14px}
-    .chip{display:inline-block;padding:4px 8px;border:1px solid #d1d5db;border-radius:999px;background:#fff;margin-right:6px}
   </style>
 </head>
 <body>
@@ -29,9 +28,7 @@
   </main>
 
   <script src="/ui/layout.js?v=0.18.9"></script>
-  <script>
-    SuperhondUI.mount({ title:'Hond', icon:'🐶', back:'/honden/' });
-  </script>
+  <script>SuperhondUI.mount({ title:'Hond', icon:'🐶', back:'/honden/' });</script>
   <script>
     (async () => {
       const q = new URLSearchParams(location.search);
@@ -58,8 +55,7 @@
           ? `<a href="/klanten/detail.html?id=${owner.id}">${owner.voornaam} ${owner.achternaam}</a> <span class="muted">${owner.plaats||''}</span>`
           : '—';
 
-        $('#hond-loader').hidden = true;
-        show($('#hond-info'));
+        $('#hond-loader').hidden = true; show($('#hond-info'));
       }catch(e){
         $('#hond-loader').hidden = true;
         $('#hond-error').textContent = 'Kon hondgegevens niet laden.'; show($('#hond-error'));
