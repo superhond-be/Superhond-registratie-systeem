@@ -1,45 +1,40 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Honden – Superhond</title>
-  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
+<body data-layout="superhond">
   <header class="topbar">
-    <div class="container topbar-flex">
-      <a href="../index.html" class="btn-back">← Terug</a>
-      <h1 class="brand">🐶 Honden</h1>
-      <span class="version-badge" id="header-version">v…</span>
-    </div>
+    <a href="/" class="btn btn-back">← Terug</a>
+    <h1 class="brand">🐶 Honden</h1>
+    <span class="badge badge-version">v0.18.7</span>
   </header>
 
   <main class="container">
-    <section class="form-card" style="margin:12px 0;">
+    <section class="card">
       <h2>Hondenlijst</h2>
-      <div id="hondenStatus">Honden laden…</div>
-      <div class="table-wrapper">
-        <table id="honden-tabel" class="table">
+      <div id="honden-loader" class="loader">Laden…</div>
+      <p id="honden-error" class="error" hidden></p>
+      <p id="honden-meta" class="muted"></p>
+
+      <div class="table-wrap">
+        <table class="table">
           <thead>
-            <tr>
-              <th>Naam</th>
-              <th>Ras</th>
-              <th>Geboortedatum</th>
-              <th>Eigenaar</th>
-            </tr>
+            <tr><th>Naam</th><th>Ras</th><th>Geboortedatum</th><th>Eigenaar</th></tr>
           </thead>
-          <tbody></tbody>
+          <tbody id="honden-tbody"></tbody>
         </table>
       </div>
     </section>
   </main>
 
   <footer class="footer">
-    <div class="container">© Superhond 2025 — <span id="version-info">Versie laden…</span></div>
+    <small>© Superhond 2025 — <span id="version">v0.18.7 (static)</span></small>
   </footer>
 
-  <script src="../js/footer.js?b=1"></script>
-  <script src="/js/honden.js?b=1"></script>
+  <script src="/js/honden.js" defer></script>
 </body>
 </html>
