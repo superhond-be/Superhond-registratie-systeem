@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agenda – Superhond</title>
+  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
+  <style>
+    .tabs{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+    .tab{padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer}
+    .tab.active{background:#eef2ff;border-color:#c7d2fe}
+    .row{display:grid;grid-template-columns:110px 1fr 140px 120px 120px;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid #e5e7eb}
+    .row.highlight{background:#fff6d6} /* actieve les (vandaag) */
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#f3f4f6;border:1px solid #e5e7eb}
+    .warn{background:#fde68a;border-color:#f59e0b}
+  </style>
+</head>
+<body>
+  <main class="container">
+    <section class="card">
+      <h2>Agenda</h2>
+      <div class="tabs">
+        <button class="tab active" data-scope="week">Deze week</button>
+        <button class="tab" data-scope="all">Alles</button>
+        <button class="tab" data-scope="mededelingen">Mededelingen</button>
+      </div>
+      <div id="agenda-list"></div>
+      <p id="agenda-empty" class="muted" hidden>Geen items.</p>
+    </section>
+  </main>
+
+  <script src="/ui/layout.js?v=0.18.9"></script>
+  <script>SuperhondUI.mount({ title:'Agenda', icon:'📅', back:'/' });</script>
+  <script type="module">
+    import { loadAll, indexById, humanDate, timeRange } from '/js/data.js?v=0.18.9';
+
+    const $ = s => document.querySelector(s);
+    const list = $('#agenda-list'), empty = $('#agenda-empty');
+    const tabs = [...document.querySelectorAll('.tab')];
+
+    const todayStr = new Date().toISOString().slice(0,10);
+
+    function withinThisWeek(iso){
+      const d = new Date(iso + 'T00:00');
+      const now = new Date();
+      const monday = new Date(now); monday.setDate(now.getDate() - ((now.getDay()+6)%7));
+      const sunday = new Date(monday); sunday.setDate(monday.getDate()+6);
+      return d >= new Date(monday.toDateString()) && d <= new Date(sunday.toDateString());
+    }
+
+    function render(scope, data){
+      const { lessen, reeksenById, trainersById, locatiesById, mededelingen } = data;
+      let rows = [];
+
+      if (scope === 'mededelingen'){
+        rows = mededelingen.map(m => ({
+          type:'msg',
+          date: m.aangemaaktOp.slice(0,10),
+          title: m.titel,
+          sub: m.scope.type === 'les' ? `Les #${m.scope.lesId}` :
+               m.scope.type === 'reeks' ? `Reeks ${m.scope.reeksId}` : m.scope.type,
+          right: m.kanalen.join(', '),
+          highlight: false
+        }));
+      } else {
+        const src = scope === 'week' ? lessen.filter(l => withinThisWeek(l.datum)) : lessen;
+        rows = src.map(l => {
+          const r = reeksenById[l.reeksId];
+          const t = trainersById[l.trainerId];
+          const loc = locatiesById[l.locatieId];
+          return {
+            type:'lesson',
+            date: l.datum,
+            title: r ? r.naam : l.reeksId,
+            sub: `${timeRange(l.starttijd, l.eindtijd)} — ${t ? (t.voornaam+' '+t.achternaam) : '—'}`,
+            right: loc ? loc.naam : '—',
+            highlight: l.datum === todayStr
+          };
+        });
+      }
+
+      list.innerHTML = rows.map(r => `
+        <div class="row ${r.highlight ? 'highlight' : ''}">
+          <div>${humanDate(r.date)}</div>
+          <div><strong>${r.title}</strong><div class="muted">${r.sub||''}</div></div>
+          <div class="pill ${r.type==='msg'?'warn':''}">${r.type==='msg'?'Mededeling':'Les'}</div>
+          <div>${r.right||''}</div>
+          <div></div>
+        </div>`).join('');
+
+      empty.hidden = rows.length > 0;
+    }
+
+    (async () => {
+      const all = await loadAll();
+      const reeksenById = indexById(all.reeksen);
+      const trainersById = indexById(all.trainers);
+      const locatiesById = indexById(all.locaties);
+      const data = { ...all, reeksenById, trainersById, locatiesById };
+
+      let scope = 'week';
+      render(scope, data);
+      tabs.forEach(b => b.addEventListener('click', () => {
+        tabs.forEach(x => x.classList.toggle('active', x===b));
+        scope = b.dataset.scope;
+        render(scope, data);
+      }));
+    })();
+  </script>
+</body>
+</html>
