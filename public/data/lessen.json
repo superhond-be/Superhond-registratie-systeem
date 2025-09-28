@@ -1,0 +1,38 @@
+[
+  {
+    "id": "L4001",
+    "reeksId": "LR300",
+    "lesNr": 1,
+    "datum": "2025-10-05",
+    "starttijd": "10:00",
+    "eindtijd": "11:00",
+    "trainerId": "T900",
+    "locatieId": "LOC1",
+    "status": "gepland",
+    "mapUrl": "https://maps.example.com/loc1"
+  },
+  {
+    "id": "L4002",
+    "reeksId": "LR300",
+    "lesNr": 2,
+    "datum": "2025-10-12",
+    "starttijd": "10:00",
+    "eindtijd": "11:00",
+    "trainerId": "T900",
+    "locatieId": "LOC1",
+    "status": "gepland",
+    "mapUrl": "https://maps.example.com/loc1"
+  },
+  {
+    "id": "L4101",
+    "reeksId": "LR310",
+    "lesNr": 1,
+    "datum": "2025-10-07",
+    "starttijd": "18:30",
+    "eindtijd": "19:30",
+    "trainerId": "T901",
+    "locatieId": "LOC2",
+    "status": "gepland",
+    "mapUrl": "https://maps.example.com/loc2"
+  }
+]
