@@ -4,19 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Klanten – Superhond</title>
-  <meta name="description" content="Klantenlijst met zoek- en landenfilter, gekoppeld aan honden.">
- <link rel="stylesheet" href="/ui/style.css?v=0.18.7">
+  <link rel="stylesheet" href="/ui/style.css?v=0.18.7">
 </head>
-<body data-layout="superhond">
-  <!-- Topbar -->
-  <header class="topbar">
-    <a class="btn btn-back" href="/">← Terug</a>
-    <h1 class="brand">👤 Klanten</h1>
-    <span class="badge badge-version">v0.18.7</span>
-  </header>
-
+<body>
   <main class="container">
-    <!-- Kaart: filter + lijst -->
     <section class="card">
       <h2>Klantenlijst</h2>
 
@@ -41,11 +32,11 @@
         <table class="table">
           <thead>
             <tr>
-              <th scope="col">Klant</th>
-              <th scope="col">E-mail</th>
-              <th scope="col">Plaats</th>
-              <th scope="col">Honden</th>
-              <th scope="col">Acties</th>
+              <th>Klant</th>
+              <th>E-mail</th>
+              <th>Plaats</th>
+              <th>Honden</th>
+              <th>Acties</th>
             </tr>
           </thead>
           <tbody id="klanten-tbody"></tbody>
@@ -54,12 +45,11 @@
     </section>
   </main>
 
-  <footer class="footer">
-    <small>© Superhond 2025 — <span id="version">v0.18.7 (static)</span></small>
-    <br><small class="muted">API offline — static versie gebruikt</small>
-  </footer>
-
-  <!-- Script laadt data + render (moet na de HTML staan) -->
-  <script src="/js/klanten.js" defer></script>
+  <!-- Scripts -->
+  <script src="/ui/layout.js?v=0.18.7"></script>
+  <script src="/js/klanten.js?v=0.18.7" defer></script>
+  <script>
+    SuperhondUI.mount({ title: 'Klanten', icon: '👤', back: '/' });
+  </script>
 </body>
 </html>
