@@ -1,50 +1,41 @@
-(async function () {
-  const $ = s => document.querySelector(s);
-  const STATUS = $('#hondenStatus');   // <div id="hondenStatus">
-  const TBL = $('#honden-tabel');      // <table id="honden-tabel">
+/* v0.18.7 – Hondenlijst (Superhond UI) */
+(async () => {
+  const body   = document.querySelector('#honden-tbody');
+  const meta   = document.querySelector('#honden-meta');
+  const loader = document.querySelector('#honden-loader');
+  const err    = document.querySelector('#honden-error');
 
-  function showError(msg, detail) {
-    if (STATUS) STATUS.innerHTML =
-      `<div class="form-card" style="border-left:4px solid #d83a3a">
-         <b>Kon honden niet laden:</b> ${msg}<br>
-         <span class="sub">${detail || ''}</span>
-       </div>`;
-  }
-
-  async function loadJson(url) {
-    const u = `${url}${url.includes('?') ? '&' : '?'}b=${Date.now()}`;
-    const r = await fetch(u);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
-  }
-
-  function renderRows(items) {
-    const tbody = TBL && TBL.tBodies[0];
-    if (!tbody) return;
-    tbody.innerHTML = items.map(h => `
-      <tr>
-        <td>${h.naam || ''}</td>
-        <td>${h.ras || ''}</td>
-        <td>${h.geboortedatum || ''}</td>
-        <td>${h.eigenaar || ''}</td>
-      </tr>
-    `).join('') || `<tr><td colspan="4" class="sub">Geen resultaten…</td></tr>`;
-  }
+  const showLoader = v => loader.hidden = !v;
+  const showErr = m => { err.textContent = m; err.hidden = false; };
 
   try {
-    if (STATUS) STATUS.textContent = 'Demo-data laden…';
-    const honden = await loadJson('/data/honden.json');
+    showLoader(true);
+    const [hRes, kRes] = await Promise.all([
+      fetch('/data/honden.json',  { cache:'no-store' }),
+      fetch('/data/klanten.json', { cache:'no-store' })
+    ]);
+    if (!hRes.ok || !kRes.ok) throw new Error('Kon data niet laden');
 
-    const norm = honden.map(h => ({
-      naam: h.naam || '',
-      ras: h.ras || '',
-      geboortedatum: h.geboortedatum || '',  // laat string ongemoeid
-      eigenaar: h.eigenaar || ''
-    }));
+    const [dogs, klanten] = await Promise.all([hRes.json(), kRes.json()]);
+    const kById = Object.fromEntries(klanten.map(k => [k.id, k]));
 
-    renderRows(norm);
-    if (STATUS) STATUS.textContent = `Geladen: ${norm.length} honden ✓`;
+    body.innerHTML = dogs.map(h => {
+      const e = kById[h.eigenaarId];
+      const eigenaar = e ? `${e.voornaam} ${e.achternaam}` : '—';
+      const plaats = e?.plaats ? `<small class="muted"> ${e.plaats}</small>` : '';
+      return `<tr>
+        <td><strong>${h.naam}</strong></td>
+        <td>${h.ras}</td>
+        <td>${h.geboortedatum}</td>
+        <td>${eigenaar}${plaats}</td>
+      </tr>`;
+    }).join('');
+
+    meta.textContent = `Geladen: ${dogs.length} honden ✓`;
+    showLoader(false);
   } catch (e) {
-    showError(e.message || 'Onbekende fout', 'Controleer /data/honden.json & netwerk');
+    console.error(e);
+    showLoader(false);
+    showErr('Fout bij laden van honden.');
   }
 })();
