@@ -64,6 +64,98 @@
     const empty = $('#dash-agenda-empty');
     const tabs = [...document.querySelectorAll('.tab')];
 
+    <script type="module">
+  import { loadAll, indexById } from '/js/data.js?v=0.18.9';
+
+  const $ = s => document.querySelector(s);
+  const list = $('#dash-agenda-list');
+  const empty = $('#dash-agenda-empty');
+  const tabs = [...document.querySelectorAll('.tab')];
+
+  const todayISO = new Date().toISOString().slice(0,10);
+  const humanDate = iso => { try{ const dt=new Date(iso+'T00:00'); return dt.toLocaleDateString(); }catch{ return iso; } };
+  const timeRange = (s,e) => `${s}–${e}`;
+  const mondayOf = d => { const x=new Date(d); const off=(x.getDay()+6)%7; x.setDate(x.getDate()-off); x.setHours(0,0,0,0); return x; };
+  const sundayOf = d => { const m=mondayOf(d); const s=new Date(m); s.setDate(m.getDate()+6); s.setHours(23,59,59,999); return s; };
+  const withinThisWeek = iso => {
+    const d = new Date(iso+'T00:00');
+    const m = mondayOf(new Date());
+    const s = sundayOf(new Date());
+    return d>=m && d<=s;
+  };
+
+  function rowHTML(r){
+    const tag = r.href ? 'a' : 'div';
+    const extra = r.href ? ` href="${r.href}"` : '';
+    return `
+      <${tag} class="agenda-row ${r.highlight ? 'highlight' : ''}"${extra}>
+        <div>${humanDate(r.date)}</div>
+        <div><strong>${r.title}</strong><div class="muted">${r.sub||''}</div></div>
+        <div><span class="pill ${r.type==='msg'?'warn':''}">${r.type==='msg'?'Mededeling':'Les'}</span></div>
+        <div>${r.right||''}</div>
+      </${tag}>`;
+  }
+
+  function render(scope, data){
+    const { lessen, reeksenById, trainersById, locatiesById, mededelingen } = data;
+    let rows = [];
+
+    if (scope === 'mededelingen'){
+      rows = mededelingen.map(m => ({
+        type:'msg',
+        date: m.aangemaaktOp?.slice(0,10) || '',
+        title: m.titel,
+        sub: (m.scope?.type==='les' ? `Les ${m.scope.lesId}` :
+             m.scope?.type==='reeks' ? `Reeks ${m.scope.reeksId}` :
+             (m.scope?.type||'mededeling')),
+        right: (m.kanalen||[]).join(', '),
+        highlight: false,
+        href: m.scope?.type==='les'
+          ? `/lessen/detail.html?id=${m.scope.lesId}`
+          : (m.scope?.type==='reeks'
+             ? `/lessenreeks/detail.html?id=${m.scope.reeksId}`
+             : '')
+      }));
+    } else {
+      const base = (scope==='week') ? lessen.filter(l => withinThisWeek(l.datum)) : lessen;
+      rows = base.map(l => {
+        const r = reeksenById[l.reeksId];
+        const t = trainersById[l.trainerId];
+        const loc = locatiesById[l.locatieId];
+        return {
+          type:'lesson',
+          date: l.datum,
+          title: r ? r.naam : l.reeksId,
+          sub: `${timeRange(l.starttijd, l.eindtijd)} — ${t ? (t.voornaam+' '+t.achternaam) : '—'}`,
+          right: loc ? loc.naam : '—',
+          highlight: l.datum === todayISO,
+          href: `/lessen/detail.html?id=${l.id}`
+        };
+      });
+    }
+
+    list.innerHTML = rows.map(rowHTML).join('');
+    empty.hidden = rows.length > 0;
+  }
+
+  (async () => {
+    const all = await loadAll();
+    const reeksenById = indexById(all.reeksen);
+    const trainersById = indexById(all.trainers);
+    const locatiesById = indexById(all.locaties);
+    const data = { ...all, reeksenById, trainersById, locatiesById };
+
+    let scope = 'week';
+    render(scope, data);
+
+    tabs.forEach(btn => btn.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.toggle('active', t===btn));
+      scope = btn.dataset.scope;
+      render(scope, data);
+    }));
+  })();
+</script>
+
     // helpers
     const todayISO = new Date().toISOString().slice(0,10);
     const humanDate = iso => {
