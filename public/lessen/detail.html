@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Les – Superhond</title>
+  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
+  <style>
+    .kv{display:grid;grid-template-columns:160px 1fr;gap:8px 14px}
+    .chips{margin-top:6px}
+    .chip{display:inline-block;padding:4px 8px;border:1px solid #d1d5db;border-radius:999px;background:#fff;margin:0 6px 6px 0;text-decoration:none;color:inherit}
+    .chip:hover{background:#f8fafc}
+  </style>
+</head>
+<body>
+  <main class="container">
+    <section class="card">
+      <h2 id="les-titel">Les</h2>
+      <div id="les-loader" class="loader">Laden…</div>
+      <p id="les-error" class="error" hidden></p>
+
+      <div id="les-info" hidden>
+        <div class="kv">
+          <div><strong>Reeks</strong></div><div id="v-reeks"></div>
+          <div><strong>Lesnummer</strong></div><div id="v-lesnr"></div>
+          <div><strong>Datum</strong></div><div id="v-datum"></div>
+          <div><strong>Tijd</strong></div><div id="v-tijd"></div>
+          <div><strong>Trainer</strong></div><div id="v-trainer"></div>
+          <div><strong>Locatie</strong></div><div id="v-locatie"></div>
+          <div><strong>Status</strong></div><div id="v-status"></div>
+          <div><strong>Kaart</strong></div><div id="v-kaart"></div>
+        </div>
+
+        <h3 style="margin-top:16px">Inschrijvingen</h3>
+        <div id="v-inschrijvingen" class="chips"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/ui/layout.js?v=0.18.9"></script>
+  <script>SuperhondUI.mount({ title:'Les', icon:'📅', back:'/' });</script>
+  <script type="module">
+    import { loadAll, indexById } from '/js/data.js?v=0.18.9';
+
+    const $=s=>document.querySelector(s); const show=el=>el.hidden=false;
+
+    (async ()=>{
+      const id = new URLSearchParams(location.search).get('id');
+      if(!id){ $('#les-error').textContent='Geen les-id.'; show($('#les-error')); $('#les-loader').hidden=true; return; }
+
+      try{
+        const all = await loadAll();
+        const les = all.lessen.find(x => x.id === id);
+        if(!les) throw new Error('Les niet gevonden');
+
+        const reeksenById = indexById(all.reeksen);
+        const trainersById = indexById(all.trainers);
+        const locatiesById = indexById(all.locaties);
+
+        const reeks = reeksenById[les.reeksId];
+        const trainer = trainersById[les.trainerId];
+        const locatie = locatiesById[les.locatieId];
+
+        // Inschrijvingen bij deze reeks:
+        const ins = all.inschrijvingen.filter(i => i.reeksId === les.reeksId);
+
+        $('#les-titel').textContent = (reeks ? reeks.naam : les.reeksId) + ` — les ${les.lesNr}`;
+        $('#v-reeks').innerHTML = reeks
+          ? `<a href="/lessenreeks/detail.html?id=${reeks.id}">${reeks.naam}</a>`
+          : les.reeksId;
+        $('#v-lesnr').textContent = String(les.lesNr || '—');
+        $('#v-datum').textContent = les.datum || '—';
+        $('#v-tijd').textContent = (les.starttijd && les.eindtijd) ? `${les.starttijd}–${les.eindtijd}` : '—';
+        $('#v-trainer').textContent = trainer ? `${trainer.voornaam} ${trainer.achternaam}` : '—';
+        $('#v-locatie').textContent = locatie ? `${locatie.naam} — ${locatie.adres||''}` : '—';
+        $('#v-status').textContent = les.status || '—';
+        $('#v-kaart').innerHTML = les.mapUrl ? `<a class="btn btn-xs" href="${les.mapUrl}" target="_blank" rel="noopener">Open kaart</a>` : '<span class="muted">—</span>';
+
+        const klantenById = indexById(all.klanten);
+        const hondenById = indexById(all.honden);
+        $('#v-inschrijvingen').innerHTML = ins.length
+          ? ins.map(i => {
+              const k = klantenById[i.klantId]; const h = i.hondId ? hondenById[i.hondId] : null;
+              const klantNaam = k ? `${k.voornaam} ${k.achternaam}` : i.klantId;
+              const hondNaam = h ? ` • ${h.naam}` : '';
+              return `<a class="chip" href="/klanten/detail.html?id=${i.klantId}" title="Bekijk klant">${klantNaam}${hondNaam}</a>`;
+            }).join('')
+          : '<span class="muted">Nog geen inschrijvingen</span>';
+
+        $('#les-loader').hidden = true; show($('#les-info'));
+      }catch(e){
+        console.error(e);
+        $('#les-loader').hidden = true;
+        $('#les-error').textContent = 'Kon lesgegevens niet laden.'; show($('#les-error'));
+      }
+    })();
+  </script>
+</body>
+</html>
