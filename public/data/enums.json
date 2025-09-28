@@ -1,0 +1,10 @@
+{
+  "status": {
+    "actief": "actief",
+    "inactief": "inactief",
+    "gepland": "gepland",
+    "afgelopen": "afgelopen",
+    "geannuleerd": "geannuleerd"
+  },
+  "kanalen": ["email", "whatsapp"]
+}
