@@ -5,16 +5,10 @@
   "scripts": {
     "bump": "node tools/bump-version.js",
     "bump:minor": "node tools/bump-version.js minor",
-    "bump:major": "node tools/bump-version.js major"
+    "bump:major": "node tools/bump-version.js major",
+    "verify": "node tools/verify.js",
+    "split-seed": "node tools/split-seed.js"
   },
   "dependencies": {},
   "devDependencies": {}
-}
-
-"scripts": {
-  "bump": "node tools/bump-version.js",
-  "bump:minor": "node tools/bump-version.js minor",
-  "bump:major": "node tools/bump-version.js major",
-  "verify": "node tools/verify.js",
-  "split-seed": "node tools/split-seed.js"
 }
