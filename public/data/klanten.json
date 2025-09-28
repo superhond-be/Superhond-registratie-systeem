@@ -1,42 +1,52 @@
 [
   {
-    "id": 1,
-    "voornaam": "Jan",
-    "achternaam": "Janssens",
-    "email": "jan.janssens@example.com",
-    "telefoon": "+32 470 12 34 56",
-    "land": "België",
-    "plaats": "Antwerpen",
-    "honden": [1, 2]
-  },
-  {
-    "id": 2,
-    "voornaam": "Ann",
+    "id": "K1001",
+    "voornaam": "An",
     "achternaam": "Peeters",
-    "email": "ann.peeters@example.com",
+    "email": "an.peeters@example.be",
     "telefoon": "+32 475 11 22 33",
-    "land": "België",
+    "land": "BE",
     "plaats": "Retie",
-    "honden": [3]
+    "honden": ["H2001", "H2002"]
   },
   {
-    "id": 3,
+    "id": "K1002",
+    "voornaam": "Tom",
+    "achternaam": "Janssens",
+    "email": "tom.janssens@example.be",
+    "telefoon": "+32 486 66 77 88",
+    "land": "BE",
+    "plaats": "Dessel",
+    "honden": ["H2003"]
+  },
+  {
+    "id": "K1003",
     "voornaam": "Sofie",
     "achternaam": "De Smet",
-    "email": "sofie.desmet@example.com",
-    "telefoon": "+32 488 99 77 11",
-    "land": "België",
-    "plaats": "Hasselt",
+    "email": "sofie.desmet@example.be",
+    "telefoon": "+32 478 12 34 56",
+    "land": "BE",
+    "plaats": "Turnhout",
     "honden": []
   },
   {
-    "id": 4,
-    "voornaam": "Tom",
-    "achternaam": "Vermeulen",
-    "email": "tom.vermeulen@example.com",
+    "id": "K1004",
+    "voornaam": "Jan",
+    "achternaam": "van Dijk",
+    "email": "jan.vandijk@example.nl",
     "telefoon": "+31 6 1234 5678",
-    "land": "Nederland",
+    "land": "NL",
     "plaats": "Eindhoven",
-    "honden": [4]
+    "honden": ["H2004"]
+  },
+  {
+    "id": "K1005",
+    "voornaam": "Lisa",
+    "achternaam": "de Boer",
+    "email": "lisa.deboer@example.nl",
+    "telefoon": "+31 6 8765 4321",
+    "land": "NL",
+    "plaats": "Tilburg",
+    "honden": ["H2005"]
   }
 ]
