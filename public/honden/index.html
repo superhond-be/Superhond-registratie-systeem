@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Honden – Superhond</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <!-- gebruik jouw UI-pad -->
+  <link rel="stylesheet" href="/ui/style.css?v=0.18.7">
 </head>
 <body data-layout="superhond">
   <header class="topbar">
@@ -16,6 +17,8 @@
   <main class="container">
     <section class="card">
       <h2>Hondenlijst</h2>
+
+      <!-- MOET exact deze IDs hebben -->
       <div id="honden-loader" class="loader">Laden…</div>
       <p id="honden-error" class="error" hidden></p>
       <p id="honden-meta" class="muted"></p>
@@ -23,7 +26,9 @@
       <div class="table-wrap">
         <table class="table">
           <thead>
-            <tr><th>Naam</th><th>Ras</th><th>Geboortedatum</th><th>Eigenaar</th></tr>
+            <tr>
+              <th>Naam</th><th>Ras</th><th>Geboortedatum</th><th>Eigenaar</th>
+            </tr>
           </thead>
           <tbody id="honden-tbody"></tbody>
         </table>
@@ -35,6 +40,7 @@
     <small>© Superhond 2025 — <span id="version">v0.18.7 (static)</span></small>
   </footer>
 
-  <script src="/js/honden.js" defer></script>
+  <!-- cache-buster zodat Render/iPad niet cacht -->
+  <script src="/js/honden.js?v=0.18.7" defer></script>
 </body>
 </html>
