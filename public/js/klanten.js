@@ -1,87 +1,99 @@
-(async function () {
-  const $ = s => document.querySelector(s);
-  const log = (...a) => { try { console.log('[Klant]', ...a); } catch {} };
+/* v0.18.7 static – Klantenlijst */
+(() => {
+  const els = {
+    tblBody: document.querySelector('#klanten-tbody'),
+    loader: document.querySelector('#klanten-loader'),
+    error: document.querySelector('#klanten-error'),
+    q: document.querySelector('#q'),
+    land: document.querySelector('#land'),
+    minDogs: document.querySelector('#minDogs'),
+    count: document.querySelector('#count-badge')
+  };
 
-  const TBL = $('#klanten-tabel');        // <table id="klanten-tabel">
-  const STATUS = $('#klantenStatus');     // <div id="klantenStatus">
-  const LAND_FILTER = $('#filterLand');   // <select id="filterLand">
-  const MIN_HONDEN = $('#filterMinHonden'); // <input id="filterMinHonden">
-  const SEARCH = $('#filterZoek');        // <input id="filterZoek">
+  const state = { klanten: [], hondenByOwner: new Map() };
 
-  function showError(msg, detail) {
-    if (STATUS) STATUS.innerHTML =
-      `<div class="form-card" style="border-left:4px solid #d83a3a">
-         <b>Kon demo-data niet laden:</b> ${msg}<br>
-         <span class="sub">${detail || ''}</span>
-       </div>`;
+  const debounce = (fn, ms=300) => {
+    let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); };
+  };
+
+  async function loadKlanten() {
+    showLoader(true);
+    try {
+      const [klRes, hoRes] = await Promise.all([
+        fetch('/data/klanten.json', {cache: 'no-store'}),
+        fetch('/data/honden.json', {cache: 'no-store'})
+      ]);
+      if (!klRes.ok || !hoRes.ok) throw new Error('Kon data niet laden');
+
+      const [klanten, honden] = await Promise.all([klRes.json(), hoRes.json()]);
+      // bouw index honden per eigenaar
+      const map = new Map();
+      honden.forEach(h => {
+        if (!map.has(h.eigenaarId)) map.set(h.eigenaarId, []);
+        map.get(h.eigenaarId).push(h);
+      });
+      state.klanten = klanten;
+      state.hondenByOwner = map;
+
+      render();
+      showLoader(false);
+    } catch (err) {
+      showLoader(false);
+      showError('Fout bij laden van klanten. Probeer te verversen.');
+      console.error(err);
+    }
   }
 
-  async function loadJson(url) {
-    const u = `${url}${url.includes('?') ? '&' : '?'}b=${Date.now()}`;
-    const r = await fetch(u);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
-  }
+  function applyFilters(rows) {
+    const q = (els.q.value || '').trim().toLowerCase();
+    const land = els.land.value;
+    const minDogs = parseInt(els.minDogs.value || '0', 10);
 
-  function renderRows(items) {
-    const tbody = TBL && TBL.tBodies[0];
-    if (!tbody) return;
-    tbody.innerHTML = items.map(k => {
-      const honden = (k.honden || []).length;
-      const plaats = [k.postcode, k.plaats].filter(Boolean).join(' ');
-      return `<tr>
-        <td>${(k.voornaam || '')} ${(k.achternaam || '')}</td>
-        <td>${k.email || ''}</td>
-        <td>${plaats || ''}</td>
-        <td style="text-align:right">${honden}</td>
-        <td></td>
-      </tr>`;
-    }).join('') || `<tr><td colspan="5" class="sub">Geen resultaten…</td></tr>`;
-  }
-
-  function applyFilters(data) {
-    const zoek = (SEARCH?.value || '').toLowerCase().trim();
-    const minH = parseInt(MIN_HONDEN?.value || '0', 10) || 0;
-    const land = LAND_FILTER?.value || '';
-
-    return data.filter(k => {
-      if (land && land !== 'ALL' && (k.land || '').toLowerCase() !== land.toLowerCase()) return false;
-      const count = (k.honden || []).length;
-      if (count < minH) return false;
-      if (zoek) {
-        const hay = [k.voornaam, k.achternaam, k.email].join(' ').toLowerCase();
-        if (!hay.includes(zoek)) return false;
-      }
-      return true;
+    return rows.filter(k => {
+      const full = `${k.voornaam} ${k.achternaam}`.toLowerCase();
+      const matchQ = !q || full.includes(q) || (k.email||'').toLowerCase().includes(q);
+      const matchLand = !land || land === 'ALL' || k.land === land;
+      const countDogs = (state.hondenByOwner.get(k.id) || []).length;
+      const matchDogs = countDogs >= minDogs;
+      return matchQ && matchLand && matchDogs;
     });
   }
 
-  try {
-    if (STATUS) STATUS.textContent = 'Demo-data laden…';
-    // pad is absoluut omdat /public de webroot is
-    const klanten = await loadJson('/data/klanten.json');
-
-    // Normaliseer velden een tikje, maar raak datums niet aan (Safari is streng)
-    const norm = klanten.map(k => ({
-      id: k.id || '',
-      voornaam: k.voornaam || '',
-      achternaam: k.achternaam || '',
-      email: k.email || '',
-      land: k.land || '',
-      postcode: k.postcode || '',
-      plaats: k.plaats || '',
-      honden: Array.isArray(k.honden) ? k.honden : []
-    }));
-
-    const update = () => renderRows(applyFilters(norm));
-    [SEARCH, MIN_HONDEN, LAND_FILTER].forEach(el => el && el.addEventListener('input', update));
-    update();
-
-    if (STATUS) STATUS.textContent = `Geladen: ${norm.length} klanten ✓`;
-    log('OK', norm);
-  } catch (e) {
-    log('ERR', e);
-    showError(e.message || 'Onbekende fout', 'Controleer /data/klanten.json & netwerk');
-    if (STATUS) STATUS.classList.add('sub');
+  function render() {
+    const rows = applyFilters(structuredClone(state.klanten));
+    els.tblBody.innerHTML = rows.map(k => {
+      const dogs = state.hondenByOwner.get(k.id) || [];
+      const dogCount = dogs.length;
+      const name = `${k.voornaam} ${k.achternaam}`;
+      return `
+        <tr>
+          <td><strong>${name}</strong></td>
+          <td><a href="mailto:${k.email}">${k.email}</a></td>
+          <td>${k.plaats || ''}</td>
+          <td>${dogCount}</td>
+          <td>
+            <button class="btn btn-xs" title="Bekijken" data-action="view" data-id="${k.id}">👁️</button>
+            <button class="btn btn-xs" title="Bewerken" data-action="edit" data-id="${k.id}">✏️</button>
+            <button class="btn btn-xs" title="Verwijderen" data-action="del" data-id="${k.id}">🗑️</button>
+          </td>
+        </tr>`;
+    }).join('');
+    els.count.textContent = `${rows.length} klanten`;
   }
+
+  function showLoader(yes){
+    els.loader.hidden = !yes;
+  }
+  function showError(msg){
+    els.error.textContent = msg;
+    els.error.hidden = false;
+  }
+
+  // events
+  els.q.addEventListener('input', debounce(render, 300));
+  els.land.addEventListener('change', render);
+  els.minDogs.addEventListener('input', render);
+
+  // init
+  loadKlanten();
 })();
