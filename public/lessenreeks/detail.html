@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lessenreeks – Superhond</title>
+  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
+  <style>
+    .kv{display:grid;grid-template-columns:160px 1fr;gap:8px 14px}
+    .list{margin-top:10px}
+    .row{display:grid;grid-template-columns:100px 1fr 140px 120px;gap:8px;padding:6px 8px;border-bottom:1px solid #e5e7eb}
+    .chips{margin-top:6px}
+    .chip{display:inline-block;padding:4px 8px;border:1px solid #d1d5db;border-radius:999px;background:#fff;margin:0 6px 6px 0;text-decoration:none;color:inherit}
+    .chip:hover{background:#f8fafc}
+  </style>
+</head>
+<body>
+  <main class="container">
+    <section class="card">
+      <h2 id="reeks-titel">Lessenreeks</h2>
+      <div id="reeks-loader" class="loader">Laden…</div>
+      <p id="reeks-error" class="error" hidden></p>
+
+      <div id="reeks-info" hidden>
+        <div class="kv">
+          <div><strong>Klas</strong></div><div id="v-klas"></div>
+          <div><strong>Pakket</strong></div><div id="v-pakket"></div>
+          <div><strong>Aantal strippen</strong></div><div id="v-strippen"></div>
+          <div><strong>Geldigheid</strong></div><div id="v-geldigheid"></div>
+          <div><strong>Startdatum</strong></div><div id="v-start"></div>
+          <div><strong>Max deelnemers</strong></div><div id="v-max"></div>
+          <div><strong>Lesduur</strong></div><div id="v-duur"></div>
+          <div><strong>Status</strong></div><div id="v-status"></div>
+        </div>
+
+        <h3 style="margin-top:16px">Lessen</h3>
+        <div id="v-lessen" class="list"></div>
+
+        <h3 style="margin-top:16px">Inschrijvingen</h3>
+        <div id="v-ins" class="chips"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/ui/layout.js?v=0.18.9"></script>
+  <script>SuperhondUI.mount({ title:'Lessenreeks', icon:'📚', back:'/' });</script>
+  <script type="module">
+    import { loadAll, indexById } from '/js/data.js?v=0.18.9';
+
+    const $=s=>document.querySelector(s); const show=el=>el.hidden=false;
+
+    (async ()=>{
+      const id = new URLSearchParams(location.search).get('id');
+      if(!id){ $('#reeks-error').textContent='Geen reeks-id.'; show($('#reeks-error')); $('#reeks-loader').hidden=true; return; }
+
+      try{
+        const all = await loadAll();
+        const reeks = all.reeksen.find(r => r.id === id);
+        if(!reeks) throw new Error('Reeks niet gevonden');
+
+        const klassenById = indexById(all.klassen);
+        const pakkettenById = indexById(all.pakketten);
+
+        $('#reeks-titel').textContent = reeks.naam;
+        const klas = klassenById[reeks.klasId];
+        const pakket = pakkettenById[reeks.pakketId];
+
+        $('#v-klas').textContent = klas ? `${klas.naam} (${klas.thema})` : reeks.klasId;
+        $('#v-pakket').textContent = pakket ? pakket.naam : reeks.pakketId;
+        $('#v-strippen').textContent = reeks.aantalStrippen;
+        $('#v-geldigheid').textContent = `${reeks.geldigheidWeken} weken`;
+        $('#v-start').textContent = reeks.startdatum || '—';
+        $('#v-max').textContent = reeks.maxDeelnemers ?? (pakket?.maxDeelnemers ?? '—');
+        $('#v-duur').textContent = (reeks.lesduurMin ?? pakket?.lesduurMin ?? '—') + ' min';
+        $('#v-status').textContent = reeks.status || '—';
+
+        // Lessen in deze reeks
+        const lessen = all.lessen.filter(l => l.reeksId === id)
+          .sort((a,b)=> (a.datum+a.starttijd).localeCompare(b.datum+b.starttijd));
+        $('#v-lessen').innerHTML = lessen.length
+          ? lessen.map(l => `
+              <a class="row" href="/lessen/detail.html?id=${l.id}">
+                <div>${l.datum}</div>
+                <div><strong>Les ${l.lesNr}</strong></div>
+                <div>${l.starttijd}–${l.eindtijd}</div>
+                <div>${l.status}</div>
+              </a>
+            `).join('')
+          : '<span class="muted">Nog geen lessen</span>';
+
+        // Inschrijvingen chips
+        const klantenById = indexById(all.klanten);
+        const hondenById = indexById(all.honden);
+        const ins = all.inschrijvingen.filter(i => i.reeksId === id);
+        $('#v-ins').innerHTML = ins.length
+          ? ins.map(i => {
+              const k = klantenById[i.klantId]; const h = i.hondId ? hondenById[i.hondId] : null;
+              const klantNaam = k ? `${k.voornaam} ${k.achternaam}` : i.klantId;
+              const hondNaam = h ? ` • ${h.naam}` : '';
+              const saldo = (i.aantalStrippen - (i.stripGebruikt||0) - (i.stripInVerwerking||0));
+              return `<a class="chip" href="/klanten/detail.html?id=${i.klantId}" title="Saldo ${saldo}">${klantNaam}${hondNaam}</a>`;
+            }).join('')
+          : '<span class="muted">Nog geen inschrijvingen</span>';
+
+        $('#reeks-loader').hidden = true; show($('#reeks-info'));
+      }catch(e){
+        console.error(e);
+        $('#reeks-loader').hidden = true;
+        $('#reeks-error').textContent = 'Kon reeksgegevens niet laden.'; show($('#reeks-error'));
+      }
+    })();
+  </script>
+</body>
+</html>
