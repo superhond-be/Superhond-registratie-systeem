@@ -1,8 +1,8 @@
-// /public/ui/layout.js
+// /public/ui/layout.js  — v0.18.7
 (function () {
   const log = (...a) => { try { console.log('[SuperhondUI]', ...a); } catch {} };
 
-  const pad = n => String(n).padStart(2,'0');
+  const pad = n => String(n).padStart(2, '0');
   const fmt = ts => {
     try {
       const d = new Date(ts);
@@ -33,7 +33,7 @@
     }
   }
 
-  function headerHTML({ title = 'Superhond', icon = '🐶', home = false, back = '../index.html' }) {
+  function headerHTML({ title = 'Superhond', icon = '🐶', home = false, back = '/' }) {
     if (home) {
       return `
 <header class="topbar topbar--home">
@@ -65,16 +65,18 @@
 </footer>`;
   }
 
-  // Noodinjectie: als CSS niet gevonden wordt, toon iets basis zodat layout niet “kaal” is
+  // Zorg dat onze hoofd-CSS geladen is. Val terug op mini inline-styles als /ui/style.css ontbreekt.
   function ensureCss(cb) {
-    if (document.querySelector('link[data-superhond]')) return cb && cb();
+    // Al aanwezig?
+    if ([...document.querySelectorAll('link[rel="stylesheet"]')].some(l => (l.href||'').includes('/ui/style.css'))) {
+      cb && cb(); return;
+    }
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/ui/superhond.css?b=1'; // let op: absoluut pad vanaf /public
-    link.setAttribute('data-superhond', '1');
+    link.href = '/ui/style.css?v=0.18.7'; // standaard pad
     link.onload = () => { log('CSS loaded'); cb && cb(); };
     link.onerror = () => {
-      log('CSS NOT FOUND at /ui/superhond.css — injecting fallback styles');
+      log('CSS NOT FOUND at /ui/style.css — injecting fallback styles');
       const style = document.createElement('style');
       style.textContent = `
         :root{--bg:#f9f9fb;--card:#fff;--border:#e5e7eb}
@@ -85,9 +87,6 @@
         .topbar-center{display:flex;align-items:center;justify-content:center;height:56px}
         .brand{margin:0;font-weight:800;font-size:22px}
         .version-badge{position:absolute;right:16px;top:50%;transform:translateY(-50%);background:#1f2328;color:#fff;border-radius:999px;padding:3px 8px;font-size:12px}
-        .page-title{margin:20px 0 12px}
-        .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px}
-        .tile{display:block;padding:16px 18px;border:1px solid var(--border);border-radius:12px;background:var(--card);text-decoration:none;color:inherit;box-shadow:0 2px 8px rgba(0,0,0,.06)}
         .footer{margin-top:24px;padding:16px 0;border-top:1px solid var(--border);color:#6a6f76}
       `;
       document.head.appendChild(style);
@@ -112,7 +111,7 @@
       log('footer injected');
     }
 
-    // 3) Versie
+    // 3) Versie-info
     const hv = document.getElementById('header-version');
     const fv = document.getElementById('version-info');
     const he = document.getElementById('apiHealth');
@@ -129,17 +128,6 @@
 
     log('mount done', v);
   }
-  /* v0.18.7 small tweaks */
-.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.input, .select { min-height: 38px; }
-.input-nr { width: 5.5rem; }
-.loader { padding: .5rem 0; }
-.error { color: #b00020; }
-.badge-version { float: right; }
-.container { padding: 12px; }
-.card { background: #fff; padding: 12px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
-.muted { color:#6b7280; font-size:.9em; }
-.btn.btn-xs { font-size:.85rem; padding:.2rem .4rem; }
 
   // Expose
   window.SuperhondUI = { mount };
