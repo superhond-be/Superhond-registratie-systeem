@@ -1,30 +1,44 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Superhond — Admin Trainers</title>
-  <link rel="stylesheet" href="../admin.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trainers – Superhond</title>
+  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
 </head>
 <body>
-  <header class="topbar">
-    <a href="../dashboard.html" class="btn">⬅️ Terug</a>
-    <h1>👩‍🏫 Trainers (demo)</h1>
-  </header>
-
   <main class="container">
-    <section class="panel">
-      <table class="table">
-        <thead>
-          <tr><th>Naam</th><th>Specialisatie</th><th>Beschikbaar</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>Paul Janssens</td><td>Basisgroep, Gehoorzaamheid</td><td>Wo & Za</td></tr>
-          <tr><td>Sofie Vermeulen</td><td>Privélessen, Gedrag</td><td>Di & Do</td></tr>
-          <tr><td>Maas Willems</td><td>Puppy Start</td><td>Zo</td></tr>
-        </tbody>
-      </table>
+    <section class="card">
+      <h2>Trainers</h2>
+
+      <div class="toolbar" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+        <input id="q" class="input" type="search" placeholder="Zoek trainer…">
+        <span class="badge" id="t-count">0 trainers</span>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Naam</th>
+              <th>E-mail</th>
+              <th>Telefoon</th>
+              <th>Acties</th>
+            </tr>
+          </thead>
+          <tbody id="t-tbody"></tbody>
+        </table>
+      </div>
+      <div class="loader" id="t-loader">Laden…</div>
+      <p class="error" id="t-error" hidden></p>
     </section>
   </main>
+
+  <script src="/ui/layout.js?v=0.18.9"></script>
+  <script>SuperhondUI.mount({ title:'Trainers', icon:'🧑‍🏫', back:'/' });</script>
+  <script>
+    const tb=document.getElementById('t-tbody'), ct=document.getElementById('t-count');
+    (async()=>{ tb.innerHTML=''; ct.textContent='0 trainers'; /* TODO: vullen */ })();
+  </script>
 </body>
 </html>
