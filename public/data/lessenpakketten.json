@@ -1,0 +1,28 @@
+[
+  {
+    "id": "LP200",
+    "naam": "Puppy Basispakket",
+    "klasId": "C100",
+    "type": "strippenkaart",
+    "thema": "puppy",
+    "aantalStrippen": 8,
+    "maxDeelnemers": 8,
+    "lesduurMin": 60,
+    "geldigheidWeken": 12,
+    "prijsExcl": 0,
+    "status": "actief"
+  },
+  {
+    "id": "LP210",
+    "naam": "Pubers Pakket",
+    "klasId": "C110",
+    "type": "strippenkaart",
+    "thema": "puber",
+    "aantalStrippen": 10,
+    "maxDeelnemers": 10,
+    "lesduurMin": 60,
+    "geldigheidWeken": 16,
+    "prijsExcl": 0,
+    "status": "actief"
+  }
+]
