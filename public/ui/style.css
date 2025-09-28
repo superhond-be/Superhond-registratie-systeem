@@ -1,11 +1,91 @@
-/* v0.18.7 small tweaks */
-.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.input,.select{min-height:38px}
-.input-nr{width:5.5rem}
-.loader{padding:.5rem 0}
-.error{color:#b00020}
-.badge-version{float:right}
-.container{padding:12px}
-.card{background:#fff;padding:12px;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
-.muted{color:#6b7280;font-size:.9em}
-.btn.btn-xs{font-size:.85rem;padding:.2rem .4rem}
+/* Superhond UI – v0.18.9 */
+
+:root{
+  --bg:#f6f8fb;
+  --card:#ffffff;
+  --ink:#111827;
+  --muted:#6b7280;
+  --border:#e5e7eb;
+  --shadow:0 1px 2px rgba(0,0,0,.06);
+  --primary:#1e70ff;
+  --primary-ink:#fff;
+  --accent:#f4c400; /* Superhond geel */
+  --radius:12px;
+}
+
+* { box-sizing: border-box; }
+html,body { height:100%; }
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+}
+
+/* Containers */
+.container{ max-width:1060px; margin:0 auto; padding:16px; }
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:16px;
+}
+.page-title, h2 { margin:0 0 12px; }
+
+/* Topbar / header */
+.topbar{ background:var(--accent); color:#000; }
+.topbar .container{ position:relative; display:flex; align-items:center; gap:12px; min-height:56px; }
+.brand{ margin:0; font-weight:800; font-size:20px; }
+.brand--center{ text-align:center; width:100%; }
+.btn-back{
+  text-decoration:none; color:#000; background:#fff; border:1px solid #d1d5db;
+  padding:6px 10px; border-radius:8px;
+}
+.version-badge, .badge-version{
+  position:absolute; right:16px; top:50%; transform:translateY(-50%);
+  background:#111827; color:#fff; border-radius:999px; padding:4px 10px; font-size:12px;
+}
+
+/* Footer */
+.footer{ border-top:1px solid var(--border); color:var(--muted); }
+.footer .container{ padding:14px 16px; }
+
+/* Tiles (home) */
+.tiles{ display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+.tile{
+  display:flex; align-items:center; gap:10px;
+  padding:14px 16px; border:1px solid var(--border); border-radius:var(--radius);
+  background:var(--card); text-decoration:none; color:inherit; box-shadow:var(--shadow);
+}
+.tile:hover{ border-color:#d1d5db; transform:translateY(-1px); transition:.12s ease; }
+
+/* Table */
+.table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.table{ width:100%; border-collapse:collapse; }
+.table th, .table td{ text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); }
+.table thead th{ font-weight:700; background:#fafafa; }
+
+/* Inputs / buttons / badges */
+.input, .select{
+  min-height:38px; padding:6px 10px; border:1px solid #d1d5db; border-radius:8px; background:#fff;
+}
+.input:focus, .select:focus{ outline:2px solid rgba(30,112,255,.25); border-color:#9bbcff; }
+.input-nr{ width:5.5rem; }
+.btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border:1px solid #d1d5db;
+  border-radius:8px; background:#fff; text-decoration:none; color:#111827; cursor:pointer;
+}
+.btn:hover{ background:#f8fafc; }
+.btn-xs{ font-size:.85rem; padding:.2rem .45rem; }
+.badge{ display:inline-block; padding:4px 8px; border-radius:999px; background:#eef2ff; color:#1e40af; }
+
+.loader{ padding:.5rem 0; color:var(--muted); }
+.error{ color:#b00020; }
+.muted{ color:var(--muted); font-size:.92em; }
+
+/* Small screens */
+@media (max-width:720px){
+  .container{ padding:12px; }
+  .brand{ font-size:18px; }
+  .topbar .container{ min-height:52px; }
+}
