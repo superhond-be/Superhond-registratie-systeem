@@ -1,0 +1,4 @@
+[
+  { "id": "LOC1", "naam": "Terrein Retie", "adres": "Sportpark 1, Retie", "mapUrl": "https://maps.example.com/loc1" },
+  { "id": "LOC2", "naam": "Terrein Dessel", "adres": "Boslaan 5, Dessel", "mapUrl": "https://maps.example.com/loc2" }
+]
