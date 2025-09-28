@@ -1,26 +1,25 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Superhond — Admin Rapporten</title>
-  <link rel="stylesheet" href="../admin.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rapporten – Superhond</title>
+  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
 </head>
 <body>
-  <header class="topbar">
-    <a href="../dashboard.html" class="btn">⬅️ Terug</a>
-    <h1>📊 Rapporten (demo)</h1>
-  </header>
-
   <main class="container">
-    <section class="panel">
-      <p>Hier kan je rapporten genereren en exporteren.</p>
-      <ul>
-        <li>📄 Lessen per maand (CSV/PDF)</li>
-        <li>👥 Inschrijvingen per trainer</li>
-        <li>💳 Strippenkaart-gebruik</li>
+    <section class="card">
+      <h2>Rapporten</h2>
+      <ul class="muted" style="margin:0;padding-left:18px">
+        <li>Deelname per les (periode/locatie/trainer)</li>
+        <li>Strippenkaart verbruik (per klant)</li>
+        <li>Nieuwe inschrijvingen (week/maand)</li>
       </ul>
+      <p class="muted" style="margin-top:10px;">(Coming soon — grafieken en CSV-export)</p>
     </section>
   </main>
+
+  <script src="/ui/layout.js?v=0.18.9"></script>
+  <script>SuperhondUI.mount({ title:'Rapporten', icon:'📈', back:'/' });</script>
 </body>
 </html>
