@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Seed beheer – Superhond</title>
+  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
+  <style>
+    .actions { display:flex; gap:.5rem; flex-wrap:wrap; margin:10px 0; }
+    #seed-status.ok { color:#065f46 }  /* groen */
+    #seed-status.err { color:#b00020 } /* rood  */
+  </style>
+</head>
+<body>
+  <main class="container">
+    <section class="card">
+      <h2>Seed beheer</h2>
+      <p class="muted">Werkbestand: <code>/public/data/seed.json</code></p>
+      <div class="actions">
+        <button id="seed-import" class="btn">📥 Importeer seed.json</button>
+        <button id="seed-dl-klanten" class="btn" disabled>⬇️ Exporteer klanten.json</button>
+        <button id="seed-dl-honden" class="btn" disabled>⬇️ Exporteer honden.json</button>
+      </div>
+      <p id="seed-status" class="muted">Nog niet geladen.</p>
+      <p class="muted">Tip: Gebruik de exportbestanden om <em>public/data/klanten.json</em> en
+        <em>public/data/honden.json</em> bij te werken wanneer je op een statische host draait.</p>
+    </section>
+  </main>
+
+  <script src="/ui/layout.js?v=0.18.9"></script>
+  <script>
+    SuperhondUI.mount({ title: 'Seed beheer', icon: '🌱', back: '/' });
+  </script>
+  <script src="/js/seed-loader.js?v=0.18.9"></script>
+</body>
+</html>
