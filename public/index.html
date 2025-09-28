@@ -3,47 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Klanten – Superhond</title>
+  <title>Superhond – Dashboard</title>
   <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
 </head>
 <body>
   <main class="container">
-    <section class="card">
-      <h2>Klantenlijst</h2>
-
-      <div class="toolbar" style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;">
-        <input id="q" class="input" type="search" placeholder="Zoek (naam/e-mail)…" aria-label="Zoeken">
-        <input id="minDogs" class="input input-nr" type="number" min="0" value="0" title="Min. # honden" aria-label="Minimum aantal honden">
-        <select id="land" class="select" aria-label="Filter op land">
-          <option value="ALL">Alle landen</option>
-          <option value="BE">België</option>
-          <option value="NL">Nederland</option>
-        </select>
-        <span id="count-badge" class="badge">0 klanten</span>
-      </div>
-
-      <div id="klanten-loader" class="loader">Klanten laden…</div>
-      <p id="klanten-error" class="error" hidden></p>
-
-      <div class="table-wrap">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Klant</th>
-              <th>E-mail</th>
-              <th>Plaats</th>
-              <th>Honden</th>
-              <th>Acties</th>
-            </tr>
-          </thead>
-          <tbody id="klanten-tbody"></tbody>
-        </table>
-      </div>
-    </section>
+    <h2 class="page-title">Dashboard</h2>
+    <div class="tiles">
+      <a href="/klanten/" class="tile">👤 Klanten</a>
+      <a href="/honden/" class="tile">🐶 Honden</a>
+      <a href="/lessen/" class="tile">📅 Lessen</a>
+      <a href="/trainers/" class="tile">🧑‍🏫 Trainers</a>
+      <a href="/strippenkaarten/" class="tile">🎫 Strippenkaarten</a>
+      <a href="/rapporten/" class="tile">📈 Rapporten</a>
+      <a href="/instellingen/" class="tile">⚙️ Instellingen</a>
+      <a href="/over/" class="tile">ℹ️ Over</a>
+    </div>
   </main>
 
   <script src="/ui/layout.js?v=0.18.9"></script>
-  <script src="/js/klanten.js?v=0.18.9" defer></script>
-  <script>SuperhondUI.mount({ title: 'Klanten', icon: '👤', back: '/' });</script>
+  <script>
+    SuperhondUI.mount({ title: 'Superhond', icon: '🐶', home: true });
+  </script>
 </body>
 </html>
