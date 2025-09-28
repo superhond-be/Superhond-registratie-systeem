@@ -2,27 +2,29 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Superhond Registratie</title>
-  <!-- (optioneel) direct CSS linken; layout.js laadt 'm ook, maar dit helpt bij cache -->
-  <link rel="stylesheet" href="/ui/superhond.css?b=1">
+  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
 </head>
-<body class="dashboard-page">
+<body>
   <main class="container">
     <h2 class="page-title">Hoofdmenu</h2>
-    <nav class="tiles">
-      <a href="/klanten/" class="tile">👤<span>Klanten</span></a>
-      <a href="/honden/" class="tile">🐕<span>Honden</span></a>
-      <a href="/lessen/" class="tile">📅<span>Lessen</span></a>
-      <a href="/trainers/" class="tile">🏅<span>Trainers</span></a>
-      <a href="/strippenkaarten/" class="tile">🎟️<span>Strippenkaarten</span></a>
-      <a href="/rapporten/" class="tile">📊<span>Rapporten</span></a>
-      <a href="/instellingen/" class="tile">⚙️<span>Instellingen</span></a>
-      <a href="/over/" class="tile">ℹ️<span>Over</span></a>
-    </nav>
+
+    <div class="tiles">
+      <a class="tile" href="/klanten/"><span>👤</span> Klanten</a>
+      <a class="tile" href="/honden/"><span>🐶</span> Honden</a>
+      <a class="tile" href="/strippenkaarten/"><span>🎫</span> Strippenkaarten</a>
+      <a class="tile" href="/lessen/"><span>📅</span> Lessen</a>
+      <a class="tile" href="/trainers/"><span>🧑‍🏫</span> Trainers</a>
+      <a class="tile" href="/rapporten/"><span>📈</span> Rapporten</a>
+      <a class="tile" href="/over/"><span>ℹ️</span> Over</a>
+      <a class="tile" href="/instellingen/"><span>⚙️</span> Instellingen</a>
+    </div>
   </main>
 
-  <script src="/ui/layout.js?b=1"></script>
-  <script>SuperhondUI.mount({ title:'Superhond Registratie', icon:'🐶', home:true });</script>
+  <script src="/ui/layout.js?v=0.18.9"></script>
+  <script>
+    SuperhondUI.mount({ title: 'Superhond Registratie', icon: '🐾', home: true });
+  </script>
 </body>
 </html>
