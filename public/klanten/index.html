@@ -4,18 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Klanten – Superhond</title>
-  <link rel="stylesheet" href="/ui/style.css?v=0.18.7">
+  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
 </head>
 <body>
   <main class="container">
     <section class="card">
       <h2>Klantenlijst</h2>
 
-      <!-- Filterbalk -->
-      <div class="toolbar" style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
-        <input id="q" class="input" type="search" placeholder="Zoek (naam/e-mail)…" aria-label="Zoeken">
-        <input id="minDogs" class="input input-nr" type="number" min="0" value="0" title="Min. # honden" aria-label="Minimum aantal honden">
-        <select id="land" class="select" aria-label="Filter op land">
+      <div class="toolbar" style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;">
+        <input id="q" class="input" type="search" placeholder="Zoek (naam/e-mail)…">
+        <input id="minDogs" class="input input-nr" type="number" min="0" value="0" title="Min. # honden">
+        <select id="land" class="select">
           <option value="ALL">Alle landen</option>
           <option value="BE">België</option>
           <option value="NL">Nederland</option>
@@ -23,11 +22,9 @@
         <span id="count-badge" class="badge">0 klanten</span>
       </div>
 
-      <!-- Loader & foutmelding -->
-      <div id="klanten-loader" class="loader" role="status" aria-live="polite">Klanten laden…</div>
+      <div id="klanten-loader" class="loader">Klanten laden…</div>
       <p id="klanten-error" class="error" hidden></p>
 
-      <!-- Tabel -->
       <div class="table-wrap">
         <table class="table">
           <thead>
@@ -45,9 +42,8 @@
     </section>
   </main>
 
-  <!-- Scripts -->
-  <script src="/ui/layout.js?v=0.18.7"></script>
-  <script src="/js/klanten.js?v=0.18.7" defer></script>
+  <script src="/ui/layout.js?v=0.18.9"></script>
+  <script src="/js/klanten.js?v=0.18.9" defer></script>
   <script>
     SuperhondUI.mount({ title: 'Klanten', icon: '👤', back: '/' });
   </script>
