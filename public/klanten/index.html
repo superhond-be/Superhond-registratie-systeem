@@ -4,38 +4,62 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Klanten – Superhond</title>
+  <meta name="description" content="Klantenlijst met zoek- en landenfilter, gekoppeld aan honden.">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
+<body data-layout="superhond">
+  <!-- Topbar -->
+  <header class="topbar">
+    <a class="btn btn-back" href="/">← Terug</a>
+    <h1 class="brand">👤 Klanten</h1>
+    <span class="badge badge-version">v0.18.7</span>
+  </header>
+
   <main class="container">
-    <h2 class="page-title">Klantenlijst</h2>
+    <!-- Kaart: filter + lijst -->
+    <section class="card">
+      <h2>Klantenlijst</h2>
 
-    <section class="form-card" style="margin-bottom:12px;">
-      <div style="display:grid;grid-template-columns:1fr 120px 200px;gap:12px;">
-        <input id="zoekInput" placeholder="Zoek (naam/e-mail)…">
-        <input id="minDogs" type="number" min="0" value="0">
-        <select id="landFilter">
-          <option value="">Alle landen</option>
-          <option>België</option>
-          <option>Nederland</option>
+      <!-- Filterbalk -->
+      <div class="toolbar" style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
+        <input id="q" class="input" type="search" placeholder="Zoek (naam/e-mail)…" aria-label="Zoeken">
+        <input id="minDogs" class="input input-nr" type="number" min="0" value="0" title="Min. # honden" aria-label="Minimum aantal honden">
+        <select id="land" class="select" aria-label="Filter op land">
+          <option value="ALL">Alle landen</option>
+          <option value="BE">België</option>
+          <option value="NL">Nederland</option>
         </select>
+        <span id="count-badge" class="badge">0 klanten</span>
       </div>
-      <div class="sub" id="dataStatus" style="margin-top:8px;">Klanten laden…</div>
-    </section>
 
-    <section class="form-card">
-      <div class="table-wrapper">
-        <table id="klantenTable" class="table">
+      <!-- Loader & foutmelding -->
+      <div id="klanten-loader" class="loader" role="status" aria-live="polite">Klanten laden…</div>
+      <p id="klanten-error" class="error" hidden></p>
+
+      <!-- Tabel -->
+      <div class="table-wrap">
+        <table class="table">
           <thead>
-            <tr><th>Klant</th><th>E-mail</th><th>Plaats</th><th>Honden</th><th>Acties</th></tr>
+            <tr>
+              <th scope="col">Klant</th>
+              <th scope="col">E-mail</th>
+              <th scope="col">Plaats</th>
+              <th scope="col">Honden</th>
+              <th scope="col">Acties</th>
+            </tr>
           </thead>
-          <tbody></tbody>
+          <tbody id="klanten-tbody"></tbody>
         </table>
       </div>
     </section>
   </main>
 
-  <script src="/ui/layout.js?b=1"></script>
-  <script>SuperhondUI.mount({ title:'Klanten', icon:'👤', back:'../index.html' });</script>
-  <script src="/js/klanten.js?b=1"></script>
+  <footer class="footer">
+    <small>© Superhond 2025 — <span id="version">v0.18.7 (static)</span></small>
+    <br><small class="muted">API offline — static versie gebruikt</small>
+  </footer>
+
+  <!-- Script laadt data + render (moet na de HTML staan) -->
+  <script src="/js/klanten.js" defer></script>
 </body>
 </html>
