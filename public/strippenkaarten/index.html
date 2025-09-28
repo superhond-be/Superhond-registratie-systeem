@@ -1,29 +1,46 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Superhond — Admin Strippenkaarten</title>
-  <link rel="stylesheet" href="../admin.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Strippenkaarten – Superhond</title>
+  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
 </head>
 <body>
-  <header class="topbar">
-    <a href="../dashboard.html" class="btn">⬅️ Terug</a>
-    <h1>🎟️ Strippenkaarten (demo)</h1>
-  </header>
-
   <main class="container">
-    <section class="panel">
-      <table class="table">
-        <thead>
-          <tr><th>Klant</th><th>Kaart</th><th>Totaal</th><th>Gebruikt</th><th>Resterend</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>Sara De Smet</td><td>10-Beurtenkaart</td><td>10</td><td>4</td><td>6</td></tr>
-          <tr><td>Jan Peeters</td><td>20-Beurtenkaart</td><td>20</td><td>5</td><td>15</td></tr>
-        </tbody>
-      </table>
+    <section class="card">
+      <h2>Strippenkaarten</h2>
+
+      <div class="toolbar" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+        <select id="status" class="select">
+          <option value="ALL">Alle statussen</option>
+          <option value="actief">Actief</option>
+          <option value="vol">Vol</option>
+          <option value="verlopen">Verlopen</option>
+        </select>
+        <span class="badge" id="s-count">0 kaarten</span>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Klant</th><th>Type</th><th>Credits</th><th>Gebruikt</th><th>Geldig tot</th><th>Status</th><th>Acties</th>
+            </tr>
+          </thead>
+          <tbody id="s-tbody"></tbody>
+        </table>
+      </div>
+      <div class="loader" id="s-loader">Laden…</div>
+      <p class="error" id="s-error" hidden></p>
     </section>
   </main>
+
+  <script src="/ui/layout.js?v=0.18.9"></script>
+  <script>SuperhondUI.mount({ title:'Strippenkaarten', icon:'🎫', back:'/' });</script>
+  <script>
+    const sb=document.getElementById('s-tbody'), sc=document.getElementById('s-count');
+    (async()=>{ sb.innerHTML=''; sc.textContent='0 kaarten'; /* TODO: vullen */ })();
+  </script>
 </body>
 </html>
