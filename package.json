@@ -1,21 +1,12 @@
 {
-  "name": "superhond",
-  "version": "0.18.5",
+  "name": "superhond-registratie-systeem",
+  "version": "1.0.0",
   "type": "module",
-  "engines": { "node": ">=18" },
   "scripts": {
-    "start": "node server/index.js"
+    "bump": "node tools/bump-version.js",
+    "bump:minor": "node tools/bump-version.js minor",
+    "bump:major": "node tools/bump-version.js major"
   },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.19.2"
-  }
-}
-{
-    "scripts": {
-  "bump": "node tools/bump-version.js",
-  "bump:minor": "node tools/bump-version.js minor",
-  "bump:major": "node tools/bump-version.js major"
-}
-  }
+  "dependencies": {},
+  "devDependencies": {}
 }
