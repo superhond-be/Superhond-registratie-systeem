@@ -1,7 +1,44 @@
 [
-  { "id": "H2001", "naam": "Rex",   "ras": "Mechelse Herder",   "geboortedatum": "2020-05-12", "eigenaarId": "K1001" },
-  { "id": "H2002", "naam": "Max",   "ras": "Border Collie",      "geboortedatum": "2021-02-18", "eigenaarId": "K1001" },
-  { "id": "H2003", "naam": "Bella", "ras": "Labrador Retriever", "geboortedatum": "2019-11-03", "eigenaarId": "K1002" },
-  { "id": "H2004", "naam": "Luna",  "ras": "Golden Retriever",   "geboortedatum": "2022-06-20", "eigenaarId": "K1004" },
-  { "id": "H2005", "naam": "Nora",  "ras": "Australian Shepherd","geboortedatum": "2021-09-10", "eigenaarId": "K1005" }
+  {
+    "id": "H2001",
+    "naam": "Rex",
+    "ras": "Mechelse Herder",
+    "geboortedatum": "2020-05-12",
+    "eigenaarId": "K1001"
+  },
+  {
+    "id": "H2002",
+    "naam": "Max",
+    "ras": "Border Collie",
+    "geboortedatum": "2021-02-18",
+    "eigenaarId": "K1001"
+  },
+  {
+    "id": "H2003",
+    "naam": "Bella",
+    "ras": "Labrador Retriever",
+    "geboortedatum": "2019-11-03",
+    "eigenaarId": "K1002"
+  },
+  {
+    "id": "H2004",
+    "naam": "Luna",
+    "ras": "Golden Retriever",
+    "geboortedatum": "2022-06-20",
+    "eigenaarId": "K1004"
+  },
+  {
+    "id": "H2005",
+    "naam": "Nora",
+    "ras": "Australian Shepherd",
+    "geboortedatum": "2021-09-10",
+    "eigenaarId": "K1005"
+  },
+  {
+    "id": "H2006",
+    "naam": "Milo",
+    "ras": "Beagle",
+    "geboortedatum": "2018-03-15",
+    "eigenaarId": "K1006"
+  }
 ]
