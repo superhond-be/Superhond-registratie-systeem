@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lessen – Superhond</title>
+  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
+</head>
+<body>
+  <main class="container">
+    <section class="card">
+      <h2>Lessen</h2>
+
+      <div class="toolbar" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+        <input id="q" class="input" type="search" placeholder="Zoek (naam/locatie/trainer)…">
+        <select id="loc" class="select">
+          <option value="ALL">Alle locaties</option>
+        </select>
+        <select id="trainer" class="select">
+          <option value="ALL">Alle trainers</option>
+        </select>
+        <span class="badge" id="lessen-count">0 lessen</span>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Naam</th>
+              <th>Type</th>
+              <th>Locatie</th>
+              <th>Trainer</th>
+              <th>Start</th>
+              <th>Prijs</th>
+              <th>Credits</th>
+              <th>Acties</th>
+            </tr>
+          </thead>
+          <tbody id="lessen-tbody"></tbody>
+        </table>
+      </div>
+      <div class="loader" id="lessen-loader">Laden…</div>
+      <p class="error" id="lessen-error" hidden></p>
+    </section>
+  </main>
+
+  <script src="/ui/layout.js?v=0.18.9"></script>
+  <script>
+    SuperhondUI.mount({ title:'Lessen', icon:'📅', back:'/' });
+  </script>
+  <script>
+    // demo: lege render (koppelen aan echte API komt later)
+    const tbody = document.getElementById('lessen-tbody');
+    const count = document.getElementById('lessen-count');
+    const loader = document.getElementById('lessen-loader');
+    const errorEl = document.getElementById('lessen-error');
+
+    (async function load(){
+      try{
+        loader.style.display = 'block';
+        // TODO: fetch('/data/lessen.json') of /api/lessen
+        const rows = [];
+        tbody.innerHTML = rows.map(r=>`
+          <tr>
+            <td>${r.naam}</td><td>${r.type}</td><td>${r.locatie}</td>
+            <td>${r.trainer}</td><td>${r.start}</td>
+            <td>€ ${r.prijs?.toFixed?.(2)||'-'}</td><td>${r.credits||'-'}</td>
+            <td><button class="btn btn-xs">👁️</button></td>
+          </tr>`).join('');
+        count.textContent = `${rows.length} lessen`;
+      }catch(e){ errorEl.hidden=false; errorEl.textContent='Fout bij laden van lessen.'; }
+      finally{ loader.style.display='none'; }
+    })();
+  </script>
+</body>
+</html>
