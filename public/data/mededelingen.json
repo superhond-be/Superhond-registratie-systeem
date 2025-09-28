@@ -1,0 +1,20 @@
+[
+  {
+    "id": "M6001",
+    "titel": "Trainer ziek — les verplaatst",
+    "bericht": "De les van dinsdag 7/10 wordt verplaatst naar 14/10.",
+    "scope": { "type": "les", "lesId": "L4101" },
+    "kanalen": ["email", "whatsapp"],
+    "status": "actief",
+    "aangemaaktOp": "2025-09-28T10:00:00+02:00"
+  },
+  {
+    "id": "M6002",
+    "titel": "Weerswaarschuwing",
+    "bericht": "Neem regenjas mee voor de puppy les van zondag.",
+    "scope": { "type": "reeks", "reeksId": "LR300" },
+    "kanalen": ["email"],
+    "status": "actief",
+    "aangemaaktOp": "2025-09-28T11:30:00+02:00"
+  }
+]
