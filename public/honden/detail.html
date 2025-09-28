@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hond – Superhond</title>
+  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
+  <style>
+    .kv{display:grid;grid-template-columns:140px 1fr;gap:8px 14px}
+    .chip{display:inline-block;padding:4px 8px;border:1px solid #d1d5db;border-radius:999px;background:#fff;margin-right:6px}
+  </style>
+</head>
+<body>
+  <main class="container">
+    <section class="card">
+      <h2 id="hond-naam">Hond</h2>
+      <div id="hond-loader" class="loader">Laden…</div>
+      <p id="hond-error" class="error" hidden></p>
+
+      <div id="hond-info" hidden>
+        <div class="kv">
+          <div><strong>Naam</strong></div><div id="v-naam"></div>
+          <div><strong>Ras</strong></div><div id="v-ras"></div>
+          <div><strong>Geboortedatum</strong></div><div id="v-dob"></div>
+          <div><strong>Eigenaar</strong></div><div id="v-owner"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/ui/layout.js?v=0.18.9"></script>
+  <script>
+    SuperhondUI.mount({ title:'Hond', icon:'🐶', back:'/honden/' });
+  </script>
+  <script>
+    (async () => {
+      const q = new URLSearchParams(location.search);
+      const id = q.get('id');
+      const $ = s => document.querySelector(s);
+      const show = el => el.hidden = false;
+
+      if(!id){ $('#hond-error').textContent='Geen hond-id.'; show($('#hond-error')); $('#hond-loader').hidden=true; return; }
+
+      try{
+        const [hRes,kRes] = await Promise.all([
+          fetch('/data/honden.json?b='+Date.now()), fetch('/data/klanten.json?b='+Date.now())
+        ]);
+        const [honden,klanten] = await Promise.all([hRes.json(), kRes.json()]);
+        const hond = honden.find(h=>h.id===id);
+        if(!hond) throw new Error('Hond niet gevonden');
+
+        const owner = klanten.find(k=>k.id===hond.eigenaarId);
+        $('#hond-naam').textContent = hond.naam;
+        $('#v-naam').textContent = hond.naam;
+        $('#v-ras').textContent  = hond.ras || '—';
+        $('#v-dob').textContent  = hond.geboortedatum || '—';
+        $('#v-owner').innerHTML  = owner
+          ? `<a href="/klanten/detail.html?id=${owner.id}">${owner.voornaam} ${owner.achternaam}</a> <span class="muted">${owner.plaats||''}</span>`
+          : '—';
+
+        $('#hond-loader').hidden = true;
+        show($('#hond-info'));
+      }catch(e){
+        $('#hond-loader').hidden = true;
+        $('#hond-error').textContent = 'Kon hondgegevens niet laden.'; show($('#hond-error'));
+        console.error(e);
+      }
+    })();
+  </script>
+</body>
+</html>
