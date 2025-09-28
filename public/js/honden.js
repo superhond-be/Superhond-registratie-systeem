@@ -1,18 +1,18 @@
-/* v0.18.7 – Hondenlijst (Superhond UI) */
+/* v0.18.9 – Hondenlijst met klikbare eigenaar + link naar honddetail */
 (async () => {
   const body   = document.querySelector('#honden-tbody');
   const meta   = document.querySelector('#honden-meta');
   const loader = document.querySelector('#honden-loader');
   const err    = document.querySelector('#honden-error');
 
-  const showLoader = v => loader.hidden = !v;
-  const showErr = m => { err.textContent = m; err.hidden = false; };
+  const showLoader = v => { if (loader) loader.hidden = !v; };
+  const showErr = m => { if (err){ err.textContent = m; err.hidden = false; } };
 
   try {
     showLoader(true);
     const [hRes, kRes] = await Promise.all([
-      fetch('/data/honden.json',  { cache:'no-store' }),
-      fetch('/data/klanten.json', { cache:'no-store' })
+      fetch('/data/honden.json?b='+Date.now(), {cache:'no-store'}),
+      fetch('/data/klanten.json?b='+Date.now(), {cache:'no-store'})
     ]);
     if (!hRes.ok || !kRes.ok) throw new Error('Kon data niet laden');
 
@@ -21,17 +21,20 @@
 
     body.innerHTML = dogs.map(h => {
       const e = kById[h.eigenaarId];
-      const eigenaar = e ? `${e.voornaam} ${e.achternaam}` : '—';
-      const plaats = e?.plaats ? `<small class="muted"> ${e.plaats}</small>` : '';
-      return `<tr>
-        <td><strong>${h.naam}</strong></td>
-        <td>${h.ras}</td>
-        <td>${h.geboortedatum}</td>
-        <td>${eigenaar}${plaats}</td>
-      </tr>`;
+      const eigenaarNaam = e ? `${e.voornaam} ${e.achternaam}` : '—';
+      const plaats = e?.plaats || '';
+      return `
+        <tr>
+          <td><a href="/honden/detail.html?id=${h.id}"><strong>${h.naam}</strong></a></td>
+          <td>${h.ras || '—'}</td>
+          <td>${h.geboortedatum || '—'}</td>
+          <td>${e
+              ? `<a href="/klanten/detail.html?id=${e.id}">${eigenaarNaam}</a> <small class="muted">${plaats}</small>`
+              : '—'}</td>
+        </tr>`;
     }).join('');
 
-    meta.textContent = `Geladen: ${dogs.length} honden ✓`;
+    if (meta) meta.textContent = `Geladen: ${dogs.length} honden ✓`;
     showLoader(false);
   } catch (e) {
     console.error(e);
