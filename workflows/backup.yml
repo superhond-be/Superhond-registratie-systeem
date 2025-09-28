@@ -1,0 +1,50 @@
+name: Backup to GitHub Release
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * 1'   # elke maandag 02:00 UTC (≈ 04:00 Brussel in winter)
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute filenames
+        id: n
+        run: |
+          TS=$(date -u +"%Y%m%d-%H%M%SZ")
+          echo "TAG=backup-$TS" >> $GITHUB_OUTPUT
+          echo "FULL=superhond-full-$TS.zip" >> $GITHUB_OUTPUT
+          echo "DATA=superhond-data-$TS.zip" >> $GITHUB_OUTPUT
+
+      - name: Create ZIPs
+        run: |
+          sudo apt-get update && sudo apt-get install -y zip
+          # Volledige broncode (zonder .git/.github/node_modules/mac-artefacten)
+          zip -r "${{ steps.n.outputs.FULL }}" . \
+            -x ".git/*" ".github/*" "node_modules/*" "**/.DS_Store" "**/Thumbs.db"
+          # Alleen de data
+          zip -r "${{ steps.n.outputs.DATA }}" public/data
+
+      - name: Create GitHub Release (with assets)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.n.outputs.TAG }}
+          name: "Automated backup ${{ steps.n.outputs.TAG }}"
+          body: |
+            Automated backup created by GitHub Actions.
+            Includes:
+            - ${{ steps.n.outputs.FULL }} (full repo, except .git, node_modules, .github)
+            - ${{ steps.n.outputs.DATA }} (data-only)
+          files: |
+            ${{ steps.n.outputs.FULL }}
+            ${{ steps.n.outputs.DATA }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
