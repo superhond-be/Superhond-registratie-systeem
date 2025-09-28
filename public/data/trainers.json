@@ -1,0 +1,4 @@
+[
+  { "id": "T900", "voornaam": "Evi", "achternaam": "De Vos", "email": "evi.devos@example.be", "telefoon": "+32 475 22 33 44", "status": "actief" },
+  { "id": "T901", "voornaam": "Koen", "achternaam": "Martens", "email": "koen.martens@example.be", "telefoon": "+32 486 55 66 77", "status": "actief" }
+]
