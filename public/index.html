@@ -3,28 +3,47 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Superhond Registratie</title>
+  <title>Klanten – Superhond</title>
   <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
 </head>
 <body>
   <main class="container">
-    <h2 class="page-title">Hoofdmenu</h2>
+    <section class="card">
+      <h2>Klantenlijst</h2>
 
-    <div class="tiles">
-      <a class="tile" href="/klanten/"><span>👤</span> Klanten</a>
-      <a class="tile" href="/honden/"><span>🐶</span> Honden</a>
-      <a class="tile" href="/strippenkaarten/"><span>🎫</span> Strippenkaarten</a>
-      <a class="tile" href="/lessen/"><span>📅</span> Lessen</a>
-      <a class="tile" href="/trainers/"><span>🧑‍🏫</span> Trainers</a>
-      <a class="tile" href="/rapporten/"><span>📈</span> Rapporten</a>
-      <a class="tile" href="/over/"><span>ℹ️</span> Over</a>
-      <a class="tile" href="/instellingen/"><span>⚙️</span> Instellingen</a>
-    </div>
+      <div class="toolbar" style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;">
+        <input id="q" class="input" type="search" placeholder="Zoek (naam/e-mail)…" aria-label="Zoeken">
+        <input id="minDogs" class="input input-nr" type="number" min="0" value="0" title="Min. # honden" aria-label="Minimum aantal honden">
+        <select id="land" class="select" aria-label="Filter op land">
+          <option value="ALL">Alle landen</option>
+          <option value="BE">België</option>
+          <option value="NL">Nederland</option>
+        </select>
+        <span id="count-badge" class="badge">0 klanten</span>
+      </div>
+
+      <div id="klanten-loader" class="loader">Klanten laden…</div>
+      <p id="klanten-error" class="error" hidden></p>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Klant</th>
+              <th>E-mail</th>
+              <th>Plaats</th>
+              <th>Honden</th>
+              <th>Acties</th>
+            </tr>
+          </thead>
+          <tbody id="klanten-tbody"></tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
   <script src="/ui/layout.js?v=0.18.9"></script>
-  <script>
-    SuperhondUI.mount({ title: 'Superhond Registratie', icon: '🐾', home: true });
-  </script>
+  <script src="/js/klanten.js?v=0.18.9" defer></script>
+  <script>SuperhondUI.mount({ title: 'Klanten', icon: '👤', back: '/' });</script>
 </body>
 </html>
