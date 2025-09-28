@@ -1,6 +1,7 @@
 [
-  { "id": 1, "naam": "Rex",  "ras": "Mechelse Herder",    "geboortedatum": "2020-05-12", "eigenaarId": 1 },
-  { "id": 2, "naam": "Max",  "ras": "Border Collie",      "geboortedatum": "2021-02-18", "eigenaarId": 1 },
-  { "id": 3, "naam": "Bella","ras": "Labrador Retriever", "geboortedatum": "2019-11-03", "eigenaarId": 2 },
-  { "id": 4, "naam": "Luna", "ras": "Golden Retriever",   "geboortedatum": "2022-06-20", "eigenaarId": 4 }
+  { "id": "H2001", "naam": "Rex",   "ras": "Mechelse Herder",   "geboortedatum": "2020-05-12", "eigenaarId": "K1001" },
+  { "id": "H2002", "naam": "Max",   "ras": "Border Collie",      "geboortedatum": "2021-02-18", "eigenaarId": "K1001" },
+  { "id": "H2003", "naam": "Bella", "ras": "Labrador Retriever", "geboortedatum": "2019-11-03", "eigenaarId": "K1002" },
+  { "id": "H2004", "naam": "Luna",  "ras": "Golden Retriever",   "geboortedatum": "2022-06-20", "eigenaarId": "K1004" },
+  { "id": "H2005", "naam": "Nora",  "ras": "Australian Shepherd","geboortedatum": "2021-09-10", "eigenaarId": "K1005" }
 ]
