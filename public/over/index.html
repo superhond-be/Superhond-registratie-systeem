@@ -1,47 +1,24 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Over - Superhond</title>
-  <link rel="stylesheet" href="../css/style.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Over – Superhond</title>
+  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
 </head>
 <body>
-  <header class="topbar">
-    <div class="container topbar-flex">
-      <h1 class="brand">ℹ️ Over Superhond</h1>
-      <span class="version-badge" id="header-version">v…</span>
-    </div>
-  </header>
-
   <main class="container">
-    <h2 class="page-title">Systeeminformatie</h2>
-    <pre id="version-box">Versie laden...</pre>
-    <pre id="health-box">Health laden...</pre>
+    <section class="card">
+      <h2>Over Superhond</h2>
+      <p class="muted">Registratie- en lesbeheer voor hondenscholen. Deze demo draait “static” — API volgt.</p>
+      <ul class="muted" style="margin:0;padding-left:18px">
+        <li>Versie en status in footer (uit <code>/version.json</code>)</li>
+        <li>Layout via <code>/ui/style.css</code> en <code>/ui/layout.js</code></li>
+      </ul>
+    </section>
   </main>
 
-  <footer class="footer">
-    <div class="container">
-      © Superhond 2025 — <span id="version-info">Versie laden...</span>
-    </div>
-  </footer>
-
-  <script src="../js/footer.js?b=12345"></script>
-  <script>
-    // Versie (API of static)
-    fetch('/api/version?b=' + Date.now())
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(d => document.getElementById('version-box').textContent = JSON.stringify(d, null, 2))
-      .catch(() => fetch('/version.json?b=' + Date.now())
-        .then(r => r.json())
-        .then(d => document.getElementById('version-box').textContent = JSON.stringify(d, null, 2))
-        .catch(() => document.getElementById('version-box').textContent = '⚠️ Geen versie-informatie'));
-
-    // Health (bestaat alleen als je later een backend hebt)
-    fetch('/health?b=' + Date.now())
-      .then(r => r.text())
-      .then(t => document.getElementById('health-box').textContent = t)
-      .catch(() => document.getElementById('health-box').textContent = 'ℹ️ Geen backend health endpoint (Static Site).');
-  </script>
+  <script src="/ui/layout.js?v=0.18.9"></script>
+  <script>SuperhondUI.mount({ title:'Over', icon:'ℹ️', back:'/' });</script>
 </body>
 </html>
