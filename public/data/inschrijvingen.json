@@ -1,0 +1,28 @@
+[
+  {
+    "id": "I5001",
+    "klantId": "K1001",
+    "hondId": "H2001",
+    "reeksId": "LR300",
+    "pakketId": "LP200",
+    "startdatum": "2025-10-05",
+    "aantalStrippen": 8,
+    "geldigheidWeken": 12,
+    "stripGebruikt": 1,
+    "stripInVerwerking": 1,
+    "status": "actief"
+  },
+  {
+    "id": "I5002",
+    "klantId": "K1002",
+    "hondId": "H2003",
+    "reeksId": "LR310",
+    "pakketId": "LP210",
+    "startdatum": "2025-10-07",
+    "aantalStrippen": 10,
+    "geldigheidWeken": 16,
+    "stripGebruikt": 0,
+    "stripInVerwerking": 0,
+    "status": "actief"
+  }
+]
