@@ -1,38 +1,32 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Honden – Superhond</title>
-  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Honden</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/layout.js" defer></script>
+  <script src="/honden/index.js" defer></script>
 </head>
 <body>
-  <main class="container">
-    <section class="card">
-      <h2>Hondenlijst</h2>
+  <header id="topbar"></header>
 
-      <div id="honden-loader" class="loader">Laden…</div>
-      <p id="honden-error" class="error" hidden></p>
-      <p id="honden-meta" class="muted"></p>
-
-      <div class="table-wrap">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Naam</th>
-              <th>Ras</th>
-              <th>Geboortedatum</th>
-              <th>Eigenaar</th>
-            </tr>
-          </thead>
-          <tbody id="honden-tbody"></tbody>
-        </table>
-      </div>
-    </section>
+  <main>
+    <h1>Honden</h1>
+    <div id="loader">⏳ Laden...</div>
+    <div id="error" style="display:none; color:red;"></div>
+    <table id="honden-tabel" style="display:none;">
+      <thead>
+        <tr>
+          <th>Naam</th>
+          <th>Ras</th>
+          <th>Eigenaar</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </main>
 
-  <script src="/ui/layout.js?v=0.18.9"></script>
-  <script src="/js/honden.js?v=0.18.9" defer></script>
-  <script>SuperhondUI.mount({ title: 'Honden', icon: '🐶', back: '/' });</script>
+  <footer id="footer"></footer>
 </body>
 </html>
