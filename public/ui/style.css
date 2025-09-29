@@ -89,22 +89,19 @@ body{
   .brand{ font-size:18px; }
   .topbar .container{ min-height:
 
- #superhond-score {
+#superhond-score {
   display: flex;
   justify-content: center;
   gap: 12px;
   margin-top: 1rem;
 }
-
 #superhond-score button {
   background: #007bff;
-  border: none;
+  color: white;
   padding: 8px 14px;
   border-radius: 6px;
-  color: white;
+  border: none;
   cursor: pointer;
-  font-weight: 600;
-  
 }
 
 #superhond-score button:hover {
