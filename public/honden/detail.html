@@ -1,24 +1,36 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Hond detail</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/style.css" />
   <script src="/js/layout.js" defer></script>
-  <script src="/honden/detail.js" defer></script>
+  <script type="module" src="/honden/detail.js" defer></script>
+  <style>.grid{display:grid;gap:.5rem;grid-template-columns:1fr 2fr;max-width:800px}</style>
 </head>
 <body>
-  <header id="topbar"></header>
+<header id="topbar"></header>
 
-  <main>
-    <h1>Hond detail</h1>
-    <div id="loader">⏳ Laden...</div>
-    <div id="error" style="display:none; color:red;"></div>
-    <div id="hond-detail" style="display:none;"></div>
-    <p><a href="/honden/index.html" class="btn">⬅️ Terug naar honden</a></p>
-  </main>
+<main>
+  <h1>Hond detail</h1>
+  <div id="loader">⏳ Laden…</div>
+  <div id="error" style="display:none;color:red;"></div>
 
-  <footer id="footer"></footer>
+  <section id="hond" style="display:none;">
+    <div class="grid">
+      <div>Naam</div><div id="d-naam"></div>
+      <div>Ras</div><div id="d-ras"></div>
+      <div>Geboortedatum</div><div id="d-dob"></div>
+      <div>Chip</div><div id="d-chip"></div>
+      <div>Eigenaar</div><div id="d-owner"></div>
+    </div>
+    <p style="margin-top:.5rem">
+      <a class="btn" href="/honden/index.html">⬅️ Terug naar honden</a>
+    </p>
+  </section>
+</main>
+
+<footer id="footer"></footer>
 </body>
 </html>
