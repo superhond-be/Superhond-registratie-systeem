@@ -5,34 +5,29 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Klanten</title>
 
-  <!-- NIEUWE UI-styles -->
-  <link rel="stylesheet" href="../ui/style.css">
+  <!-- Centrale UI -->
+  <link rel="stylesheet" href="../ui/style.css" />
 
-  <!-- Layout met topbar + footer + versie/buildtijd -->
+  <!-- Layout (topbar/footer + versie/buildtijd) -->
   <script src="../js/layout.js" defer></script>
 
   <!-- Pagina-logic -->
   <script type="module" src="./index.js" defer></script>
 </head>
 <body>
-
-  <header id="topbar" class="topbar"></header>
-
+<header id="topbar" class="topbar"></header>
 
 <main>
   <h1>Klanten</h1>
 
-  <!-- Toolbar -->
   <div class="toolbar">
-    <input id="zoek" type="search" placeholder="Zoek naam of e-mail…">
+    <input id="zoek" type="search" placeholder="Zoek naam of e-mail…" />
     <button id="btn-nieuw" class="btn primary">+ Nieuwe klant</button>
   </div>
 
-  <!-- Loader + errors -->
   <div id="loader">⏳ Laden…</div>
   <div id="error" style="display:none;"></div>
 
-  <!-- Tabel in card wrapper -->
   <div class="table-wrap" id="wrap" style="display:none;">
     <table id="tabel">
       <thead>
@@ -51,49 +46,56 @@
 
 <footer id="footer"></footer>
 
-<!-- Modal Nieuw/Wijzig -->
+<!-- Modal: iPad/Safari-proof -->
 <dialog id="modal">
-  <form method="dialog" id="form">
+  <form id="form">
     <h3 id="modal-title">Klant</h3>
+
     <input type="hidden" name="id" />
-    <div class="row"><label>Naam</label><input name="naam" /></div>
-    <div class="row"><label>Voornaam</label><input name="voornaam" /></div>
-    <div class="row"><label>Achternaam</label><input name="achternaam" /></div>
-    <div class="row"><label>E-mail</label><input name="email" type="email" /></div>
-    <div class="row"><label>Telefoon</label><input name="telefoon" /></div>
-    <div class="row"><label>Adres</label><input name="adres" /></div>
-    <div class="row"><label>Land</label>
+
+    <div class="row">
+      <label>Naam</label>
+      <input name="naam" placeholder="Tom Janssens" />
+    </div>
+
+    <div class="row">
+      <label>Voornaam</label>
+      <input name="voornaam" />
+    </div>
+
+    <div class="row">
+      <label>Achternaam</label>
+      <input name="achternaam" />
+    </div>
+
+    <div class="row">
+      <label>E-mail</label>
+      <input name="email" type="email" />
+    </div>
+
+    <div class="row">
+      <label>Telefoon</label>
+      <input name="telefoon" />
+    </div>
+
+    <div class="row">
+      <label>Adres</label>
+      <input name="adres" />
+    </div>
+
+    <div class="row">
+      <label>Land</label>
       <select name="land">
         <option value="BE">BE</option>
         <option value="NL">NL</option>
       </select>
     </div>
+
     <menu>
-      <button value="cancel">Annuleren</button>
-      <button class="btn primary" value="ok">Bewaren</button>
+      <button type="button" id="btn-cancel">Annuleren</button>
+      <button type="button" id="btn-save" class="btn primary">Bewaren</button>
     </menu>
   </form>
 </dialog>
-
-<!-- Dialog: niet verwijderen bij gekoppelde honden -->
-<dialog id="confirmDel">
-  <form method="dialog">
-    <h3>Kan klant niet verwijderen</h3>
-    <p id="confirm-msg"></p>
-    <menu><button value="ok" class="btn">OK</button></menu>
-  </form>
-</dialog>
-
-<script>
-  // Toon wrapper zodra er rijen zijn
-  document.addEventListener('DOMContentLoaded', () => {
-    const table = document.getElementById('tabel');
-    const wrap  = document.getElementById('wrap');
-    const obs = new MutationObserver(() => {
-      if (table.tBodies[0] && table.tBodies[0].rows.length) wrap.style.display = '';
-    });
-    obs.observe(table.tBodies[0], { childList: true });
-  });
-</script>
 </body>
 </html>
