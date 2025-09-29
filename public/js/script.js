@@ -42,7 +42,4 @@ document.getElementById("customerForm").addEventListener("submit", function(e) {
   document.getElementById("output").textContent = JSON.stringify(customer, null, 2);
 });
 
-document.getElementById("mijnFoto").addEventListener("click", function() {
-  alert("Je hebt op de afbeelding geklikt 📸");
-});
 
