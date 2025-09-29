@@ -6,12 +6,14 @@ const loader = document.getElementById("loader");
 const error  = document.getElementById("error");
 const tabel  = document.getElementById("tabel");
 const tbody  = tabel.querySelector("tbody");
+const wrap   = document.getElementById("wrap");
 const zoek   = document.getElementById("zoek");
 const btnNieuw = document.getElementById("btn-nieuw");
+
 const modal = document.getElementById("modal");
 const form  = document.getElementById("form");
-const confirmDel = document.getElementById("confirmDel");
-const confirmMsg = document.getElementById("confirm-msg");
+const btnCancel = document.getElementById("btn-cancel");
+const btnSave   = document.getElementById("btn-save");
 
 let klantCache = [];
 let hondCache  = [];
@@ -32,7 +34,6 @@ function ensureNaam(k){
   return comb || guessNameFromEmail(k.email) || `Klant #${k.id}`;
 }
 function dogsOf(klantId){
-  // tolerant voor schema; uiteindelijk slaan we overal eigenaarId op
   return (hondCache || []).filter(h => String(h?.eigenaarId ?? h?.ownerId ?? h?.klantId) === String(klantId));
 }
 
@@ -41,9 +42,11 @@ function rowHtml(k) {
   const naam = ensureNaam(k);
   const dogs = dogsOf(k.id);
   const maxChips = 3;
+
   const chips = dogs.slice(0, maxChips).map(h => `
     <span class="chip"><a href="../honden/detail.html?id=${h.id}" title="Open ${S(h.naam)}">${S(h.naam)}</a></span>
   `).join("");
+
   const more = dogs.length > maxChips
     ? `<span class="chip more" title="${dogs.slice(maxChips).map(h=>S(h.naam)).join(', ')}">+${dogs.length - maxChips}</span>`
     : (dogs.length === 0 ? `<a class="chip more" href="../honden/index.html?owner=${k.id}" title="Nieuwe hond">+ Hond</a>` : "");
@@ -65,13 +68,13 @@ function render(filter="") {
   const f = S(filter).trim().toLowerCase();
   const lijst = (klantCache || [])
     .filter(Boolean)
-    .map(k => ({ ...k, naam: ensureNaam(k) })) // zorg dat naam altijd gevuld is
+    .map(k => ({ ...k, naam: ensureNaam(k) }))
     .filter(k => !f || S(k.naam).toLowerCase().includes(f) || S(k.email).toLowerCase().includes(f))
     .sort(cmpBy("naam"));
 
   tbody.innerHTML = lijst.map(rowHtml).join("");
   loader.style.display = "none";
-  document.getElementById("wrap").style.display = lijst.length ? "" : "none";
+  wrap.style.display = "";
 }
 
 /* ---------- init ---------- */
@@ -79,7 +82,7 @@ async function init() {
   try {
     await ensureData();
     klantCache = getKlanten() || [];
-    hondCache  = getHonden() || [];
+    hondCache  = getHonden()  || [];
 
     // MIGRATIE: sla ontbrekende naam direct op zodat het blijvend is
     let changed = false;
@@ -112,8 +115,10 @@ zoek.addEventListener("input", debounce(() => render(zoek.value), 300));
 
 function openEdit(id) {
   const isNew = !id;
-  const k = isNew ? { id:"", naam:"", voornaam:"", achternaam:"", email:"", telefoon:"", adres:"", land:"BE" }
-                  : klantCache.find(x => String(x?.id) === String(id)) || {};
+  const k = isNew
+    ? { id:"", naam:"", voornaam:"", achternaam:"", email:"", telefoon:"", adres:"", land:"BE" }
+    : klantCache.find(x => String(x?.id) === String(id)) || {};
+
   form.reset();
   form.id.value = k.id || "";
   form.naam.value = S(k.naam);
@@ -123,17 +128,25 @@ function openEdit(id) {
   form.telefoon.value = S(k.telefoon);
   form.adres.value = S(k.adres);
   form.land.value = S(k.land || "BE");
+
   document.getElementById("modal-title").textContent = isNew ? "Nieuwe klant" : "Klant wijzigen";
   modal.showModal();
 }
 
-form.addEventListener("submit", e => e.preventDefault());
-modal.addEventListener("close", () => {
-  if (modal.returnValue !== "ok") return;
+// iPad/Safari-proof: expliciete knoppen
+btnCancel.addEventListener("click", () => modal.close('cancel'));
+btnSave.addEventListener("click", () => {
   const data = Object.fromEntries(new FormData(form).entries());
 
-  // bereken en bewaar consistente naam
-  data.naam = S(data.naam).trim() || ([data.voornaam, data.achternaam].filter(Boolean).join(" ").trim()) || guessNameFromEmail(data.email);
+  // naam invullen indien leeg
+  data.naam = S(data.naam).trim() ||
+              [data.voornaam, data.achternaam].filter(Boolean).join(" ").trim() ||
+              guessNameFromEmail(data.email);
+
+  if (!data.naam) {
+    alert("Vul minstens een naam (of voornaam/achternaam of e-mail) in.");
+    return;
+  }
 
   if (!data.id) {
     const max = (klantCache || []).reduce((m,x)=>Math.max(m, Number(x?.id)||0), 0);
@@ -143,15 +156,16 @@ modal.addEventListener("close", () => {
     const i = klantCache.findIndex(k => String(k?.id) === String(data.id));
     if (i >= 0) klantCache[i] = { ...klantCache[i], ...data };
   }
+
   setKlanten(klantCache);
   render(zoek.value);
+  modal.close('ok');
 });
 
 function tryDelete(id) {
   const dogs = dogsOf(id).length;
   if (dogs > 0) {
-    confirmMsg.textContent = `Klant heeft nog ${dogs} hond(en). Verwijder of herwijs eerst de honden.`;
-    confirmDel.showModal();
+    alert(`Klant heeft nog ${dogs} hond(en). Verwijder of herwijs eerst de honden.`);
     return;
   }
   if (!confirm("Deze klant definitief verwijderen?")) return;
