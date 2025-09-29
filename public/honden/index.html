@@ -1,32 +1,67 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Honden</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/style.css" />
   <script src="/js/layout.js" defer></script>
-  <script src="/honden/index.js" defer></script>
+  <script type="module" src="/honden/index.js" defer></script>
+  <style>
+    .toolbar { display:flex; gap:.5rem; align-items:center; margin:.5rem 0 1rem; }
+    dialog form { display:grid; gap:.5rem; min-width:min(560px,90vw); }
+    dialog .row { display:grid; gap:.5rem; grid-template-columns:1fr 2fr; align-items:center; }
+    dialog menu { display:flex; justify-content:flex-end; gap:.5rem; margin-top:.5rem; }
+  </style>
 </head>
 <body>
-  <header id="topbar"></header>
+<header id="topbar"></header>
 
-  <main>
-    <h1>Honden</h1>
-    <div id="loader">⏳ Laden...</div>
-    <div id="error" style="display:none; color:red;"></div>
-    <table id="honden-tabel" style="display:none;">
-      <thead>
-        <tr>
-          <th>Naam</th>
-          <th>Ras</th>
-          <th>Eigenaar</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </main>
+<main>
+  <h1>Honden</h1>
+  <div class="toolbar">
+    <input id="zoek" type="search" placeholder="Zoek hond of ras…" />
+    <select id="ownerFilter"><option value="">— Filter op eigenaar —</option></select>
+    <button id="btn-nieuw" class="btn">+ Nieuwe hond</button>
+  </div>
 
-  <footer id="footer"></footer>
+  <div id="loader">⏳ Laden…</div>
+  <div id="error" style="display:none;color:red;"></div>
+
+  <table id="tabel" style="display:none;width:100%">
+    <thead>
+      <tr>
+        <th>Naam</th>
+        <th>Ras</th>
+        <th>Geboortedatum</th>
+        <th>Eigenaar</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</main>
+
+<footer id="footer"></footer>
+
+<!-- Modal -->
+<dialog id="modal">
+  <form method="dialog" id="form">
+    <h3 id="modal-title">Hond</h3>
+    <input type="hidden" name="id" />
+    <div class="row"><label>Naam</label><input name="naam" required /></div>
+    <div class="row"><label>Ras</label><input name="ras" /></div>
+    <div class="row"><label>Geboortedatum</label><input name="geboortedatum" type="date" /></div>
+    <div class="row"><label>Chip</label><input name="chip" /></div>
+    <div class="row"><label>Eigenaar</label>
+      <select name="eigenaarId" id="sel-eigenaar" required></select>
+    </div>
+    <menu>
+      <button value="cancel">Annuleren</button>
+      <button class="btn" value="ok">Bewaren</button>
+    </menu>
+  </form>
+</dialog>
+
 </body>
 </html>
