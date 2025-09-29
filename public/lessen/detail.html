@@ -1,99 +1,160 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Les – Superhond</title>
-  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Les – Detail</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
   <style>
-    .kv{display:grid;grid-template-columns:160px 1fr;gap:8px 14px}
-    .chips{margin-top:6px}
-    .chip{display:inline-block;padding:4px 8px;border:1px solid #d1d5db;border-radius:999px;background:#fff;margin:0 6px 6px 0;text-decoration:none;color:inherit}
-    .chip:hover{background:#f8fafc}
+    /* Kleine, zelfstandige styles voor spinner/kaart */
+    .container { max-width: 960px; margin: 0 auto; padding: 16px; }
+    .breadcrumbs { font-size: .9rem; color: #666; margin-bottom: 12px; }
+    .card { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .meta { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); margin: 12px 0; }
+    .badge { display:inline-block; padding: 4px 8px; border-radius: 999px; background:#f6f7fb; border:1px solid #e6e7ef; font-size:.85rem; }
+    .spinner { display:flex; align-items:center; gap:8px; color:#555; }
+    .spinner:before{ content:""; width:14px;height:14px;border-radius:50%; border:2px solid #bbb;border-top-color:#333; animation:spin 0.8s linear infinite; display:inline-block; }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .error { background:#fff3f3; border:1px solid #ffd6d6; color:#8a1f1f; padding:12px; border-radius:8px; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top: 12px;}
+    .btn { appearance:none; border:1px solid #ddd; background:#fafafa; padding:8px 12px; border-radius:8px; cursor:pointer; }
+    .btn:hover { background:#f0f0f0; }
+    .muted { color:#666; font-size:.95rem; }
+    .list { margin: 0; padding-left: 18px; }
   </style>
 </head>
 <body>
+  <div id="topbar"></div>
+
   <main class="container">
-    <section class="card">
-      <h2 id="les-titel">Les</h2>
-      <div id="les-loader" class="loader">Laden…</div>
-      <p id="les-error" class="error" hidden></p>
+    <nav class="breadcrumbs"><a href="/index.html">Dashboard</a> › <a href="/agenda.html">Agenda</a> › Les</nav>
 
-      <div id="les-info" hidden>
-        <div class="kv">
-          <div><strong>Reeks</strong></div><div id="v-reeks"></div>
-          <div><strong>Lesnummer</strong></div><div id="v-lesnr"></div>
-          <div><strong>Datum</strong></div><div id="v-datum"></div>
-          <div><strong>Tijd</strong></div><div id="v-tijd"></div>
-          <div><strong>Trainer</strong></div><div id="v-trainer"></div>
-          <div><strong>Locatie</strong></div><div id="v-locatie"></div>
-          <div><strong>Status</strong></div><div id="v-status"></div>
-          <div><strong>Kaart</strong></div><div id="v-kaart"></div>
-        </div>
+    <div id="status" class="spinner">Laden…</div>
 
-        <h3 style="margin-top:16px">Inschrijvingen</h3>
-        <div id="v-inschrijvingen" class="chips"></div>
+    <article id="detail" class="card" hidden>
+      <header>
+        <h1 id="title">Les</h1>
+        <p id="subtitle" class="muted"></p>
+      </header>
+
+      <section class="meta" id="meta"></section>
+
+      <section>
+        <h2>Beschrijving</h2>
+        <p id="description" class="muted">–</p>
+      </section>
+
+      <section>
+        <h2>Koppelingen</h2>
+        <ul class="list" id="links"></ul>
+      </section>
+
+      <div class="actions">
+        <a id="backLink" class="btn" href="/agenda.html">← Terug naar agenda</a>
+        <a id="reeksLink" class="btn" href="#" hidden>Bekijk lessenreeks</a>
       </div>
-    </section>
+    </article>
+
+    <div id="error" class="error" hidden></div>
   </main>
 
-  <script src="/ui/layout.js?v=0.18.9"></script>
-  <script>SuperhondUI.mount({ title:'Les', icon:'📅', back:'/' });</script>
+  <div id="footer"></div>
+
   <script type="module">
-    import { loadAll, indexById } from '/js/data.js?v=0.18.9';
+    import { mountLayout } from "/assets/js/layout.js"; // reeds bij jou aanwezig
+    import { getQueryParam } from "/assets/js/lib/url.mjs";
+    import { fetchJSON } from "/assets/js/lib/http.mjs";
+    import { fmtDateTime, fmtTimeRange, safe } from "/assets/js/lib/format.mjs";
 
-    const $=s=>document.querySelector(s); const show=el=>el.hidden=false;
+    mountLayout("#topbar", "#footer");
 
-    (async ()=>{
-      const id = new URLSearchParams(location.search).get('id');
-      if(!id){ $('#les-error').textContent='Geen les-id.'; show($('#les-error')); $('#les-loader').hidden=true; return; }
+    const statusEl = document.querySelector("#status");
+    const errorEl  = document.querySelector("#error");
+    const cardEl   = document.querySelector("#detail");
 
-      try{
-        const all = await loadAll();
-        const les = all.lessen.find(x => x.id === id);
-        if(!les) throw new Error('Les niet gevonden');
+    const id = getQueryParam("id");
+    if (!id) {
+      statusEl.hidden = true;
+      errorEl.hidden = false;
+      errorEl.textContent = "Geen id in de URL (verwacht ?id=…).";
+      throw new Error("Missing id");
+    }
 
-        const reeksenById = indexById(all.reeksen);
-        const trainersById = indexById(all.trainers);
-        const locatiesById = indexById(all.locaties);
+    (async function init() {
+      try {
+        const [lessen, locaties, trainers, reeksen] = await Promise.all([
+          fetchJSON("/data/lessen.json"),
+          fetchJSON("/data/locaties.json").catch(() => []),
+          fetchJSON("/data/trainers.json").catch(() => []),
+          fetchJSON("/data/lessenreeksen.json").catch(() => []),
+        ]);
 
-        const reeks = reeksenById[les.reeksId];
-        const trainer = trainersById[les.trainerId];
-        const locatie = locatiesById[les.locatieId];
+        const les = lessen.find(l => String(l.id) === String(id));
+        if (!les) throw new Error(`Les met id ${id} niet gevonden.`);
 
-        // Inschrijvingen bij deze reeks:
-        const ins = all.inschrijvingen.filter(i => i.reeksId === les.reeksId);
+        // Resolve referenties (best effort)
+        const locatie = locaties.find(x => x.id === les.locatieId);
+        const trainer = trainers.find(x => x.id === les.trainerId);
+        const reeks   = les.reeksId ? reeksen.find(x => x.id === les.reeksId) : null;
 
-        $('#les-titel').textContent = (reeks ? reeks.naam : les.reeksId) + ` — les ${les.lesNr}`;
-        $('#v-reeks').innerHTML = reeks
-          ? `<a href="/lessenreeks/detail.html?id=${reeks.id}">${reeks.naam}</a>`
-          : les.reeksId;
-        $('#v-lesnr').textContent = String(les.lesNr || '—');
-        $('#v-datum').textContent = les.datum || '—';
-        $('#v-tijd').textContent = (les.starttijd && les.eindtijd) ? `${les.starttijd}–${les.eindtijd}` : '—';
-        $('#v-trainer').textContent = trainer ? `${trainer.voornaam} ${trainer.achternaam}` : '—';
-        $('#v-locatie').textContent = locatie ? `${locatie.naam} — ${locatie.adres||''}` : '—';
-        $('#v-status').textContent = les.status || '—';
-        $('#v-kaart').innerHTML = les.mapUrl ? `<a class="btn btn-xs" href="${les.mapUrl}" target="_blank" rel="noopener">Open kaart</a>` : '<span class="muted">—</span>';
+        // Title + subtitle
+        document.querySelector("#title").textContent = les.titel || `Les #${les.id}`;
+        document.querySelector("#subtitle").textContent =
+          [fmtDateTime(les.start), fmtTimeRange(les.start, les.einde), locatie?.naam].filter(Boolean).join(" • ");
 
-        const klantenById = indexById(all.klanten);
-        const hondenById = indexById(all.honden);
-        $('#v-inschrijvingen').innerHTML = ins.length
-          ? ins.map(i => {
-              const k = klantenById[i.klantId]; const h = i.hondId ? hondenById[i.hondId] : null;
-              const klantNaam = k ? `${k.voornaam} ${k.achternaam}` : i.klantId;
-              const hondNaam = h ? ` • ${h.naam}` : '';
-              return `<a class="chip" href="/klanten/detail.html?id=${i.klantId}" title="Bekijk klant">${klantNaam}${hondNaam}</a>`;
-            }).join('')
-          : '<span class="muted">Nog geen inschrijvingen</span>';
+        // Meta
+        const meta = document.querySelector("#meta");
+        meta.innerHTML = [
+          badge("Datum", fmtDateTime(les.start)),
+          badge("Tijd", fmtTimeRange(les.start, les.einde) || "–"),
+          badge("Locatie", locatie?.naam || "–"),
+          badge("Trainer", trainer?.naam || "–"),
+          badge("Niveau", les.niveau || "–"),
+          badge("Capaciteit", les.capaciteit != null ? String(les.capaciteit) : "–"),
+          badge("Status", humanStatus(les.status))
+        ].join("");
 
-        $('#les-loader').hidden = true; show($('#les-info'));
-      }catch(e){
-        console.error(e);
-        $('#les-loader').hidden = true;
-        $('#les-error').textContent = 'Kon lesgegevens niet laden.'; show($('#les-error'));
+        // Description
+        document.querySelector("#description").innerHTML = safe(les.beschrijving || "Geen beschrijving.");
+
+        // Links
+        const links = document.querySelector("#links");
+        links.innerHTML = [
+          les.reeksId ? liLink(`/lessenreeks/detail.html?id=${encodeURIComponent(les.reeksId)}`, "Naar lessenreeks") : "",
+          trainer ? liLink(`#`, `Trainer: ${trainer.naam}`) : "",
+          locatie ? liLink(`#`, `Locatie: ${locatie.naam}`) : "",
+        ].join("");
+
+        // Reeks-knop
+        const reeksBtn = document.querySelector("#reeksLink");
+        if (reeks) {
+          reeksBtn.hidden = false;
+          reeksBtn.href = `/lessenreeks/detail.html?id=${encodeURIComponent(reeks.id)}`;
+        }
+
+        // UI states
+        statusEl.hidden = true;
+        cardEl.hidden = false;
+      } catch (err) {
+        statusEl.hidden = true;
+        errorEl.hidden = false;
+        errorEl.textContent = err.message || "Onbekende fout bij laden.";
+        console.error(err);
       }
     })();
+
+    // helpers
+    function badge(label, value) {
+      return `<div><div class="muted" style="margin-bottom:4px">${label}</div><span class="badge">${safe(value ?? "–")}</span></div>`;
+    }
+    function humanStatus(s) {
+      if (!s) return "–";
+      const map = { open:"Open", vol:"Vol", geannuleerd:"Geannuleerd" };
+      return map[s] || s;
+    }
+    function liLink(href, text) {
+      return `<li><a href="${href}">${safe(text)}</a></li>`;
+    }
   </script>
 </body>
 </html>
