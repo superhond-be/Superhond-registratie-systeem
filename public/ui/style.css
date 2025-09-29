@@ -89,3 +89,14 @@ body{
   .brand{ font-size:18px; }
   .topbar .container{ min-height:52px; }
 }
+
+/* chips voor honden in klantenlijst */
+.chips{display:flex;flex-wrap:wrap;gap:.35rem}
+.chip{
+  display:inline-block; padding:.15rem .5rem; border:1px solid var(--border);
+  border-radius:999px; background:#fff; font-size:.85rem; line-height:1.2;
+}
+.chip a{color:inherit; text-decoration:none}
+.chip a:hover{text-decoration:underline}
+.chip.more{background:#f3f4f6}
+
