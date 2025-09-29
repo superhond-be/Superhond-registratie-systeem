@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lessenreeksen</title>
+
+  <!-- UI-styles -->
+  <link rel="stylesheet" href="../ui/style.css">
+
+  <!-- Layout -->
+  <script src="../js/layout.js" defer></script>
+
+  <!-- Pagina logic -->
+  <script type="module" src="./index.js" defer></script>
+</head>
+<body>
+<header id="topbar"></header>
+
+<main>
+  <h1>Lessenreeksen</h1>
+
+  <div class="toolbar">
+    <input id="zoek" type="search" placeholder="Zoek reeks…">
+  </div>
+
+  <div id="loader">⏳ Laden…</div>
+  <div id="error" style="display:none;"></div>
+
+  <div class="table-wrap" id="wrap" style="display:none;">
+    <table id="tabel">
+      <thead>
+        <tr>
+          <th>Naam</th>
+          <th>Thema</th>
+          <th>Aantal lessen</th>
+          <th>Prijs</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</main>
+
+<footer id="footer"></footer>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const tbody = document.querySelector("#tabel tbody");
+    const wrap  = document.getElementById("wrap");
+    const obs = new MutationObserver(() => {
+      if (tbody.rows.length) wrap.style.display = "";
+    });
+    obs.observe(tbody, { childList: true });
+  });
+</script>
+</body>
+</html>
