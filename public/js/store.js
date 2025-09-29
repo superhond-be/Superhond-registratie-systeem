@@ -1,52 +1,74 @@
-// Eenvoudige client-side "datastore" met seed fallback en localStorage.
-// Keys
-const K_KLANTEN = "superhond.klanten";
-const K_HONDEN  = "superhond.honden";
+// Superhond store.js — robuuste loader (altijd absolute /data/* paden)
 
-// Seed-loaders
-async function loadSeed(path) {
-  const r = await fetch(path, { cache: "no-store" });
-  if (!r.ok) throw new Error(`Seed niet geladen: ${path}`);
-  return await r.json();
+const LS = {
+  klanten: "sh_klanten",
+  honden: "sh_honden",
+  version: "sh_version",
+};
+
+let _klanten = null;
+let _honden  = null;
+
+const bust = () => `?t=${Date.now()}`;
+
+async function loadJsonAbs(path) {
+  const url = `${path}${bust()}`;
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(`${url} → HTTP ${r.status}`);
+  return r.json();
 }
 
-// Init: laad uit localStorage of seed
+async function loadAllDemo() {
+  const [klanten, honden] = await Promise.all([
+    loadJsonAbs("/data/klanten.json"),
+    loadJsonAbs("/data/honden.json"),
+  ]);
+  return { klanten, honden };
+}
+
 export async function ensureData() {
-  if (!localStorage.getItem(K_KLANTEN)) {
-    const seed = await loadSeed("/data/klanten.json").catch(() => []);
-    localStorage.setItem(K_KLANTEN, JSON.stringify(seed));
+  if (_klanten && _honden) return;
+
+  // 1) uit localStorage als beschikbaar
+  const kl = localStorage.getItem(LS.klanten);
+  const ho = localStorage.getItem(LS.honden);
+  if (kl && ho) {
+    try {
+      _klanten = JSON.parse(kl);
+      _honden  = JSON.parse(ho);
+      return;
+    } catch {
+      // val terug op fetch
+    }
   }
-  if (!localStorage.getItem(K_HONDEN)) {
-    const seed = await loadSeed("/data/honden.json").catch(() => []);
-    localStorage.setItem(K_HONDEN, JSON.stringify(seed));
+
+  // 2) static demo-data (absolute paden!)
+  try {
+    const { klanten, honden } = await loadAllDemo();
+    _klanten = klanten || [];
+    _honden  = honden  || [];
+    localStorage.setItem(LS.klanten, JSON.stringify(_klanten));
+    localStorage.setItem(LS.honden,  JSON.stringify(_honden));
+  } catch (e) {
+    // gooi door zodat pagina's het tonen in #error
+    throw new Error("Kon demo-data niet laden. " + e.message);
   }
 }
 
-export function getKlanten() {
-  return JSON.parse(localStorage.getItem(K_KLANTEN) || "[]");
-}
+/* -------- getters / setters -------- */
+export const getKlanten = () => _klanten || [];
+export const getHonden  = () => _honden  || [];
+
 export function setKlanten(list) {
-  localStorage.setItem(K_KLANTEN, JSON.stringify(list));
-}
-export function getHonden() {
-  return JSON.parse(localStorage.getItem(K_HONDEN) || "[]");
+  _klanten = Array.isArray(list) ? list : [];
+  localStorage.setItem(LS.klanten, JSON.stringify(_klanten));
 }
 export function setHonden(list) {
-  localStorage.setItem(K_HONDEN, JSON.stringify(list));
+  _honden = Array.isArray(list) ? list : [];
+  localStorage.setItem(LS.honden, JSON.stringify(_honden));
 }
 
-// ID helpers
-function nextId(list) {
-  const max = list.reduce((m, x) => Math.max(m, Number(x.id) || 0), 0);
-  return max + 1;
-}
-export function newKlantId() { return nextId(getKlanten()); }
-export function newHondId()  { return nextId(getHonden()); }
-
-// Utils
-export function byId(list, id) {
-  return list.find(x => String(x.id) === String(id));
-}
-export function debounce(fn, ms=300) {
-  let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+/* -------- misc helpers -------- */
+export function debounce(fn, ms=300){
+  let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); };
 }
