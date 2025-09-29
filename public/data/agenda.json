@@ -1,0 +1,37 @@
+[
+  {
+    "id": 1,
+    "type": "les",
+    "titel": "Puppy Training",
+    "datum": "2025-10-05 10:00",
+    "locatie": "Hondenschool Retie"
+  },
+  {
+    "id": 101,
+    "type": "reeks",
+    "titel": "Puppy Reeks Oktober",
+    "datum": "2025-10-05",
+    "locatie": "Hondenschool Retie"
+  },
+  {
+    "id": 2,
+    "type": "les",
+    "titel": "Basis Gehoorzaamheid",
+    "datum": "2025-10-06 19:00",
+    "locatie": "Hondenschool Dessel"
+  },
+  {
+    "id": 3,
+    "type": "les",
+    "titel": "Agility Instap",
+    "datum": "2025-10-07 18:30",
+    "locatie": "Speelweide Mol"
+  },
+  {
+    "id": 102,
+    "type": "reeks",
+    "titel": "Agility Reeks Herfst",
+    "datum": "2025-10-07",
+    "locatie": "Speelweide Mol"
+  }
+]
