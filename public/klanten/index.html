@@ -1,32 +1,80 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Klanten</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/style.css" />
   <script src="/js/layout.js" defer></script>
-  <script src="/klanten/index.js" defer></script>
+  <script type="module" src="/klanten/index.js" defer></script>
+  <style>
+    .actions button { margin-right: .25rem; }
+    .toolbar { display:flex; gap:.5rem; align-items:center; margin:.5rem 0 1rem; }
+    .toolbar input { flex:1; }
+    dialog form { display:grid; gap:.5rem; min-width: min(560px, 90vw); }
+    dialog .row { display:grid; gap:.5rem; grid-template-columns: 1fr 2fr; align-items:center; }
+    dialog menu { display:flex; justify-content:flex-end; gap:.5rem; margin-top:.5rem; }
+  </style>
 </head>
 <body>
-  <header id="topbar"></header>
+<header id="topbar"></header>
 
-  <main>
-    <h1>Klanten</h1>
-    <div id="loader">⏳ Laden...</div>
-    <div id="error" style="display:none; color:red;"></div>
-    <table id="klanten-tabel" style="display:none;">
-      <thead>
-        <tr>
-          <th>Naam</th>
-          <th>Email</th>
-          <th># Honden</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </main>
+<main>
+  <h1>Klanten</h1>
 
-  <footer id="footer"></footer>
+  <div class="toolbar">
+    <input id="zoek" type="search" placeholder="Zoek naam of e-mail…" />
+    <button id="btn-nieuw" class="btn">+ Nieuwe klant</button>
+  </div>
+
+  <div id="loader">⏳ Laden…</div>
+  <div id="error" style="display:none;color:red;"></div>
+
+  <table id="tabel" style="display:none;width:100%">
+    <thead>
+      <tr>
+        <th>Naam</th>
+        <th>Email</th>
+        <th>Telefoon</th>
+        <th># Honden</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</main>
+
+<footer id="footer"></footer>
+
+<!-- Modal -->
+<dialog id="modal">
+  <form method="dialog" id="form">
+    <h3 id="modal-title">Klant</h3>
+    <input type="hidden" name="id" />
+    <div class="row"><label>Naam</label><input name="naam" required /></div>
+    <div class="row"><label>E-mail</label><input name="email" type="email" required /></div>
+    <div class="row"><label>Telefoon</label><input name="telefoon" /></div>
+    <div class="row"><label>Adres</label><input name="adres" /></div>
+    <div class="row"><label>Land</label>
+      <select name="land">
+        <option value="BE">BE</option>
+        <option value="NL">NL</option>
+      </select>
+    </div>
+    <menu>
+      <button value="cancel">Annuleren</button>
+      <button class="btn" value="ok">Bewaren</button>
+    </menu>
+  </form>
+</dialog>
+
+<dialog id="confirmDel">
+  <form method="dialog">
+    <h3>Kan klant niet verwijderen</h3>
+    <p id="confirm-msg"></p>
+    <menu><button value="ok" class="btn">OK</button></menu>
+  </form>
+</dialog>
+
 </body>
 </html>
