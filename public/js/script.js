@@ -17,58 +17,65 @@ function addDog() {
   container.appendChild(div);
 } // ✅ addDog netjes afgesloten
 
-// === Formulier - customer opslaan ===
-document.getElementById("customerForm").addEventListener("submit", function (e) {
-  e.preventDefault();
-
-  const customer = {
-    name: document.getElementById("customerName").value,
-    email: document.getElementById("customerEmail").value,
-    phone: document.getElementById("customerPhone").value,
-    dogs: []
-  };
-
-  const dogDivs = document.querySelectorAll(".dog");
-  dogDivs.forEach((dogDiv) => {
-    const dog = {
-      name: dogDiv.querySelector("input[name='dogName']").value,
-      breed: dogDiv.querySelector("input[name='dogBreed']").value,
-      birthdate: dogDiv.querySelector("input[name='dogBirthdate']").value
-    };
-    customer.dogs.push(dog);
-  });
-
-  // TODO: sla 'customer' op of verzend naar je backend
-});
-
-// ===== Score teller functies (buiten de submit!) =====
+// ===== Alles pas starten na DOM =====
 document.addEventListener('DOMContentLoaded', () => {
-  let score = 0;
+  // === Formulier - customer opslaan (alleen als het formulier bestaat) ===
+  const form = document.getElementById("customerForm");
+  if (form) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
 
+      const customer = {
+        name: document.getElementById("customerName").value,
+        email: document.getElementById("customerEmail").value,
+        phone: document.getElementById("customerPhone").value,
+        dogs: []
+      };
+
+      document.querySelectorAll(".dog").forEach((dogDiv) => {
+        const dog = {
+          name: dogDiv.querySelector("input[name='dogName']").value,
+          breed: dogDiv.querySelector("input[name='dogBreed']").value,
+          birthdate: dogDiv.querySelector("input[name='dogBirthdate']").value
+        };
+        customer.dogs.push(dog);
+      });
+
+      // TODO: sla 'customer' op of verzend naar je backend
+      console.info('[Superhond] customer submit →', customer);
+    });
+  }
+
+  // ===== Score teller functies (alleen als de knoppen bestaan) =====
   const scoreEl  = document.getElementById("score");
   const plusBtn  = document.getElementById("plusKnop");
   const resetBtn = document.getElementById("resetKnop");
 
-  if (!scoreEl || !plusBtn) {
-    console.info("[Superhond] Teller niet actief op deze pagina.");
-    return;
-  }
+  if (scoreEl && plusBtn) {
+    // safety: maak knoppen geen submit
+    if (plusBtn.type !== 'button') plusBtn.type = 'button';
+    if (resetBtn && resetBtn.type !== 'button') resetBtn.type = 'button';
 
-  // safety: maak knoppen geen submit
-  if (plusBtn.type !== 'button') plusBtn.type = 'button';
-  if (resetBtn && resetBtn.type !== 'button') resetBtn.type = 'button';
-
-  plusBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    score++;
+    // optioneel: waarde onthouden
+    let score = Number(localStorage.getItem('superhond_score') || scoreEl.textContent || 0) || 0;
     scoreEl.textContent = String(score);
-  });
 
-  if (resetBtn) {
-    resetBtn.addEventListener("click", (e) => {
+    plusBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      score = 0;
-      scoreEl.textContent = "0";
+      score++;
+      scoreEl.textContent = String(score);
+      localStorage.setItem('superhond_score', String(score));
     });
+
+    if (resetBtn) {
+      resetBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        score = 0;
+        scoreEl.textContent = "0";
+        localStorage.setItem('superhond_score', "0");
+      });
+    }
+  } else {
+    console.info("[Superhond] Teller niet actief op deze pagina.");
   }
 });
