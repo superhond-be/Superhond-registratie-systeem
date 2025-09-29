@@ -1,3 +1,4 @@
+// /honden/index.js
 import { ensureData, getHonden, setHonden, getKlanten, debounce } from "../js/store.js";
 
 const loader = document.getElementById("loader");
@@ -17,18 +18,25 @@ let klantCache = [];
 const S = v => String(v ?? "");
 const cmpBy = key => (a,b) => S(a?.[key]).localeCompare(S(b?.[key]));
 const byId = (list, id) => (list || []).find(x => String(x?.id) === String(id));
-
-// Tolerant owner-key + altijd opslaan als eigenaarId
+// Tolerant owner-key
 const getEigenaarId = h => h?.eigenaarId ?? h?.ownerId ?? h?.klantId ?? h?.eigenaar ?? h?.owner ?? null;
 
-// >>> ENKEL naam (geen e-mail meer in de tabel)
-function klantDisplayNaam(k) { return (k?.naam && k.naam.trim()) ? k.naam : (k ? `Klant #${k.id}` : "—"); }
+// Maak nette naam uit beschikbare velden
+function guessNameFromEmail(email) {
+  const local = (email || "").split("@")[0];
+  return local.split(/[._-]+/).map(s => s ? s[0].toUpperCase() + s.slice(1) : "").join(" ").trim();
+}
+function klantNaam(k) {
+  if (!k) return "—";
+  const comb = [k.voornaam, k.achternaam].filter(Boolean).join(" ").trim();
+  return (k.naam && k.naam.trim()) || comb || guessNameFromEmail(k.email) || `Klant #${k.id}`;
+}
 
 function rowHtml(h) {
   const eigId = getEigenaarId(h);
   const eigenaar = byId(klantCache, eigId);
   const eigenaarCell = eigId && eigenaar
-    ? `<a href="../klanten/detail.html?id=${eigenaar.id}">${klantDisplayNaam(eigenaar)}</a>`
+    ? `<a href="../klanten/detail.html?id=${eigenaar.id}">${klantNaam(eigenaar)}</a>`
     : "—";
 
   return `
@@ -63,19 +71,19 @@ function populateOwnerSelects(selectedId="") {
   const sorted = (klantCache || []).slice().sort(cmpBy("naam"));
   selEigenaar.innerHTML =
     `<option value="" disabled ${selectedId?"":"selected"}>— Kies eigenaar —</option>` +
-    sorted.map(k => `<option value="${k.id}" ${String(k.id)===String(selectedId)?"selected":""}>${klantDisplayNaam(k)}</option>`).join("");
+    sorted.map(k => `<option value="${k.id}" ${String(k.id)===String(selectedId)?"selected":""}>${klantNaam(k)}</option>`).join("");
 
   ownerFilter.innerHTML =
     `<option value="">— Filter op eigenaar —</option>` +
-    sorted.map(k => `<option value="${k.id}">${klantDisplayNaam(k)}</option>`).join("");
+    sorted.map(k => `<option value="${k.id}">${klantNaam(k)}</option>`).join("");
 }
 
-// migratie: forceer eigenaarId-key in localStorage
+// éénmalige migratie: forceer eigenaarId-key in localStorage
 function migrateOwnerKey() {
   let changed = false;
   hondCache = (hondCache || []).map(h => {
     const eig = getEigenaarId(h);
-    if (eig != null && h.eigenaarId !== eig) { changed = true; return { ...h, eigenaarId: Number(eig) }; }
+    if (eig != null && h.eigenaarId !== eig) { changed = true; return { ...h, eigenaarId: Number(eig) || String(eig) }; }
     return h;
   });
   if (changed) setHonden(hondCache);
@@ -138,7 +146,9 @@ modal.addEventListener("close", () => {
   const data = Object.fromEntries(new FormData(form).entries());
   if (!S(data.naam).trim() || !data.eigenaarId) return;
 
-  data.eigenaarId = Number(data.eigenaarId); // altijd eigenaarId bewaren
+  // altijd als eigenaarId bewaren (nummer of string)
+  const n = Number(data.eigenaarId);
+  data.eigenaarId = Number.isFinite(n) && String(n) === String(data.eigenaarId) ? n : data.eigenaarId;
 
   if (!data.id) {
     const max = (hondCache || []).reduce((m,x)=>Math.max(m, Number(x?.id)||0), 0);
