@@ -89,3 +89,16 @@ body{
   .brand{ font-size:18px; }
   .topbar .container{ min-height:52px; }
 }
+
+#mijnFoto {
+  border: 5px solid #333;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+#mijnFoto:hover {
+  transform: scale(1.1);
+  border-color: darkred;
+}
+
