@@ -38,8 +38,11 @@ document.getElementById("customerForm").addEventListener("submit", function(e) {
     };
     customer.dogs.push(dog);
   });
-
-  document.getElementById("output").textContent = JSON.stringify(customer, null, 2);
+document.getElementById("resetKnop").addEventListener("click", function() {
+  score = 0;
+  document.getElementById("score").textContent = score;
+});
+  
 });
 
 
