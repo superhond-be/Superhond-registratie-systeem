@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Hond detail</title>
-  <link rel="stylesheet" href="/css/style.css" />
-  <script src="/js/layout.js" defer></script>
-  <script type="module" src="/honden/detail.js" defer></script>
+  <link rel="stylesheet" href="../css/style.css" />
+  <script src="../js/layout.js" defer></script>
+  <script type="module" src="./detail.js" defer></script>
   <style>.grid{display:grid;gap:.5rem;grid-template-columns:1fr 2fr;max-width:800px}</style>
 </head>
 <body>
@@ -15,7 +15,7 @@
 <main>
   <h1>Hond detail</h1>
   <div id="loader">⏳ Laden…</div>
-  <div id="error" style="display:none;color:red;"></div>
+  <div id="error" style="display:none;color:#b91c1c"></div>
 
   <section id="hond" style="display:none;">
     <div class="grid">
@@ -26,7 +26,7 @@
       <div>Eigenaar</div><div id="d-owner"></div>
     </div>
     <p style="margin-top:.5rem">
-      <a class="btn" href="/honden/index.html">⬅️ Terug naar honden</a>
+      <a class="btn" href="./index.html">⬅️ Terug naar honden</a>
     </p>
   </section>
 </main>
