@@ -55,10 +55,12 @@ document.addEventListener('DOMContentLoaded', () => {
     console.info("[Superhond] Teller niet actief op deze pagina.");
     return;
   }
-
-  plusBtn.addEventListener("click", () => {
+ plusBtn.addEventListener('click', (e) => {
+    e.preventDefault(); // ⬅️ vangt per ongeluk "submit" op
     score++;
     scoreEl.textContent = String(score);
+    // console.log('score =', score);
+
   });
 
   if (resetBtn) {
