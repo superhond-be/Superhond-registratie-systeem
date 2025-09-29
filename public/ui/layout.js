@@ -128,7 +128,15 @@
 
     log('mount done', v);
   }
-
+<script src="/js/agenda.js?v=0.19.0"></script>
+<script>
+  // Laad de agenda zodra de UI gemount is (of meteen, beide oké)
+  if (window.SuperhondUI?.ready) {
+    SuperhondUI.ready(() => window.Agenda && window.Agenda.init());
+  } else {
+    document.addEventListener('DOMContentLoaded', () => window.Agenda && window.Agenda.init());
+  }
+</script>
   // Expose
   window.SuperhondUI = { mount };
 })();
