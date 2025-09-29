@@ -38,11 +38,16 @@ document.getElementById("customerForm").addEventListener("submit", function(e) {
     };
     customer.dogs.push(dog);
   });
-document.getElementById("resetKnop").addEventListener("click", function() {
-  score = 0;
+// ===== Score teller functies =====
+let score = 0;
+
+document.getElementById("plusKnop").addEventListener("click", function () {
+  score++;
   document.getElementById("score").textContent = score;
 });
-  
+  document.getElementById("resetKnop").addEventListener("click", function () {
+  score = 0;
+  document.getElementById("score").textContent = score;
 });
 
 
