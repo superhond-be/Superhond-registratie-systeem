@@ -1,23 +1,5 @@
 [
-  {
-    "id": 1,
-    "titel": "Puppy Training",
-    "datum": "2025-10-05 10:00",
-    "locatie": "Hondenschool Retie",
-    "trainer": "Sofie"
-  },
-  {
-    "id": 2,
-    "titel": "Basis Gehoorzaamheid",
-    "datum": "2025-10-06 19:00",
-    "locatie": "Hondenschool Dessel",
-    "trainer": "Tom"
-  },
-  {
-    "id": 3,
-    "titel": "Agility Instap",
-    "datum": "2025-10-07 18:30",
-    "locatie": "Speelweide Mol",
-    "trainer": "Inge"
-  }
+  { "id": 101, "naam": "Puppyles 1", "datum": "2025-10-05", "locatie": "Terrein A", "trainer": "Anja", "hondId": 1 },
+  { "id": 102, "naam": "Puppyles 2", "datum": "2025-10-12", "locatie": "Terrein A", "trainer": "Anja", "hondId": 1 },
+  { "id": 201, "naam": "Puberles 1", "datum": "2025-10-07", "locatie": "Terrein B", "trainer": "Tom", "hondId": 2 }
 ]
