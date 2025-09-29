@@ -5,17 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Honden</title>
 
-  <!-- in /honden/*.html en /klanten/*.html -->
-<link rel="stylesheet" href="../css/style.css?v=0.18.9">
-<script src="../js/layout.js" defer></script>
-  
+  <!-- NIEUWE UI-styles (let op ../ in submap) -->
+  <link rel="stylesheet" href="../ui/style.css">
+
+  <!-- Layout met topbar + footer + versie/buildtijd -->
+  <script src="../js/layout.js" defer></script>
+
+  <!-- Jouw pagina-logic (de gepatchte versie met klantNaam, migrateOwnerKey, enz.) -->
   <script type="module" src="./index.js" defer></script>
-  <style>
-    .toolbar { display:flex; gap:.5rem; align-items:center; margin:.5rem 0 1rem; }
-    dialog form { display:grid; gap:.5rem; min-width:min(560px,90vw); }
-    dialog .row { display:grid; gap:.5rem; grid-template-columns:1fr 2fr; align-items:center; }
-    dialog menu { display:flex; justify-content:flex-end; gap:.5rem; margin-top:.5rem; }
-  </style>
 </head>
 <body>
 <header id="topbar"></header>
@@ -23,48 +20,90 @@
 <main>
   <h1>Honden</h1>
 
+  <!-- Toolbar -->
   <div class="toolbar">
-    <input id="zoek" type="search" placeholder="Zoek hond of ras…" />
-    <select id="ownerFilter"><option value="">— Filter op eigenaar —</option></select>
-    <button id="btn-nieuw" class="btn">+ Nieuwe hond</button>
+    <input id="zoek" type="search" placeholder="Zoek hond of ras…">
+    <select id="ownerFilter">
+      <option value="">— Filter op eigenaar —</option>
+    </select>
+    <button id="btn-nieuw" class="btn primary">+ Nieuwe hond</button>
   </div>
 
+  <!-- Loader + errors -->
   <div id="loader">⏳ Laden…</div>
-  <div id="error" style="display:none;color:red;"></div>
+  <div id="error" style="display:none;"></div>
 
-  <table id="tabel" style="display:none;width:100%">
-    <thead>
-      <tr>
-        <th>Naam</th>
-        <th>Ras</th>
-        <th>Geboortedatum</th>
-        <th>Eigenaar</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <!-- Tabel in een card wrapper voor nette stijl -->
+  <div class="table-wrap" id="wrap" style="display:none;">
+    <table id="tabel">
+      <thead>
+        <tr>
+          <th>Naam</th>
+          <th>Ras</th>
+          <th>Geboortedatum</th>
+          <th>Eigenaar</th>
+          <th class="right"></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 </main>
 
 <footer id="footer"></footer>
 
-<!-- Modal -->
+<!-- Modal voor toevoegen/wijzigen -->
 <dialog id="modal">
   <form method="dialog" id="form">
     <h3 id="modal-title">Hond</h3>
+
     <input type="hidden" name="id" />
-    <div class="row"><label>Naam</label><input name="naam" required /></div>
-    <div class="row"><label>Ras</label><input name="ras" /></div>
-    <div class="row"><label>Geboortedatum</label><input name="geboortedatum" type="date" /></div>
-    <div class="row"><label>Chip</label><input name="chip" /></div>
-    <div class="row"><label>Eigenaar</label>
+
+    <div class="row">
+      <label>Naam</label>
+      <input name="naam" required />
+    </div>
+
+    <div class="row">
+      <label>Ras</label>
+      <input name="ras" />
+    </div>
+
+    <div class="row">
+      <label>Geboortedatum</label>
+      <input name="geboortedatum" type="date" />
+    </div>
+
+    <div class="row">
+      <label>Chip</label>
+      <input name="chip" />
+    </div>
+
+    <div class="row">
+      <label>Eigenaar</label>
       <select name="eigenaarId" id="sel-eigenaar" required></select>
     </div>
+
     <menu>
       <button value="cancel">Annuleren</button>
-      <button class="btn" value="ok">Bewaren</button>
+      <button class="btn primary" value="ok">Bewaren</button>
     </menu>
   </form>
 </dialog>
+
+<script>
+  // Klein detail: zodra de tabel gevuld is toont je JS #tabel.
+  // Zorg dat hij ook de wrapper laat zien:
+  document.addEventListener('DOMContentLoaded', () => {
+    const target = document.getElementById('tabel');
+    const wrap = document.getElementById('wrap');
+    const obs = new MutationObserver(() => {
+      if (target.tBodies[0] && target.tBodies[0].rows.length) {
+        wrap.style.display = '';
+      }
+    });
+    obs.observe(target.tBodies[0], { childList: true });
+  });
+</script>
 </body>
 </html>
