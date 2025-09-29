@@ -1,102 +1,170 @@
-/* Superhond UI – v0.18.9 */
+/* ─────────────────────────────────────────────
+   Superhond UI – v2
+   Doel: heldere typografie, rustige spacing,
+   goede leesbaarheid op iPad en desktop.
+   ───────────────────────────────────────────── */
 
+/* ====== Design tokens ====== */
 :root{
-  --bg:#f6f8fb;
-  --card:#ffffff;
-  --ink:#111827;
-  --muted:#6b7280;
-  --border:#e5e7eb;
-  --shadow:0 1px 2px rgba(0,0,0,.06);
-  --primary:#1e70ff;
-  --primary-ink:#fff;
-  --accent:#f4c400; /* Superhond geel */
-  --radius:12px;
+  /* kleuren */
+  --bg:           #f7f7fb;   /* pagina-achtergrond */
+  --card:         #ffffff;   /* kaart/tafels */
+  --ink:          #0f172a;   /* hoofdtekst */
+  --muted:        #64748b;   /* secundaire tekst */
+  --border:       #e5e7eb;   /* zachte lijnen */
+  --brand:        #f5c20b;   /* Superhond-geel */
+  --brand-ink:    #1f2937;
+  --link:         #2563eb;
+  --link-hover:   #1e40af;
+  --success:      #16a34a;
+  --warning:      #ea580c;
+  --danger:       #b91c1c;
+
+  /* shadow & radius */
+  --radius:       12px;
+  --radius-sm:     8px;
+  --shadow-1:     0 1px 2px rgba(0,0,0,.05), 0 4px 14px rgba(0,0,0,.06);
+  --shadow-2:     0 6px 20px rgba(0,0,0,.08);
+
+  /* spacing */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px;
+  --space-4: 16px; --space-5: 20px; --space-6: 24px;
+
+  /* typography */
+  --font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  --fs-base: 16px;
+  --lh: 1.45;
 }
 
-* { box-sizing: border-box; }
-html,body { height:100%; }
+/* ====== Base ====== */
+*{box-sizing:border-box}
+html,body{height:100%}
+html{font-size:var(--fs-base)}
 body{
-  margin:0;
-  background:var(--bg);
-  color:var(--ink);
-  font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  margin:0; font-family:var(--font); line-height:var(--lh);
+  color:var(--ink); background:var(--bg);
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+}
+img{max-width:100%; height:auto; display:block}
+a{color:var(--link); text-decoration:none}
+a:hover{text-decoration:underline; color:var(--link-hover)}
+
+main{max-width:1100px; margin:var(--space-6) auto 80px; padding:0 var(--space-4)}
+h1{font-size:1.75rem; margin:0 0 var(--space-4)}
+h2{font-size:1.25rem; margin:var(--space-5) 0 var(--space-2)}
+small, .muted{color:var(--muted)}
+
+/* ====== Topbar & Footer (layout.js vult inhoud) ====== */
+.topbar-inner, .footer-inner{
+  max-width:1100px; margin:0 auto; padding:var(--space-3) var(--space-4);
+  display:flex; align-items:center; gap:var(--space-3);
+}
+.topbar-inner .brand{
+  font-weight:700; letter-spacing:.2px;
+}
+.version-pill{
+  margin-left:auto; font-size:.85rem;
+  background:#11182710; border:1px solid #11182722; color:#111827;
+  padding:4px 10px; border-radius:999px;
 }
 
-/* Containers */
-.container{ max-width:1060px; margin:0 auto; padding:16px; }
+/* ====== Cards ====== */
 .card{
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  padding:16px;
-}
-.page-title, h2 { margin:0 0 12px; }
-
-/* Topbar / header */
-.topbar{ background:var(--accent); color:#000; }
-.topbar .container{ position:relative; display:flex; align-items:center; gap:12px; min-height:56px; }
-.brand{ margin:0; font-weight:800; font-size:20px; }
-.brand--center{ text-align:center; width:100%; }
-.btn-back{
-  text-decoration:none; color:#000; background:#fff; border:1px solid #d1d5db;
-  padding:6px 10px; border-radius:8px;
-}
-.version-badge, .badge-version{
-  position:absolute; right:16px; top:50%; transform:translateY(-50%);
-  background:#111827; color:#fff; border-radius:999px; padding:4px 10px; font-size:12px;
+  background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+  box-shadow:var(--shadow-1); padding:var(--space-5);
 }
 
-/* Footer */
-.footer{ border-top:1px solid var(--border); color:var(--muted); }
-.footer .container{ padding:14px 16px; }
-
-/* Tiles (home) */
-.tiles{ display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
-.tile{
-  display:flex; align-items:center; gap:10px;
-  padding:14px 16px; border:1px solid var(--border); border-radius:var(--radius);
-  background:var(--card); text-decoration:none; color:inherit; box-shadow:var(--shadow);
+/* ====== Toolbar & Inputs ====== */
+.toolbar{
+  display:flex; gap:var(--space-3); align-items:center;
+  margin: var(--space-3) 0 var(--space-4);
+  flex-wrap:wrap;
 }
-.tile:hover{ border-color:#d1d5db; transform:translateY(-1px); transition:.12s ease; }
-
-/* Table */
-.table-wrap{ overflow-x:auto; -webkit-overflow-scrolling:touch; }
-.table{ width:100%; border-collapse:collapse; }
-.table th, .table td{ text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); }
-.table thead th{ font-weight:700; background:#fafafa; }
-
-/* Inputs / buttons / badges */
-.input, .select{
-  min-height:38px; padding:6px 10px; border:1px solid #d1d5db; border-radius:8px; background:#fff;
+input[type="search"], input[type="text"], input[type="email"], input[type="tel"],
+input[type="date"], select, textarea{
+  width:100%; max-width:520px;
+  padding:10px 12px; border:1px solid var(--border); border-radius:var(--radius-sm);
+  background:#fff; color:var(--ink);
+  outline:none; box-shadow:0 0 0 0 rgba(0,0,0,0);
 }
-.input:focus, .select:focus{ outline:2px solid rgba(30,112,255,.25); border-color:#9bbcff; }
-.input-nr{ width:5.5rem; }
-.btn{ display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border:1px solid #d1d5db;
-  border-radius:8px; background:#fff; text-decoration:none; color:#111827; cursor:pointer;
+input::placeholder{color:#94a3b8}
+select{max-width:280px}
+
+/* ====== Buttons ====== */
+.btn, button{
+  appearance:none; border:1px solid var(--border); background:#fff; color:var(--ink);
+  padding:10px 14px; border-radius:var(--radius-sm); cursor:pointer;
+  box-shadow:0 1px 0 rgba(0,0,0,.02);
 }
-.btn:hover{ background:#f8fafc; }
-.btn-xs{ font-size:.85rem; padding:.2rem .45rem; }
-.badge{ display:inline-block; padding:4px 8px; border-radius:999px; background:#eef2ff; color:#1e40af; }
+.btn:hover, button:hover{background:#f9fafb}
+.btn.primary{background:var(--brand); border-color:#eab308; color:var(--brand-ink); font-weight:600}
+.btn.danger{border-color:#fecaca; background:#fff; color:var(--danger)}
+.btn.icon{display:inline-flex; align-items:center; gap:8px}
 
-.loader{ padding:.5rem 0; color:var(--muted); }
-.error{ color:#b00020; }
-.muted{ color:var(--muted); font-size:.92em; }
+/* ====== Tables ====== */
+.table-wrap{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-1); overflow:hidden}
+table{width:100%; border-collapse:separate; border-spacing:0}
+thead th{
+  background:#f4f6f9; color:#334155; text-align:left; font-weight:600;
+  padding:12px 14px; border-bottom:1px solid var(--border)
+}
+tbody td{padding:12px 14px; border-bottom:1px solid var(--border)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#fafbfc}
 
-/* Small screens */
-@media (max-width:720px){
-  .container{ padding:12px; }
-  .brand{ font-size:18px; }
-  .topbar .container{ min-height:52px; }
+/* Responsive table (kleine iPad schermen) */
+@media (max-width: 760px){
+  .table-wrap{overflow:auto}
+  table{min-width:720px}
 }
 
-/* chips voor honden in klantenlijst */
-.chips{display:flex;flex-wrap:wrap;gap:.35rem}
+/* ====== Chips (hondennamen) ====== */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{
-  display:inline-block; padding:.15rem .5rem; border:1px solid var(--border);
+  display:inline-block; padding:4px 10px; border:1px solid var(--border);
   border-radius:999px; background:#fff; font-size:.85rem; line-height:1.2;
+  box-shadow:0 1px 0 rgba(0,0,0,.02);
 }
-.chip a{color:inherit; text-decoration:none}
-.chip a:hover{text-decoration:underline}
-.chip.more{background:#f3f4f6}
+.chip.more{background:#f4f6f9; color:#475569}
 
+/* ====== Tabs (zoals Agenda tabs) ====== */
+.tabs{display:flex; gap:8px; align-items:center}
+.tab{
+  display:inline-block; padding:6px 12px; border:1px solid var(--border);
+  background:#fff; border-radius:999px; color:#334155; font-weight:600;
+}
+.tab.active{background:var(--brand); border-color:#eab308; color:var(--brand-ink)}
+.tab:hover{background:#f9fafb}
+
+/* ====== Alerts/Helpers ====== */
+#loader{color:var(--muted)}
+#error{color:var(--danger)}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;background:#f4f6f9;border:1px solid var(--border);font-size:.8rem}
+
+/* ====== Dialog (native <dialog>) ====== */
+dialog{
+  border:0; border-radius:var(--radius); padding:0; box-shadow:var(--shadow-2);
+}
+dialog::backdrop{background:rgba(15,23,42,.35)}
+dialog form{display:grid; gap:var(--space-3); padding:var(--space-5) var(--space-5)}
+dialog .row{display:grid; gap:10px; grid-template-columns: 1fr 2fr; align-items:center}
+dialog menu{display:flex; justify-content:flex-end; gap:10px; padding:0 var(--space-5) var(--space-5)}
+
+/* ====== Utility ====== */
+.grid{display:grid; gap:12px}
+.grid.two{grid-template-columns: 1fr 1fr}
+.right{text-align:right}
+.center{text-align:center}
+.nowrap{white-space:nowrap}
+
+/* ====== Print ====== */
+@media print{
+  .topbar-inner, .footer-inner, .toolbar {display:none!important}
+  body{background:#fff}
+  .table-wrap{box-shadow:none}
+}
+
+/* ====== Motion/Accessibility ====== */
+@media (prefers-reduced-motion: reduce){
+  *{animation:none!important; transition:none!important}
+}
