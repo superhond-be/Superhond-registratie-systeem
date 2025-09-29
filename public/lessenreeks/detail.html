@@ -1,30 +1,42 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Lessenreeks detail</title>
-  <link rel="stylesheet" href="/css/style.css">
-  <script src="/js/layout.js" defer></script>
-  <script src="detail.js" defer></script>
+
+  <!-- UI-styles -->
+  <link rel="stylesheet" href="../ui/style.css">
+
+  <!-- Layout -->
+  <script src="../js/layout.js" defer></script>
+
+  <!-- Pagina logic -->
+  <script type="module" src="./detail.js" defer></script>
 </head>
 <body>
-  <header id="topbar"></header>
-  
-  <main>
-    <h1>Lessenreeks detail</h1>
-    <div id="loader">⏳ Laden...</div>
-    <div id="error" style="display:none; color:red;"></div>
-    <div id="reeks-detail" style="display:none;"></div>
-  </main>
-  
+<header id="topbar"></header>
+
 <main>
   <h1>Lessenreeks detail</h1>
-  <div id="loader">⏳ Laden...</div>
-  <div id="error" style="display:none; color:red;"></div>
-  <div id="reeks-detail" style="display:none;"></div>
 
-  <p><a href="/index.html#agenda" class="btn">⬅️ Terug naar agenda</a></p>
+  <div id="loader">⏳ Laden…</div>
+  <div id="error" style="display:none;"></div>
+
+  <section id="reeks" style="display:none;">
+    <div class="card grid two">
+      <div><strong>Naam</strong></div><div id="d-naam"></div>
+      <div><strong>Thema</strong></div><div id="d-thema"></div>
+      <div><strong>Aantal lessen</strong></div><div id="d-aantal"></div>
+      <div><strong>Prijs</strong></div><div id="d-prijs"></div>
+    </div>
+
+    <p style="margin-top:1rem">
+      <a class="btn" href="./index.html">⬅️ Terug naar reeksen</a>
+    </p>
+  </section>
 </main>
-  <footer id="footer"></footer>
+
+<footer id="footer"></footer>
 </body>
 </html>
