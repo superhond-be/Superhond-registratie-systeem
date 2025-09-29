@@ -1,37 +1,31 @@
+const id = new URLSearchParams(location.search).get("id");
+
+const loader = document.getElementById("loader");
+const error  = document.getElementById("error");
+const sec    = document.getElementById("reeks");
+
+const S = v => String(v ?? "");
+const byId = (list, _id) => (list || []).find(x => String(x?.id) === String(_id));
+
 async function init() {
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get("id");
-
-  const loader = document.getElementById("loader");
-  const error = document.getElementById("error");
-  const detail = document.getElementById("reeks-detail");
-
   try {
-    const response = await fetch("/data/lessenreeksen.json");
-    const data = await response.json();
+    const r = await fetch("../data/lessenreeksen.json");
+    const reeksen = await r.json();
+    const reeks = byId(reeksen, id);
+    if (!reeks) throw new Error(`Reeks met id=${id} niet gevonden`);
 
-    const reeks = data.find(item => String(item.id) === id);
-
-    if (!reeks) {
-      throw new Error(`Reeks met id=${id} niet gevonden`);
-    }
+    document.getElementById("d-naam").textContent   = S(reeks.naam);
+    document.getElementById("d-thema").textContent  = S(reeks.thema);
+    document.getElementById("d-aantal").textContent = S(reeks.aantalLessen || reeks.aantal || "");
+    document.getElementById("d-prijs").textContent  = reeks.prijs ? `€ ${reeks.prijs}` : "—";
 
     loader.style.display = "none";
-    detail.style.display = "block";
-    detail.innerHTML = `
-      <h2>${reeks.titel}</h2>
-      <p><strong>Startdatum:</strong> ${reeks.startdatum}</p>
-      <p><strong>Aantal lessen:</strong> ${reeks.lessen.length}</p>
-      <h3>Lessen in deze reeks:</h3>
-      <ul>
-        ${reeks.lessen.map(lesId => `<li><a href="/lessen/detail.html?id=${lesId}">Les ${lesId}</a></li>`).join("")}
-      </ul>
-    `;
-  } catch (err) {
+    sec.style.display = "";
+  } catch (e) {
     loader.style.display = "none";
     error.style.display = "block";
-    error.textContent = "⚠️ " + err.message;
+    error.textContent = "⚠️ " + e.message;
   }
 }
 
-document.addEventListener("DOMContentLoaded", init);
+init();
