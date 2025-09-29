@@ -1,6 +1,62 @@
-<!DOCTYPE html><html lang="nl"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="refresh" content="0; url=/dashboard/">
-<title>Superhond</title>
-<script>location.replace('/dashboard/');</script>
-</head><body></body></html>
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Superhond – Dashboard</title>
+  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
+  <style>
+    /* Kleine agenda-stijlen specifiek voor dit dashboard */
+    .tabs{display:flex;gap:8px;margin:12px 0 10px;flex-wrap:wrap}
+    .tab{padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer}
+    .tab.active{background:#eef2ff;border-color:#c7d2fe}
+    .agenda-row{display:grid;grid-template-columns:110px 1fr 140px 140px;gap:8px;
+      align-items:center;padding:8px 10px;border-bottom:1px solid #e5e7eb;text-decoration:none;color:inherit}
+    .agenda-row:hover{background:#f8fafc}
+    .agenda-row.highlight{background:#fff6d6} /* vandaag */
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#f3f4f6;border:1px solid #e5e7eb}
+    .pill.warn{background:#fde68a;border-color:#f59e0b}
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h2 class="page-title">Dashboard</h2>
+
+    <!-- Tegels -->
+    <div class="tiles" style="margin-bottom:16px">
+      <a href="/klanten/" class="tile">👤 Klanten</a>
+      <a href="/honden/" class="tile">🐶 Honden</a>
+      <a href="/lessen/" class="tile">📅 Lessen</a>
+      <a href="/trainers/" class="tile">🧑‍🏫 Trainers</a>
+      <a href="/strippenkaarten/" class="tile">🎫 Strippenkaarten</a>
+      <a href="/rapporten/" class="tile">📈 Rapporten</a>
+      <a href="/instellingen/" class="tile">⚙️ Instellingen</a>
+      <a href="/over/" class="tile">ℹ️ Over</a>
+    </div>
+
+    <!-- Agenda onder de tegels -->
+    <section class="card">
+      <h2>Agenda</h2>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" data-scope="week">Deze week</button>
+        <button class="tab" data-scope="all">Alles</button>
+        <button class="tab" data-scope="mededelingen">Mededelingen</button>
+      </div>
+
+      <!-- Lijst -->
+      <div id="dash-agenda-list"></div>
+      <p id="dash-agenda-empty" class="muted" hidden>Geen items.</p>
+    </section>
+  </main>
+
+  <!-- Layout & agenda scripts -->
+  <script src="/ui/layout.js?v=0.18.9"></script>
+  <script>
+    SuperhondUI.mount({ title: 'Superhond', icon: '🐶', home: true });
+  </script>
+  <!-- De agenda gebruikt /js/data.js via dit module-script -->
+  <script type="module" src="/js/agenda.js?v=0.18.9"></script>
+</body>
+</html>
