@@ -7,8 +7,7 @@
   <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
 </head>
 <body>
-</div>
-  
+
   <main class="container">
     <h2 class="page-title">Hoofdmenu</h2>
 
@@ -21,35 +20,43 @@
       <a class="tile" href="/rapporten/"><span>📈</span> Rapporten</a>
       <a class="tile" href="/over/"><span>ℹ️</span> Over</a>
       <a class="tile" href="/instellingen/"><span>⚙️</span> Instellingen</a>
- <div id="agenda-table-wrap" class="table-wrap" hidden>
-    <table id="agenda-table">
-      <thead>
-        <tr>
-          <th>Datum</th>
-          <th>Titel</th>
-          <th>Type</th>
-        </tr>
-      </thead>
-      <tbody><!-- gevuld door agenda.js --></tbody>
-    </table>
-  </div>
-</section>
+    </div>
+
+    <section class="container" style="margin-top:1.25rem">
+      <h2 class="page-title">Agenda</h2>
+
+      <div id="agenda-error" style="color:#b00;margin:.5rem 0;"></div>
+
+      <div id="agenda-table-wrap" class="table-wrap" hidden>
+        <table id="agenda-table">
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Titel</th>
+              <th>Type</th>
+            </tr>
+          </thead>
+          <tbody><!-- gevuld door agenda.js --></tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
-<!-- Superhond Teller (één keer, buiten de tabel en main) -->
-<div id="superhond-score" style="margin: 1rem 0; text-align:center;">
-  <button id="plusKnop" type="button">+1 voor Superhond</button>
-  <span id="score">0</span>
-  <button id="resetKnop" type="button">Reset</button>
-</div>
+  <!-- Superhond Teller (één keer, buiten main) -->
+  <div id="superhond-score" style="margin: 1rem 0; text-align:center;">
+    <button id="plusKnop" type="button">+1 voor Superhond</button>
+    <span id="score">0</span>
+    <button id="resetKnop" type="button">Reset</button>
+  </div>
 
-        
+  <footer class="footer">
+    <small>&copy; 2025 Superhond</small>
+  </footer>
 
-    <footer class="footer">
-      <small>&copy; 2025 Superhond</small>
-    </footer>
-
+  <!-- Scripts -->
   <script src="/ui/layout.js?v=0.18.9"></script>
+  <!-- 👉 voeg dit toe zodat de teller werkt -->
+  <script src="/js/script.js?v=0.18.9"></script>
   <script>
     SuperhondUI.mount({ title: 'Superhond Registratie', icon: '🐾', home: true });
   </script>
