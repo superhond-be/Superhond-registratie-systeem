@@ -4,28 +4,50 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Hond detail</title>
-  <link rel="stylesheet" href="../css/style.css" />
+
+  <!-- UI-styles -->
+  <link rel="stylesheet" href="../ui/style.css">
+
+  <!-- Layout met topbar/footer -->
   <script src="../js/layout.js" defer></script>
+
+  <!-- Pagina logic -->
   <script type="module" src="./detail.js" defer></script>
-  <style>.grid{display:grid;gap:.5rem;grid-template-columns:1fr 2fr;max-width:800px}</style>
 </head>
 <body>
 <header id="topbar"></header>
 
 <main>
   <h1>Hond detail</h1>
+
   <div id="loader">⏳ Laden…</div>
-  <div id="error" style="display:none;color:#b91c1c"></div>
+  <div id="error" style="display:none;"></div>
 
   <section id="hond" style="display:none;">
-    <div class="grid">
-      <div>Naam</div><div id="d-naam"></div>
-      <div>Ras</div><div id="d-ras"></div>
-      <div>Geboortedatum</div><div id="d-dob"></div>
-      <div>Chip</div><div id="d-chip"></div>
-      <div>Eigenaar</div><div id="d-owner"></div>
+    <div class="card grid two">
+      <div><strong>Naam</strong></div><div id="d-naam"></div>
+      <div><strong>Ras</strong></div><div id="d-ras"></div>
+      <div><strong>Geboortedatum</strong></div><div id="d-dob"></div>
+      <div><strong>Chip</strong></div><div id="d-chip"></div>
+      <div><strong>Eigenaar</strong></div><div id="d-owner"></div>
     </div>
-    <p style="margin-top:.5rem">
+
+    <h2>Ingeschreven lessen</h2>
+    <div class="table-wrap">
+      <table id="lessen">
+        <thead>
+          <tr>
+            <th>Les</th>
+            <th>Datum</th>
+            <th>Locatie</th>
+            <th>Trainer</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <p style="margin-top:1rem">
       <a class="btn" href="./index.html">⬅️ Terug naar honden</a>
     </p>
   </section>
