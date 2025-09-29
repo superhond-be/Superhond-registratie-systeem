@@ -1,114 +1,153 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Lessenreeks – Superhond</title>
-  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lessenreeks – Detail</title>
+  <link rel="stylesheet" href="/assets/css/app.css" />
   <style>
-    .kv{display:grid;grid-template-columns:160px 1fr;gap:8px 14px}
-    .list{margin-top:10px}
-    .row{display:grid;grid-template-columns:100px 1fr 140px 120px;gap:8px;padding:6px 8px;border-bottom:1px solid #e5e7eb}
-    .chips{margin-top:6px}
-    .chip{display:inline-block;padding:4px 8px;border:1px solid #d1d5db;border-radius:999px;background:#fff;margin:0 6px 6px 0;text-decoration:none;color:inherit}
-    .chip:hover{background:#f8fafc}
+    .container { max-width: 960px; margin: 0 auto; padding: 16px; }
+    .breadcrumbs { font-size: .9rem; color: #666; margin-bottom: 12px; }
+    .card { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .spinner { display:flex; align-items:center; gap:8px; color:#555; }
+    .spinner:before{ content:""; width:14px;height:14px;border-radius:50%; border:2px solid #bbb;border-top-color:#333; animation:spin 0.8s linear infinite; display:inline-block; }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .error { background:#fff3f3; border:1px solid #ffd6d6; color:#8a1f1f; padding:12px; border-radius:8px; }
+    .muted { color:#666; font-size:.95rem; }
+    .list { margin: 0; padding-left: 18px; }
+    table { width:100%; border-collapse: collapse; }
+    th, td { padding:8px 10px; border-bottom:1px solid #eee; text-align:left; }
+    tr:hover { background:#fafafa; }
+    .badge { display:inline-block; padding: 4px 8px; border-radius: 999px; background:#f6f7fb; border:1px solid #e6e7ef; font-size:.85rem; }
   </style>
 </head>
 <body>
+  <div id="topbar"></div>
+
   <main class="container">
-    <section class="card">
-      <h2 id="reeks-titel">Lessenreeks</h2>
-      <div id="reeks-loader" class="loader">Laden…</div>
-      <p id="reeks-error" class="error" hidden></p>
+    <nav class="breadcrumbs"><a href="/index.html">Dashboard</a> › <a href="/agenda.html">Agenda</a> › Reeks</nav>
 
-      <div id="reeks-info" hidden>
-        <div class="kv">
-          <div><strong>Klas</strong></div><div id="v-klas"></div>
-          <div><strong>Pakket</strong></div><div id="v-pakket"></div>
-          <div><strong>Aantal strippen</strong></div><div id="v-strippen"></div>
-          <div><strong>Geldigheid</strong></div><div id="v-geldigheid"></div>
-          <div><strong>Startdatum</strong></div><div id="v-start"></div>
-          <div><strong>Max deelnemers</strong></div><div id="v-max"></div>
-          <div><strong>Lesduur</strong></div><div id="v-duur"></div>
-          <div><strong>Status</strong></div><div id="v-status"></div>
-        </div>
+    <div id="status" class="spinner">Laden…</div>
 
-        <h3 style="margin-top:16px">Lessen</h3>
-        <div id="v-lessen" class="list"></div>
+    <article id="detail" class="card" hidden>
+      <header>
+        <h1 id="title">Reeks</h1>
+        <p id="subtitle" class="muted"></p>
+      </header>
 
-        <h3 style="margin-top:16px">Inschrijvingen</h3>
-        <div id="v-ins" class="chips"></div>
+      <section>
+        <h2>Beschrijving</h2>
+        <p id="description" class="muted">–</p>
+      </section>
+
+      <section>
+        <h2>Komende lessen in deze reeks</h2>
+        <div class="muted" id="none" hidden>Geen lessen gevonden.</div>
+        <table id="table">
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Tijd</th>
+              <th>Locatie</th>
+              <th>Trainer</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </section>
+
+      <div class="actions" style="margin-top:12px; display:flex; gap:8px;">
+        <a class="btn" href="/agenda.html" style="border:1px solid #ddd; background:#fafafa; padding:8px 12px; border-radius:8px;">← Terug naar agenda</a>
       </div>
-    </section>
+    </article>
+
+    <div id="error" class="error" hidden></div>
   </main>
 
-  <script src="/ui/layout.js?v=0.18.9"></script>
-  <script>SuperhondUI.mount({ title:'Lessenreeks', icon:'📚', back:'/' });</script>
+  <div id="footer"></div>
+
   <script type="module">
-    import { loadAll, indexById } from '/js/data.js?v=0.18.9';
+    import { mountLayout } from "/assets/js/layout.js";
+    import { getQueryParam } from "/assets/js/lib/url.mjs";
+    import { fetchJSON } from "/assets/js/lib/http.mjs";
+    import { fmtDate, fmtTimeRange, fmtDateTime, safe } from "/assets/js/lib/format.mjs";
 
-    const $=s=>document.querySelector(s); const show=el=>el.hidden=false;
+    mountLayout("#topbar", "#footer");
 
-    (async ()=>{
-      const id = new URLSearchParams(location.search).get('id');
-      if(!id){ $('#reeks-error').textContent='Geen reeks-id.'; show($('#reeks-error')); $('#reeks-loader').hidden=true; return; }
+    const id = getQueryParam("id");
+    const statusEl = document.querySelector("#status");
+    const errorEl  = document.querySelector("#error");
+    const cardEl   = document.querySelector("#detail");
 
-      try{
-        const all = await loadAll();
-        const reeks = all.reeksen.find(r => r.id === id);
-        if(!reeks) throw new Error('Reeks niet gevonden');
+    if (!id) {
+      statusEl.hidden = true;
+      errorEl.hidden = false;
+      errorEl.textContent = "Geen id in de URL (verwacht ?id=…).";
+      throw new Error("Missing id");
+    }
 
-        const klassenById = indexById(all.klassen);
-        const pakkettenById = indexById(all.pakketten);
+    (async function init(){
+      try {
+        const [reeksen, lessen, locaties, trainers] = await Promise.all([
+          fetchJSON("/data/lessenreeksen.json"),
+          fetchJSON("/data/lessen.json"),
+          fetchJSON("/data/locaties.json").catch(() => []),
+          fetchJSON("/data/trainers.json").catch(() => []),
+        ]);
 
-        $('#reeks-titel').textContent = reeks.naam;
-        const klas = klassenById[reeks.klasId];
-        const pakket = pakkettenById[reeks.pakketId];
+        const reeks = reeksen.find(r => String(r.id) === String(id));
+        if (!reeks) throw new Error(`Reeks met id ${id} niet gevonden.`);
 
-        $('#v-klas').textContent = klas ? `${klas.naam} (${klas.thema})` : reeks.klasId;
-        $('#v-pakket').textContent = pakket ? pakket.naam : reeks.pakketId;
-        $('#v-strippen').textContent = reeks.aantalStrippen;
-        $('#v-geldigheid').textContent = `${reeks.geldigheidWeken} weken`;
-        $('#v-start').textContent = reeks.startdatum || '—';
-        $('#v-max').textContent = reeks.maxDeelnemers ?? (pakket?.maxDeelnemers ?? '—');
-        $('#v-duur').textContent = (reeks.lesduurMin ?? pakket?.lesduurMin ?? '—') + ' min';
-        $('#v-status').textContent = reeks.status || '—';
+        document.querySelector("#title").textContent = reeks.titel || `Reeks #${reeks.id}`;
+        document.querySelector("#subtitle").textContent = [
+          reeks.niveau ? `Niveau: ${reeks.niveau}` : null,
+          reeks.aantalLessen ? `${reeks.aantalLessen} lessen` : null
+        ].filter(Boolean).join(" • ");
+        document.querySelector("#description").innerHTML = safe(reeks.beschrijving || "Geen beschrijving.");
 
-        // Lessen in deze reeks
-        const lessen = all.lessen.filter(l => l.reeksId === id)
-          .sort((a,b)=> (a.datum+a.starttijd).localeCompare(b.datum+b.starttijd));
-        $('#v-lessen').innerHTML = lessen.length
-          ? lessen.map(l => `
-              <a class="row" href="/lessen/detail.html?id=${l.id}">
-                <div>${l.datum}</div>
-                <div><strong>Les ${l.lesNr}</strong></div>
-                <div>${l.starttijd}–${l.eindtijd}</div>
-                <div>${l.status}</div>
-              </a>
-            `).join('')
-          : '<span class="muted">Nog geen lessen</span>';
+        const rows = [];
+        const inReeks = lessen
+          .filter(l => String(l.reeksId) === String(reeks.id))
+          .sort((a,b)=> new Date(a.start) - new Date(b.start));
 
-        // Inschrijvingen chips
-        const klantenById = indexById(all.klanten);
-        const hondenById = indexById(all.honden);
-        const ins = all.inschrijvingen.filter(i => i.reeksId === id);
-        $('#v-ins').innerHTML = ins.length
-          ? ins.map(i => {
-              const k = klantenById[i.klantId]; const h = i.hondId ? hondenById[i.hondId] : null;
-              const klantNaam = k ? `${k.voornaam} ${k.achternaam}` : i.klantId;
-              const hondNaam = h ? ` • ${h.naam}` : '';
-              const saldo = (i.aantalStrippen - (i.stripGebruikt||0) - (i.stripInVerwerking||0));
-              return `<a class="chip" href="/klanten/detail.html?id=${i.klantId}" title="Saldo ${saldo}">${klantNaam}${hondNaam}</a>`;
-            }).join('')
-          : '<span class="muted">Nog geen inschrijvingen</span>';
+        for (const les of inReeks) {
+          const loc = locaties.find(x => x.id === les.locatieId);
+          const trn = trainers.find(x => x.id === les.trainerId);
+          rows.push(`
+            <tr onclick="location.href='/lessen/detail.html?id=${encodeURIComponent(les.id)}'" style="cursor:pointer">
+              <td>${safe(fmtDate(les.start))}</td>
+              <td>${safe(fmtTimeRange(les.start, les.einde) || "–")}</td>
+              <td>${safe(loc?.naam || "–")}</td>
+              <td>${safe(trn?.naam || "–")}</td>
+              <td><span class="badge">${safe(humanStatus(les.status))}</span></td>
+            </tr>
+          `);
+        }
 
-        $('#reeks-loader').hidden = true; show($('#reeks-info'));
-      }catch(e){
-        console.error(e);
-        $('#reeks-loader').hidden = true;
-        $('#reeks-error').textContent = 'Kon reeksgegevens niet laden.'; show($('#reeks-error'));
+        const tbody = document.querySelector("#tbody");
+        const none = document.querySelector("#none");
+        if (rows.length === 0) {
+          none.hidden = false;
+        } else {
+          tbody.innerHTML = rows.join("");
+        }
+
+        statusEl.hidden = true;
+        cardEl.hidden = false;
+      } catch (err) {
+        statusEl.hidden = true;
+        errorEl.hidden = false;
+        errorEl.textContent = err.message || "Onbekende fout bij laden.";
+        console.error(err);
       }
     })();
+
+    function humanStatus(s) {
+      if (!s) return "–";
+      const map = { open:"Open", vol:"Vol", geannuleerd:"Geannuleerd" };
+      return map[s] || s;
+    }
   </script>
 </body>
 </html>
