@@ -17,9 +17,9 @@ function addDog() {
     <input type="date" name="dogBirthdate">
   `;
   container.appendChild(div);
-}
-
-document.getElementById("customerForm").addEventListener("submit", function(e) {
+  
+// === Formulier - customer opslaan ===
+document.getElementById("customerForm").addEventListener("submit", function (e) {
   e.preventDefault();
 
   const customer = {
@@ -30,7 +30,7 @@ document.getElementById("customerForm").addEventListener("submit", function(e) {
   };
 
   const dogDivs = document.querySelectorAll(".dog");
-  dogDivs.forEach(dogDiv => {
+  dogDivs.forEach((dogDiv) => {
     const dog = {
       name: dogDiv.querySelector("input[name='dogName']").value,
       breed: dogDiv.querySelector("input[name='dogBreed']").value,
@@ -38,16 +38,33 @@ document.getElementById("customerForm").addEventListener("submit", function(e) {
     };
     customer.dogs.push(dog);
   });
-// ===== Score teller functies =====
-let score = 0;
 
-document.getElementById("plusKnop").addEventListener("click", function () {
-  score++;
-  document.getElementById("score").textContent = score;
+}); // ✅ sluit de SUBMIT-functie HIER af (niet later!)
+
+
+// ===== Score teller functies (buiten de submit!) =====
+document.addEventListener('DOMContentLoaded', () => {
+  let score = 0;
+
+  const scoreEl = document.getElementById("score");
+  const plusBtn = document.getElementById("plusKnop");
+  const resetBtn = document.getElementById("resetKnop");
+
+  // Als de teller-elementen niet op deze pagina staan: zacht falen
+  if (!scoreEl || !plusBtn) {
+    console.info("[Superhond] Teller niet actief op deze pagina.");
+    return;
+  }
+
+  plusBtn.addEventListener("click", () => {
+    score++;
+    scoreEl.textContent = String(score);
+  });
+
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      score = 0;
+      scoreEl.textContent = "0";
+    });
+  }
 });
-  document.getElementById("resetKnop").addEventListener("click", function () {
-  score = 0;
-  document.getElementById("score").textContent = score;
-});
-
-
