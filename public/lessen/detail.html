@@ -1,160 +1,22 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Les – Detail</title>
-  <link rel="stylesheet" href="/assets/css/app.css" />
-  <style>
-    /* Kleine, zelfstandige styles voor spinner/kaart */
-    .container { max-width: 960px; margin: 0 auto; padding: 16px; }
-    .breadcrumbs { font-size: .9rem; color: #666; margin-bottom: 12px; }
-    .card { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
-    .meta { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); margin: 12px 0; }
-    .badge { display:inline-block; padding: 4px 8px; border-radius: 999px; background:#f6f7fb; border:1px solid #e6e7ef; font-size:.85rem; }
-    .spinner { display:flex; align-items:center; gap:8px; color:#555; }
-    .spinner:before{ content:""; width:14px;height:14px;border-radius:50%; border:2px solid #bbb;border-top-color:#333; animation:spin 0.8s linear infinite; display:inline-block; }
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .error { background:#fff3f3; border:1px solid #ffd6d6; color:#8a1f1f; padding:12px; border-radius:8px; }
-    .actions { display:flex; gap:8px; flex-wrap:wrap; margin-top: 12px;}
-    .btn { appearance:none; border:1px solid #ddd; background:#fafafa; padding:8px 12px; border-radius:8px; cursor:pointer; }
-    .btn:hover { background:#f0f0f0; }
-    .muted { color:#666; font-size:.95rem; }
-    .list { margin: 0; padding-left: 18px; }
-  </style>
+  <meta charset="UTF-8">
+  <title>Les detail</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/layout.js" defer></script>
+  <script src="detail.js" defer></script>
 </head>
 <body>
-  <div id="topbar"></div>
-
-  <main class="container">
-    <nav class="breadcrumbs"><a href="/index.html">Dashboard</a> › <a href="/agenda.html">Agenda</a> › Les</nav>
-
-    <div id="status" class="spinner">Laden…</div>
-
-    <article id="detail" class="card" hidden>
-      <header>
-        <h1 id="title">Les</h1>
-        <p id="subtitle" class="muted"></p>
-      </header>
-
-      <section class="meta" id="meta"></section>
-
-      <section>
-        <h2>Beschrijving</h2>
-        <p id="description" class="muted">–</p>
-      </section>
-
-      <section>
-        <h2>Koppelingen</h2>
-        <ul class="list" id="links"></ul>
-      </section>
-
-      <div class="actions">
-        <a id="backLink" class="btn" href="/agenda.html">← Terug naar agenda</a>
-        <a id="reeksLink" class="btn" href="#" hidden>Bekijk lessenreeks</a>
-      </div>
-    </article>
-
-    <div id="error" class="error" hidden></div>
+  <header id="topbar"></header>
+  
+  <main>
+    <h1>Les detail</h1>
+    <div id="loader">⏳ Laden...</div>
+    <div id="error" style="display:none; color:red;"></div>
+    <div id="les-detail" style="display:none;"></div>
   </main>
 
-  <div id="footer"></div>
-
-  <script type="module">
-    import { mountLayout } from "/assets/js/layout.js"; // reeds bij jou aanwezig
-    import { getQueryParam } from "/assets/js/lib/url.mjs";
-    import { fetchJSON } from "/assets/js/lib/http.mjs";
-    import { fmtDateTime, fmtTimeRange, safe } from "/assets/js/lib/format.mjs";
-
-    mountLayout("#topbar", "#footer");
-
-    const statusEl = document.querySelector("#status");
-    const errorEl  = document.querySelector("#error");
-    const cardEl   = document.querySelector("#detail");
-
-    const id = getQueryParam("id");
-    if (!id) {
-      statusEl.hidden = true;
-      errorEl.hidden = false;
-      errorEl.textContent = "Geen id in de URL (verwacht ?id=…).";
-      throw new Error("Missing id");
-    }
-
-    (async function init() {
-      try {
-        const [lessen, locaties, trainers, reeksen] = await Promise.all([
-          fetchJSON("/data/lessen.json"),
-          fetchJSON("/data/locaties.json").catch(() => []),
-          fetchJSON("/data/trainers.json").catch(() => []),
-          fetchJSON("/data/lessenreeksen.json").catch(() => []),
-        ]);
-
-        const les = lessen.find(l => String(l.id) === String(id));
-        if (!les) throw new Error(`Les met id ${id} niet gevonden.`);
-
-        // Resolve referenties (best effort)
-        const locatie = locaties.find(x => x.id === les.locatieId);
-        const trainer = trainers.find(x => x.id === les.trainerId);
-        const reeks   = les.reeksId ? reeksen.find(x => x.id === les.reeksId) : null;
-
-        // Title + subtitle
-        document.querySelector("#title").textContent = les.titel || `Les #${les.id}`;
-        document.querySelector("#subtitle").textContent =
-          [fmtDateTime(les.start), fmtTimeRange(les.start, les.einde), locatie?.naam].filter(Boolean).join(" • ");
-
-        // Meta
-        const meta = document.querySelector("#meta");
-        meta.innerHTML = [
-          badge("Datum", fmtDateTime(les.start)),
-          badge("Tijd", fmtTimeRange(les.start, les.einde) || "–"),
-          badge("Locatie", locatie?.naam || "–"),
-          badge("Trainer", trainer?.naam || "–"),
-          badge("Niveau", les.niveau || "–"),
-          badge("Capaciteit", les.capaciteit != null ? String(les.capaciteit) : "–"),
-          badge("Status", humanStatus(les.status))
-        ].join("");
-
-        // Description
-        document.querySelector("#description").innerHTML = safe(les.beschrijving || "Geen beschrijving.");
-
-        // Links
-        const links = document.querySelector("#links");
-        links.innerHTML = [
-          les.reeksId ? liLink(`/lessenreeks/detail.html?id=${encodeURIComponent(les.reeksId)}`, "Naar lessenreeks") : "",
-          trainer ? liLink(`#`, `Trainer: ${trainer.naam}`) : "",
-          locatie ? liLink(`#`, `Locatie: ${locatie.naam}`) : "",
-        ].join("");
-
-        // Reeks-knop
-        const reeksBtn = document.querySelector("#reeksLink");
-        if (reeks) {
-          reeksBtn.hidden = false;
-          reeksBtn.href = `/lessenreeks/detail.html?id=${encodeURIComponent(reeks.id)}`;
-        }
-
-        // UI states
-        statusEl.hidden = true;
-        cardEl.hidden = false;
-      } catch (err) {
-        statusEl.hidden = true;
-        errorEl.hidden = false;
-        errorEl.textContent = err.message || "Onbekende fout bij laden.";
-        console.error(err);
-      }
-    })();
-
-    // helpers
-    function badge(label, value) {
-      return `<div><div class="muted" style="margin-bottom:4px">${label}</div><span class="badge">${safe(value ?? "–")}</span></div>`;
-    }
-    function humanStatus(s) {
-      if (!s) return "–";
-      const map = { open:"Open", vol:"Vol", geannuleerd:"Geannuleerd" };
-      return map[s] || s;
-    }
-    function liLink(href, text) {
-      return `<li><a href="${href}">${safe(text)}</a></li>`;
-    }
-  </script>
+  <footer id="footer"></footer>
 </body>
 </html>
