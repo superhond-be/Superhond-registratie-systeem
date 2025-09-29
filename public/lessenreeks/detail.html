@@ -1,153 +1,22 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lessenreeks – Detail</title>
-  <link rel="stylesheet" href="/assets/css/app.css" />
-  <style>
-    .container { max-width: 960px; margin: 0 auto; padding: 16px; }
-    .breadcrumbs { font-size: .9rem; color: #666; margin-bottom: 12px; }
-    .card { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
-    .spinner { display:flex; align-items:center; gap:8px; color:#555; }
-    .spinner:before{ content:""; width:14px;height:14px;border-radius:50%; border:2px solid #bbb;border-top-color:#333; animation:spin 0.8s linear infinite; display:inline-block; }
-    @keyframes spin{to{transform:rotate(360deg)}}
-    .error { background:#fff3f3; border:1px solid #ffd6d6; color:#8a1f1f; padding:12px; border-radius:8px; }
-    .muted { color:#666; font-size:.95rem; }
-    .list { margin: 0; padding-left: 18px; }
-    table { width:100%; border-collapse: collapse; }
-    th, td { padding:8px 10px; border-bottom:1px solid #eee; text-align:left; }
-    tr:hover { background:#fafafa; }
-    .badge { display:inline-block; padding: 4px 8px; border-radius: 999px; background:#f6f7fb; border:1px solid #e6e7ef; font-size:.85rem; }
-  </style>
+  <meta charset="UTF-8">
+  <title>Lessenreeks detail</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/layout.js" defer></script>
+  <script src="detail.js" defer></script>
 </head>
 <body>
-  <div id="topbar"></div>
-
-  <main class="container">
-    <nav class="breadcrumbs"><a href="/index.html">Dashboard</a> › <a href="/agenda.html">Agenda</a> › Reeks</nav>
-
-    <div id="status" class="spinner">Laden…</div>
-
-    <article id="detail" class="card" hidden>
-      <header>
-        <h1 id="title">Reeks</h1>
-        <p id="subtitle" class="muted"></p>
-      </header>
-
-      <section>
-        <h2>Beschrijving</h2>
-        <p id="description" class="muted">–</p>
-      </section>
-
-      <section>
-        <h2>Komende lessen in deze reeks</h2>
-        <div class="muted" id="none" hidden>Geen lessen gevonden.</div>
-        <table id="table">
-          <thead>
-            <tr>
-              <th>Datum</th>
-              <th>Tijd</th>
-              <th>Locatie</th>
-              <th>Trainer</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </section>
-
-      <div class="actions" style="margin-top:12px; display:flex; gap:8px;">
-        <a class="btn" href="/agenda.html" style="border:1px solid #ddd; background:#fafafa; padding:8px 12px; border-radius:8px;">← Terug naar agenda</a>
-      </div>
-    </article>
-
-    <div id="error" class="error" hidden></div>
+  <header id="topbar"></header>
+  
+  <main>
+    <h1>Lessenreeks detail</h1>
+    <div id="loader">⏳ Laden...</div>
+    <div id="error" style="display:none; color:red;"></div>
+    <div id="reeks-detail" style="display:none;"></div>
   </main>
 
-  <div id="footer"></div>
-
-  <script type="module">
-    import { mountLayout } from "/assets/js/layout.js";
-    import { getQueryParam } from "/assets/js/lib/url.mjs";
-    import { fetchJSON } from "/assets/js/lib/http.mjs";
-    import { fmtDate, fmtTimeRange, fmtDateTime, safe } from "/assets/js/lib/format.mjs";
-
-    mountLayout("#topbar", "#footer");
-
-    const id = getQueryParam("id");
-    const statusEl = document.querySelector("#status");
-    const errorEl  = document.querySelector("#error");
-    const cardEl   = document.querySelector("#detail");
-
-    if (!id) {
-      statusEl.hidden = true;
-      errorEl.hidden = false;
-      errorEl.textContent = "Geen id in de URL (verwacht ?id=…).";
-      throw new Error("Missing id");
-    }
-
-    (async function init(){
-      try {
-        const [reeksen, lessen, locaties, trainers] = await Promise.all([
-          fetchJSON("/data/lessenreeksen.json"),
-          fetchJSON("/data/lessen.json"),
-          fetchJSON("/data/locaties.json").catch(() => []),
-          fetchJSON("/data/trainers.json").catch(() => []),
-        ]);
-
-        const reeks = reeksen.find(r => String(r.id) === String(id));
-        if (!reeks) throw new Error(`Reeks met id ${id} niet gevonden.`);
-
-        document.querySelector("#title").textContent = reeks.titel || `Reeks #${reeks.id}`;
-        document.querySelector("#subtitle").textContent = [
-          reeks.niveau ? `Niveau: ${reeks.niveau}` : null,
-          reeks.aantalLessen ? `${reeks.aantalLessen} lessen` : null
-        ].filter(Boolean).join(" • ");
-        document.querySelector("#description").innerHTML = safe(reeks.beschrijving || "Geen beschrijving.");
-
-        const rows = [];
-        const inReeks = lessen
-          .filter(l => String(l.reeksId) === String(reeks.id))
-          .sort((a,b)=> new Date(a.start) - new Date(b.start));
-
-        for (const les of inReeks) {
-          const loc = locaties.find(x => x.id === les.locatieId);
-          const trn = trainers.find(x => x.id === les.trainerId);
-          rows.push(`
-            <tr onclick="location.href='/lessen/detail.html?id=${encodeURIComponent(les.id)}'" style="cursor:pointer">
-              <td>${safe(fmtDate(les.start))}</td>
-              <td>${safe(fmtTimeRange(les.start, les.einde) || "–")}</td>
-              <td>${safe(loc?.naam || "–")}</td>
-              <td>${safe(trn?.naam || "–")}</td>
-              <td><span class="badge">${safe(humanStatus(les.status))}</span></td>
-            </tr>
-          `);
-        }
-
-        const tbody = document.querySelector("#tbody");
-        const none = document.querySelector("#none");
-        if (rows.length === 0) {
-          none.hidden = false;
-        } else {
-          tbody.innerHTML = rows.join("");
-        }
-
-        statusEl.hidden = true;
-        cardEl.hidden = false;
-      } catch (err) {
-        statusEl.hidden = true;
-        errorEl.hidden = false;
-        errorEl.textContent = err.message || "Onbekende fout bij laden.";
-        console.error(err);
-      }
-    })();
-
-    function humanStatus(s) {
-      if (!s) return "–";
-      const map = { open:"Open", vol:"Vol", geannuleerd:"Geannuleerd" };
-      return map[s] || s;
-    }
-  </script>
+  <footer id="footer"></footer>
 </body>
 </html>
