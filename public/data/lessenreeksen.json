@@ -1,14 +1,5 @@
 [
-  {
-    "id": 101,
-    "titel": "Puppy Reeks Oktober",
-    "startdatum": "2025-10-05",
-    "lessen": [1, 2]
-  },
-  {
-    "id": 102,
-    "titel": "Agility Reeks Herfst",
-    "startdatum": "2025-10-07",
-    "lessen": [3]
-  }
+  { "id": 1, "naam": "Puppycursus", "thema": "Puppy", "aantalLessen": 5, "prijs": 120 },
+  { "id": 2, "naam": "Pubertraining", "thema": "Puber", "aantalLessen": 6, "prijs": 140 },
+  { "id": 3, "naam": "Basiscursus", "thema": "Basis", "aantalLessen": 8, "prijs": 180 }
 ]
