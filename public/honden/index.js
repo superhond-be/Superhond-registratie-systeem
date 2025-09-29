@@ -1,32 +1,34 @@
-// /honden/index.js
 import { ensureData, getHonden, setHonden, getKlanten, debounce } from "../js/store.js";
 
 const loader = document.getElementById("loader");
 const error  = document.getElementById("error");
 const tabel  = document.getElementById("tabel");
 const tbody  = tabel.querySelector("tbody");
+const wrap   = document.getElementById("wrap");
 const zoek   = document.getElementById("zoek");
 const ownerFilter = document.getElementById("ownerFilter");
 const btnNieuw = document.getElementById("btn-nieuw");
+
 const modal = document.getElementById("modal");
 const form  = document.getElementById("form");
+const btnCancel = document.getElementById("btn-cancel");
+const btnSave   = document.getElementById("btn-save");
 const selEigenaar = document.getElementById("sel-eigenaar");
 
 let hondCache = [];
 let klantCache = [];
 
+// helpers
 const S = v => String(v ?? "");
 const cmpBy = key => (a,b) => S(a?.[key]).localeCompare(S(b?.[key]));
 const byId = (list, id) => (list || []).find(x => String(x?.id) === String(id));
-// Tolerant owner-key
 const getEigenaarId = h => h?.eigenaarId ?? h?.ownerId ?? h?.klantId ?? h?.eigenaar ?? h?.owner ?? null;
 
-// Maak nette naam uit beschikbare velden
-function guessNameFromEmail(email) {
-  const local = (email || "").split("@")[0];
-  return local.split(/[._-]+/).map(s => s ? s[0].toUpperCase() + s.slice(1) : "").join(" ").trim();
+function guessNameFromEmail(email){
+  const local = S(email).split("@")[0];
+  return local.split(/[._-]+/).map(s=>s? s[0].toUpperCase()+s.slice(1):"").join(" ").trim();
 }
-function klantNaam(k) {
+function klantNaam(k){
   if (!k) return "—";
   const comb = [k.voornaam, k.achternaam].filter(Boolean).join(" ").trim();
   return (k.naam && k.naam.trim()) || comb || guessNameFromEmail(k.email) || `Klant #${k.id}`;
@@ -45,7 +47,7 @@ function rowHtml(h) {
       <td>${S(h.ras)}</td>
       <td>${S(h.geboortedatum)}</td>
       <td>${eigenaarCell}</td>
-      <td style="text-align:right;white-space:nowrap">
+      <td class="right nowrap">
         <button data-act="edit" data-id="${h.id}" title="Wijzig">✏️</button>
         <button data-act="del"  data-id="${h.id}" title="Verwijder">🗑️</button>
       </td>
@@ -64,7 +66,7 @@ function render(filterTxt="", owner="") {
 
   tbody.innerHTML = lijst.map(rowHtml).join("");
   loader.style.display = "none";
-  tabel.style.display = "";
+  wrap.style.display = "";
 }
 
 function populateOwnerSelects(selectedId="") {
@@ -78,7 +80,7 @@ function populateOwnerSelects(selectedId="") {
     sorted.map(k => `<option value="${k.id}">${klantNaam(k)}</option>`).join("");
 }
 
-// éénmalige migratie: forceer eigenaarId-key in localStorage
+// migratie: forceer eigenaarId-key in localStorage
 function migrateOwnerKey() {
   let changed = false;
   hondCache = (hondCache || []).map(h => {
@@ -108,6 +110,7 @@ async function init() {
   }
 }
 
+// actions in tabel
 tbody.addEventListener("click", e => {
   const btn = e.target.closest("button[data-act]");
   if (!btn) return;
@@ -140,13 +143,16 @@ function openEdit(id) {
   modal.showModal();
 }
 
-form.addEventListener("submit", e => e.preventDefault());
-modal.addEventListener("close", () => {
-  if (modal.returnValue !== "ok") return;
+// iPad/Safari-proof expliciete handlers
+btnCancel.addEventListener("click", () => modal.close('cancel'));
+btnSave.addEventListener("click", () => {
   const data = Object.fromEntries(new FormData(form).entries());
-  if (!S(data.naam).trim() || !data.eigenaarId) return;
+  if (!S(data.naam).trim() || !data.eigenaarId) {
+    alert("Vul minimaal Naam en Eigenaar in.");
+    return;
+  }
 
-  // altijd als eigenaarId bewaren (nummer of string)
+  // eigenaarId opslaan als number indien mogelijk
   const n = Number(data.eigenaarId);
   data.eigenaarId = Number.isFinite(n) && String(n) === String(data.eigenaarId) ? n : data.eigenaarId;
 
@@ -158,8 +164,10 @@ modal.addEventListener("close", () => {
     const i = (hondCache || []).findIndex(h => String(h?.id) === String(data.id));
     if (i >= 0) hondCache[i] = { ...hondCache[i], ...data };
   }
+
   setHonden(hondCache);
   render(zoek.value, ownerFilter.value);
+  modal.close('ok');
 });
 
 function tryDelete(id) {
