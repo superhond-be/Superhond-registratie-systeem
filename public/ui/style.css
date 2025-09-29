@@ -168,3 +168,23 @@ dialog menu{display:flex; justify-content:flex-end; gap:10px; padding:0 var(--sp
 @media (prefers-reduced-motion: reduce){
   *{animation:none!important; transition:none!important}
 }
+
+/* ── Superhond topbar (gele balk) ───────────────────────────────── */
+#topbar.topbar{                      /* class op het header-element */
+  position: sticky; top: 0; z-index: 50;
+  background: #f5c20b;               /* Superhond-geel */
+  border-bottom: 1px solid #e0b408;
+  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+}
+#topbar .topbar-inner{
+  max-width:1100px; margin:0 auto; padding:10px 16px;
+  display:flex; align-items:center; gap:8px;
+}
+#topbar .brand{ font-weight:700; color:#1f2937; }
+#topbar .version-pill{
+  margin-left:auto; background: rgba(0,0,0,.06); color:#1f2937;
+  border:1px solid rgba(0,0,0,.12); border-radius:999px; padding:2px 8px; font-size:.85rem;
+}
+/* zorg dat links in de topbar donker blijven */
+#topbar a{ color:#1f2937; text-decoration:none }
+#topbar a:hover{ text-decoration:underline }
