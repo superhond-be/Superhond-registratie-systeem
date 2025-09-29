@@ -1,75 +1,24 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Klant – Superhond</title>
-  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
-  <style>
-    .kv{display:grid;grid-template-columns:140px 1fr;gap:8px 14px}
-    .chips{margin-top:8px}
-    .chip{display:inline-block;padding:4px 8px;border:1px solid #d1d5db;border-radius:999px;background:#fff;margin:0 6px 6px 0}
-    .chip a{text-decoration:none;color:inherit}
-  </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klant detail</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/layout.js" defer></script>
+  <script src="/klanten/detail.js" defer></script>
 </head>
 <body>
-  <main class="container">
-    <section class="card">
-      <h2 id="klant-naam">Klant</h2>
-      <div id="klant-loader" class="loader">Laden…</div>
-      <p id="klant-error" class="error" hidden></p>
+  <header id="topbar"></header>
 
-      <div id="klant-info" hidden>
-        <div class="kv">
-          <div><strong>Naam</strong></div><div id="v-naam"></div>
-          <div><strong>E-mail</strong></div><div id="v-mail"></div>
-          <div><strong>Telefoon</strong></div><div id="v-tel"></div>
-          <div><strong>Locatie</strong></div><div id="v-loc"></div>
-          <div><strong>Honden</strong></div><div id="v-honden"></div>
-        </div>
-      </div>
-    </section>
+  <main>
+    <h1>Klant detail</h1>
+    <div id="loader">⏳ Laden...</div>
+    <div id="error" style="display:none; color:red;"></div>
+    <div id="klant-detail" style="display:none;"></div>
+    <p><a href="/klanten/index.html" class="btn">⬅️ Terug naar klanten</a></p>
   </main>
 
-  <script src="/ui/layout.js?v=0.18.9"></script>
-  <script>
-    SuperhondUI.mount({ title:'Klant', icon:'👤', back:'/klanten/' });
-  </script>
-  <script>
-    (async () => {
-      const q = new URLSearchParams(location.search);
-      const id = q.get('id');
-      const $ = s => document.querySelector(s);
-      const show = el => el.hidden = false;
-
-      if(!id){ $('#klant-error').textContent='Geen klant-id.'; show($('#klant-error')); $('#klant-loader').hidden=true; return; }
-
-      try{
-        const [kRes,hRes] = await Promise.all([
-          fetch('/data/klanten.json?b='+Date.now()), fetch('/data/honden.json?b='+Date.now())
-        ]);
-        const [klanten,honden] = await Promise.all([kRes.json(), hRes.json()]);
-        const klant = klanten.find(k=>k.id===id);
-        if(!klant) throw new Error('Klant niet gevonden');
-
-        const dogs = honden.filter(h=>h.eigenaarId===id);
-        $('#klant-naam').textContent = `${klant.voornaam} ${klant.achternaam}`;
-        $('#v-naam').textContent = `${klant.voornaam} ${klant.achternaam}`;
-        $('#v-mail').innerHTML = klant.email ? `<a href="mailto:${klant.email}">${klant.email}</a>` : '—';
-        $('#v-tel').textContent = klant.telefoon || '—';
-        $('#v-loc').textContent = `${klant.plaats||''} ${klant.land?('('+klant.land+')'):''}`;
-
-        $('#v-honden').innerHTML = dogs.length
-          ? `<div class="chips">` + dogs.map(d => `<span class="chip"><a href="/honden/detail.html?id=${d.id}">${d.naam}</a></span>`).join('') + `</div>`
-          : '<span class="muted">Geen honden</span>';
-
-        $('#klant-loader').hidden = true; show($('#klant-info'));
-      }catch(e){
-        $('#klant-loader').hidden = true;
-        $('#klant-error').textContent = 'Kon klantgegevens niet laden.'; show($('#klant-error'));
-        console.error(e);
-      }
-    })();
-  </script>
+  <footer id="footer"></footer>
 </body>
 </html>
