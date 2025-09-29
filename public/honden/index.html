@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Honden</title>
-  <link rel="stylesheet" href="/css/style.css" />
-  <script src="/js/layout.js" defer></script>
-  <script type="module" src="/honden/index.js" defer></script>
+  <link rel="stylesheet" href="../css/style.css" />
+  <script src="../js/layout.js" defer></script>
+  <script type="module" src="./index.js" defer></script>
   <style>
     .toolbar { display:flex; gap:.5rem; align-items:center; margin:.5rem 0 1rem; }
     dialog form { display:grid; gap:.5rem; min-width:min(560px,90vw); }
@@ -19,6 +19,7 @@
 
 <main>
   <h1>Honden</h1>
+
   <div class="toolbar">
     <input id="zoek" type="search" placeholder="Zoek hond of ras…" />
     <select id="ownerFilter"><option value="">— Filter op eigenaar —</option></select>
@@ -62,6 +63,5 @@
     </menu>
   </form>
 </dialog>
-
 </body>
 </html>
