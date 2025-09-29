@@ -4,23 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Klanten</title>
-  
-  <!-- in /honden/*.html en /klanten/*.html -->
 
+  <!-- NIEUWE UI-styles -->
+  <link rel="stylesheet" href="../ui/style.css">
 
-<!-- in /honden/*.html en /klanten/*.html -->
-<link rel="stylesheet" href="../css/style.css?v=0.18.9">
-<script src="../js/layout.js" defer></script>
-  
+  <!-- Layout met topbar + footer + versie/buildtijd -->
+  <script src="../js/layout.js" defer></script>
+
+  <!-- Pagina-logic -->
   <script type="module" src="./index.js" defer></script>
-  <style>
-    .actions button { margin-right:.25rem; }
-    .toolbar { display:flex; gap:.5rem; align-items:center; margin:.5rem 0 1rem; }
-    .toolbar input { flex:1; }
-    dialog form { display:grid; gap:.5rem; min-width:min(560px,90vw); }
-    dialog .row { display:grid; gap:.5rem; grid-template-columns:1fr 2fr; align-items:center; }
-    dialog menu { display:flex; justify-content:flex-end; gap:.5rem; margin-top:.5rem; }
-  </style>
 </head>
 <body>
 <header id="topbar"></header>
@@ -28,37 +20,44 @@
 <main>
   <h1>Klanten</h1>
 
+  <!-- Toolbar -->
   <div class="toolbar">
-    <input id="zoek" type="search" placeholder="Zoek naam of e-mail…" />
-    <button id="btn-nieuw" class="btn">+ Nieuwe klant</button>
+    <input id="zoek" type="search" placeholder="Zoek naam of e-mail…">
+    <button id="btn-nieuw" class="btn primary">+ Nieuwe klant</button>
   </div>
 
+  <!-- Loader + errors -->
   <div id="loader">⏳ Laden…</div>
-  <div id="error" style="display:none;color:red;"></div>
+  <div id="error" style="display:none;"></div>
 
-  <table id="tabel" style="display:none;width:100%">
-    <thead>
-      <tr>
-        <th>Naam</th>
-        <th>Email</th>
-        <th>Telefoon</th>
-        <th># Honden</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <!-- Tabel in card wrapper -->
+  <div class="table-wrap" id="wrap" style="display:none;">
+    <table id="tabel">
+      <thead>
+        <tr>
+          <th>Naam</th>
+          <th>Email</th>
+          <th>Telefoon</th>
+          <th>Honden</th>
+          <th class="right"></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 </main>
 
 <footer id="footer"></footer>
 
-<!-- Modal -->
+<!-- Modal Nieuw/Wijzig -->
 <dialog id="modal">
   <form method="dialog" id="form">
     <h3 id="modal-title">Klant</h3>
     <input type="hidden" name="id" />
-    <div class="row"><label>Naam</label><input name="naam" required /></div>
-    <div class="row"><label>E-mail</label><input name="email" type="email" required /></div>
+    <div class="row"><label>Naam</label><input name="naam" /></div>
+    <div class="row"><label>Voornaam</label><input name="voornaam" /></div>
+    <div class="row"><label>Achternaam</label><input name="achternaam" /></div>
+    <div class="row"><label>E-mail</label><input name="email" type="email" /></div>
     <div class="row"><label>Telefoon</label><input name="telefoon" /></div>
     <div class="row"><label>Adres</label><input name="adres" /></div>
     <div class="row"><label>Land</label>
@@ -69,11 +68,12 @@
     </div>
     <menu>
       <button value="cancel">Annuleren</button>
-      <button class="btn" value="ok">Bewaren</button>
+      <button class="btn primary" value="ok">Bewaren</button>
     </menu>
   </form>
 </dialog>
 
+<!-- Dialog: niet verwijderen bij gekoppelde honden -->
 <dialog id="confirmDel">
   <form method="dialog">
     <h3>Kan klant niet verwijderen</h3>
@@ -81,5 +81,17 @@
     <menu><button value="ok" class="btn">OK</button></menu>
   </form>
 </dialog>
+
+<script>
+  // Toon wrapper zodra er rijen zijn
+  document.addEventListener('DOMContentLoaded', () => {
+    const table = document.getElementById('tabel');
+    const wrap  = document.getElementById('wrap');
+    const obs = new MutationObserver(() => {
+      if (table.tBodies[0] && table.tBodies[0].rows.length) wrap.style.display = '';
+    });
+    obs.observe(table.tBodies[0], { childList: true });
+  });
+</script>
 </body>
 </html>
