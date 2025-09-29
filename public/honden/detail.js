@@ -1,25 +1,35 @@
-import { ensureData, getHonden, getKlanten, byId } from "/js/store.js";
+import { ensureData, getHonden, getKlanten } from "../js/store.js";
 
 const id = new URLSearchParams(location.search).get("id");
+
 const loader = document.getElementById("loader");
 const error  = document.getElementById("error");
 const sec    = document.getElementById("hond");
 
+const S = v => String(v ?? "");
+const byId = (list, _id) => (list || []).find(x => String(x?.id) === String(_id));
+// tolerant voor schema-varianten
+const getEigenaarId = (h) => h?.eigenaarId ?? h?.ownerId ?? h?.klantId ?? h?.eigenaar ?? h?.owner ?? null;
+
 async function init() {
   try {
     await ensureData();
-    const honden = getHonden();
-    const klanten = getKlanten();
+    const honden = getHonden() || [];
+    const klanten = getKlanten() || [];
+
     const h = byId(honden, id);
     if (!h) throw new Error(`Hond met id=${id} niet gevonden`);
-    const eigenaar = byId(klanten, h.eigenaarId);
 
-    document.getElementById("d-naam").textContent = h.naam || "";
-    document.getElementById("d-ras").textContent  = h.ras || "";
-    document.getElementById("d-dob").textContent  = h.geboortedatum || "";
-    document.getElementById("d-chip").textContent = h.chip || "";
-    document.getElementById("d-owner").innerHTML  = eigenaar
-      ? `<a href="/klanten/detail.html?id=${eigenaar.id}">${eigenaar.naam}</a>`
+    const eigId = getEigenaarId(h);
+    const eigenaar = byId(klanten, eigId);
+
+    document.getElementById("d-naam").textContent = S(h.naam);
+    document.getElementById("d-ras").textContent  = S(h.ras);
+    document.getElementById("d-dob").textContent  = S(h.geboortedatum);
+    document.getElementById("d-chip").textContent = S(h.chip);
+
+    document.getElementById("d-owner").innerHTML = eigenaar
+      ? `<a href="../klanten/detail.html?id=${eigenaar.id}">${S(eigenaar.naam)}</a>`
       : "—";
 
     loader.style.display = "none";
@@ -30,4 +40,5 @@ async function init() {
     error.textContent = "⚠️ " + e.message;
   }
 }
+
 init();
