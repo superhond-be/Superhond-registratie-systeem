@@ -1,7 +1,6 @@
 import {
-  ensureData, getHonden, setHonden, getKlanten,
-  newHondId, debounce, byId
-} from "/js/store.js";
+  ensureData, getHonden, setHonden, getKlanten, debounce
+} from "../js/store.js";
 
 const loader = document.getElementById("loader");
 const error  = document.getElementById("error");
@@ -17,18 +16,21 @@ const selEigenaar = document.getElementById("sel-eigenaar");
 let hondCache = [];
 let klantCache = [];
 
-function ownerName(id) {
-  return byId(klantCache, id)?.naam || "—";
-}
+// --- helpers (defensief) ---
+const S = v => String(v ?? "");
+const cmpBy = key => (a,b) => S(a?.[key]).localeCompare(S(b?.[key]));
+const byId = (list, id) => (list || []).find(x => String(x?.id) === String(id));
+
+function ownerName(id) { return byId(klantCache, id)?.naam || "—"; }
 
 function rowHtml(h) {
   const eigenaarNaam = ownerName(h.eigenaarId);
   return `
     <tr>
-      <td><a href="/honden/detail.html?id=${h.id}">${h.naam}</a></td>
-      <td>${h.ras || ""}</td>
-      <td>${h.geboortedatum || ""}</td>
-      <td><a href="/klanten/detail.html?id=${h.eigenaarId}">${eigenaarNaam}</a></td>
+      <td><a href="./detail.html?id=${h.id}">${S(h.naam)}</a></td>
+      <td>${S(h.ras)}</td>
+      <td>${S(h.geboortedatum)}</td>
+      <td><a href="../klanten/detail.html?id=${h.eigenaarId}">${S(eigenaarNaam)}</a></td>
       <td style="text-align:right;white-space:nowrap">
         <button data-act="edit" data-id="${h.id}" title="Wijzig">✏️</button>
         <button data-act="del"  data-id="${h.id}" title="Verwijder">🗑️</button>
@@ -37,40 +39,39 @@ function rowHtml(h) {
 }
 
 function render(filterTxt="", owner="") {
-  const f = filterTxt.trim().toLowerCase();
-  let lijst = hondCache.filter(h =>
-    (!f || h.naam?.toLowerCase().includes(f) || h.ras?.toLowerCase().includes(f)) &&
-    (!owner || String(h.eigenaarId) === String(owner))
-  ).sort((a,b) => a.naam.localeCompare(b.naam));
+  const f = S(filterTxt).trim().toLowerCase();
+  const lijst = (hondCache || [])
+    .filter(Boolean)
+    .filter(h =>
+      (!f || S(h.naam).toLowerCase().includes(f) || S(h.ras).toLowerCase().includes(f)) &&
+      (!owner || String(h.eigenaarId) === String(owner))
+    )
+    .sort(cmpBy("naam"));
+
   tbody.innerHTML = lijst.map(rowHtml).join("");
   loader.style.display = "none";
   tabel.style.display = "";
 }
 
 function populateOwnerSelects(selectedId="") {
-  const opts = [`<option value="" disabled ${selectedId?"":"selected"}>— Kies eigenaar —</option>`]
-    .concat(klantCache
-      .slice().sort((a,b)=>a.naam.localeCompare(b.naam))
-      .map(k => `<option value="${k.id}" ${String(k.id)===String(selectedId)?"selected":""}>${k.naam}</option>`));
-  selEigenaar.innerHTML = opts.join("");
+  const sorted = (klantCache || []).slice().sort(cmpBy("naam"));
+  selEigenaar.innerHTML =
+    `<option value="" disabled ${selectedId?"":"selected"}>— Kies eigenaar —</option>` +
+    sorted.map(k => `<option value="${k.id}" ${String(k.id)===String(selectedId)?"selected":""}>${S(k.naam)}</option>`).join("");
 
-  const filterOpts = [`<option value="">— Filter op eigenaar —</option>`]
-    .concat(klantCache
-      .slice().sort((a,b)=>a.naam.localeCompare(b.naam))
-      .map(k => `<option value="${k.id}">${k.naam}</option>`));
-  ownerFilter.innerHTML = filterOpts.join("");
+  ownerFilter.innerHTML =
+    `<option value="">— Filter op eigenaar —</option>` +
+    sorted.map(k => `<option value="${k.id}">${S(k.naam)}</option>`).join("");
 }
 
 async function init() {
   try {
     await ensureData();
-    hondCache = getHonden();
-    klantCache = getKlanten();
+    hondCache = getHonden() || [];
+    klantCache = getKlanten() || [];
 
-    // Preselect owner from URL ?owner=
     const urlOwner = new URLSearchParams(location.search).get("owner") || "";
     populateOwnerSelects(urlOwner);
-
     render("", urlOwner);
     ownerFilter.value = urlOwner;
   } catch (e) {
@@ -94,32 +95,37 @@ ownerFilter.addEventListener("change", () => render(zoek.value, ownerFilter.valu
 
 function openEdit(id) {
   const isNew = !id;
-  const h = isNew ? { id:"", naam:"", ras:"", geboortedatum:"", chip:"", eigenaarId:"" }
-                  : hondCache.find(x => String(x.id) === String(id));
+  const h = isNew
+    ? { id:"", naam:"", ras:"", geboortedatum:"", chip:"", eigenaarId:"" }
+    : (hondCache || []).find(x => String(x?.id) === String(id)) || {};
+
   form.reset();
   form.id.value = h.id || "";
-  form.naam.value = h.naam || "";
-  form.ras.value = h.ras || "";
-  form.geboortedatum.value = h.geboortedatum || "";
-  form.chip.value = h.chip || "";
-  populateOwnerSelects(h.eigenaarId || new URLSearchParams(location.search).get("owner") || "");
+  form.naam.value = S(h.naam);
+  form.ras.value = S(h.ras);
+  form.geboortedatum.value = S(h.geboortedatum);
+  form.chip.value = S(h.chip);
+
+  const preselect = h.eigenaarId || new URLSearchParams(location.search).get("owner") || "";
+  populateOwnerSelects(preselect);
+
   document.getElementById("modal-title").textContent = isNew ? "Nieuwe hond" : "Hond wijzigen";
   modal.showModal();
 }
 
 form.addEventListener("submit", e => e.preventDefault());
-
 modal.addEventListener("close", () => {
   if (modal.returnValue !== "ok") return;
   const data = Object.fromEntries(new FormData(form).entries());
-  if (!data.naam?.trim() || !data.eigenaarId) return;
+  if (!S(data.naam).trim() || !data.eigenaarId) return;
   data.eigenaarId = Number(data.eigenaarId);
 
   if (!data.id) {
-    data.id = newHondId();
+    const max = (hondCache || []).reduce((m,x)=>Math.max(m, Number(x?.id)||0), 0);
+    data.id = max + 1;
     hondCache.push(data);
   } else {
-    const i = hondCache.findIndex(h => String(h.id) === String(data.id));
+    const i = (hondCache || []).findIndex(h => String(h?.id) === String(data.id));
     if (i >= 0) hondCache[i] = { ...hondCache[i], ...data };
   }
   setHonden(hondCache);
@@ -127,9 +133,8 @@ modal.addEventListener("close", () => {
 });
 
 function tryDelete(id) {
-  const ok = confirm("Deze hond definitief verwijderen?");
-  if (!ok) return;
-  hondCache = hondCache.filter(h => String(h.id) !== String(id));
+  if (!confirm("Deze hond definitief verwijderen?")) return;
+  hondCache = (hondCache || []).filter(h => String(h?.id) !== String(id));
   setHonden(hondCache);
   render(zoek.value, ownerFilter.value);
 }
