@@ -1,6 +1,4 @@
-import {
-  ensureData, getHonden, setHonden, getKlanten, debounce
-} from "../js/store.js";
+import { ensureData, getHonden, setHonden, getKlanten, debounce } from "../js/store.js";
 
 const loader = document.getElementById("loader");
 const error  = document.getElementById("error");
@@ -16,21 +14,32 @@ const selEigenaar = document.getElementById("sel-eigenaar");
 let hondCache = [];
 let klantCache = [];
 
-// --- helpers (defensief) ---
+// helpers
 const S = v => String(v ?? "");
 const cmpBy = key => (a,b) => S(a?.[key]).localeCompare(S(b?.[key]));
 const byId = (list, id) => (list || []).find(x => String(x?.id) === String(id));
+// eigenaarId uit verschillende schema's
+const getEigenaarId = h => h?.eigenaarId ?? h?.ownerId ?? h?.klantId ?? h?.eigenaar ?? h?.owner ?? null;
 
-function ownerName(id) { return byId(klantCache, id)?.naam || "—"; }
+// duidelijke weergavenaam voor klant
+function klantDisplay(k) {
+  if (!k) return "—";
+  return S(k.naam).trim() || S(k.email).trim() || `Klant #${k.id}`;
+}
 
 function rowHtml(h) {
-  const eigenaarNaam = ownerName(h.eigenaarId);
+  const eigId = getEigenaarId(h);
+  const eigenaar = byId(klantCache, eigId);
+  const eigenaarCell = eigId && eigenaar
+    ? `<a href="../klanten/detail.html?id=${eigenaar.id}">${klantDisplay(eigenaar)}</a>`
+    : "—";
+
   return `
     <tr>
       <td><a href="./detail.html?id=${h.id}">${S(h.naam)}</a></td>
       <td>${S(h.ras)}</td>
       <td>${S(h.geboortedatum)}</td>
-      <td><a href="../klanten/detail.html?id=${h.eigenaarId}">${S(eigenaarNaam)}</a></td>
+      <td>${eigenaarCell}</td>
       <td style="text-align:right;white-space:nowrap">
         <button data-act="edit" data-id="${h.id}" title="Wijzig">✏️</button>
         <button data-act="del"  data-id="${h.id}" title="Verwijder">🗑️</button>
@@ -44,7 +53,7 @@ function render(filterTxt="", owner="") {
     .filter(Boolean)
     .filter(h =>
       (!f || S(h.naam).toLowerCase().includes(f) || S(h.ras).toLowerCase().includes(f)) &&
-      (!owner || String(h.eigenaarId) === String(owner))
+      (!owner || String(getEigenaarId(h)) === String(owner))
     )
     .sort(cmpBy("naam"));
 
@@ -57,11 +66,22 @@ function populateOwnerSelects(selectedId="") {
   const sorted = (klantCache || []).slice().sort(cmpBy("naam"));
   selEigenaar.innerHTML =
     `<option value="" disabled ${selectedId?"":"selected"}>— Kies eigenaar —</option>` +
-    sorted.map(k => `<option value="${k.id}" ${String(k.id)===String(selectedId)?"selected":""}>${S(k.naam)}</option>`).join("");
+    sorted.map(k => `<option value="${k.id}" ${String(k.id)===String(selectedId)?"selected":""}>${klantDisplay(k)}</option>`).join("");
 
   ownerFilter.innerHTML =
     `<option value="">— Filter op eigenaar —</option>` +
-    sorted.map(k => `<option value="${k.id}">${S(k.naam)}</option>`).join("");
+    sorted.map(k => `<option value="${k.id}">${klantDisplay(k)}</option>`).join("");
+}
+
+// éénmalige migratie: zet ownerId/klantId -> eigenaarId in localStorage
+function migrateOwnerKey() {
+  let changed = false;
+  hondCache = (hondCache || []).map(h => {
+    const eig = getEigenaarId(h);
+    if (eig != null && h.eigenaarId !== eig) { changed = true; return { ...h, eigenaarId: Number(eig) }; }
+    return h;
+  });
+  if (changed) setHonden(hondCache);
 }
 
 async function init() {
@@ -69,6 +89,8 @@ async function init() {
     await ensureData();
     hondCache = getHonden() || [];
     klantCache = getKlanten() || [];
+
+    migrateOwnerKey();
 
     const urlOwner = new URLSearchParams(location.search).get("owner") || "";
     populateOwnerSelects(urlOwner);
@@ -106,7 +128,7 @@ function openEdit(id) {
   form.geboortedatum.value = S(h.geboortedatum);
   form.chip.value = S(h.chip);
 
-  const preselect = h.eigenaarId || new URLSearchParams(location.search).get("owner") || "";
+  const preselect = getEigenaarId(h) || new URLSearchParams(location.search).get("owner") || "";
   populateOwnerSelects(preselect);
 
   document.getElementById("modal-title").textContent = isNew ? "Nieuwe hond" : "Hond wijzigen";
@@ -118,6 +140,8 @@ modal.addEventListener("close", () => {
   if (modal.returnValue !== "ok") return;
   const data = Object.fromEntries(new FormData(form).entries());
   if (!S(data.naam).trim() || !data.eigenaarId) return;
+
+  // bewaar consistent als eigenaarId (nummer)
   data.eigenaarId = Number(data.eigenaarId);
 
   if (!data.id) {
