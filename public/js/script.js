@@ -1,5 +1,3 @@
-
-
 let dogCount = 0;
 
 function addDog() {
@@ -17,7 +15,8 @@ function addDog() {
     <input type="date" name="dogBirthdate">
   `;
   container.appendChild(div);
-  
+} // ✅ addDog netjes afgesloten
+
 // === Formulier - customer opslaan ===
 document.getElementById("customerForm").addEventListener("submit", function (e) {
   e.preventDefault();
@@ -39,32 +38,35 @@ document.getElementById("customerForm").addEventListener("submit", function (e) 
     customer.dogs.push(dog);
   });
 
-}); // ✅ sluit de SUBMIT-functie HIER af (niet later!)
-
+  // TODO: sla 'customer' op of verzend naar je backend
+});
 
 // ===== Score teller functies (buiten de submit!) =====
 document.addEventListener('DOMContentLoaded', () => {
   let score = 0;
 
-  const scoreEl = document.getElementById("score");
-  const plusBtn = document.getElementById("plusKnop");
+  const scoreEl  = document.getElementById("score");
+  const plusBtn  = document.getElementById("plusKnop");
   const resetBtn = document.getElementById("resetKnop");
 
-  // Als de teller-elementen niet op deze pagina staan: zacht falen
   if (!scoreEl || !plusBtn) {
     console.info("[Superhond] Teller niet actief op deze pagina.");
     return;
   }
- plusBtn.addEventListener('click', (e) => {
-    e.preventDefault(); // ⬅️ vangt per ongeluk "submit" op
+
+  // safety: maak knoppen geen submit
+  if (plusBtn.type !== 'button') plusBtn.type = 'button';
+  if (resetBtn && resetBtn.type !== 'button') resetBtn.type = 'button';
+
+  plusBtn.addEventListener('click', (e) => {
+    e.preventDefault();
     score++;
     scoreEl.textContent = String(score);
-    // console.log('score =', score);
-
   });
 
   if (resetBtn) {
-    resetBtn.addEventListener("click", () => {
+    resetBtn.addEventListener("click", (e) => {
+      e.preventDefault();
       score = 0;
       scoreEl.textContent = "0";
     });
