@@ -1,4 +1,4 @@
-// Agenda met API→fallback /data/agenda.json + tabs
+// Agenda met API→fallback /data/agenda.json + tabs + auto-fallback naar "alles"
 (function () {
   const tabs = document.querySelectorAll(".tab[data-tab]");
   const tbody = document.querySelector("#agenda-table tbody");
@@ -6,16 +6,22 @@
   const elErr = document.getElementById("agenda-error");
   const elLoad= document.getElementById("agenda-loader");
 
-  const bust = `?t=${Date.now()}`;
-  let items = [];  // alle agenda-items (les, reeks, mededeling)
+  if (!tbody || !wrap) {
+    console.error("Agenda: ontbrekende DOM elementen (#agenda-table / #agenda-table-wrap).");
+    if (elErr) { elErr.style.display = "block"; elErr.textContent = "Agenda lay-out ontbreekt (tabel/wrapper)."; }
+    return;
+  }
 
-  // ---- helpers ----
+  const bust = `?t=${Date.now()}`;
+  let items = [];
+
+  // helpers
   const S = v => String(v ?? "");
   const toDate = d => d ? new Date(d) : null;
   const isSameWeek = (d) => {
     if (!d) return false;
     const now = new Date();
-    const start = new Date(now); // maandag 00:00
+    const start = new Date(now);
     const day = (now.getDay() + 6) % 7; // 0=ma
     start.setDate(now.getDate() - day);
     start.setHours(0,0,0,0);
@@ -47,24 +53,32 @@
     } else if (kind === "mededelingen") {
       list = list.filter(x => (x.type || "les") === "mededeling");
     }
+
     list.sort((a,b) => S(a.datum).localeCompare(S(b.datum)));
 
-    tbody.innerHTML = list.map(rowHtml).join("") || `
-      <tr><td colspan="3"><em>Geen items</em></td></tr>
-    `;
+    // auto-fallback: als "week" leeg is, toon meteen "alles"
+    if (kind === "week" && list.length === 0) {
+      setActive("alles");
+      return render("alles");
+    }
+
+    tbody.innerHTML = list.length
+      ? list.map(rowHtml).join("")
+      : `<tr><td colspan="3"><em>Geen items</em></td></tr>`;
+
     elLoad.style.display = "none";
     wrap.style.display = "";
   }
 
   async function loadAgenda() {
-    // 1) probeer API
     try {
       const r = await fetch("/api/agenda" + bust, { cache: "no-store" });
       if (!r.ok) throw new Error("API agenda niet OK");
       return await r.json();
-    } catch {
-      // 2) fallback naar static demo
+    } catch (e) {
+      // fallback static
       const r2 = await fetch("/data/agenda.json" + bust, { cache: "no-store" });
+      if (!r2.ok) throw new Error("Kon /data/agenda.json niet laden");
       return await r2.json();
     }
   }
@@ -73,20 +87,20 @@
     tabs.forEach(t => t.classList.toggle("active", t.dataset.tab === tabName));
   }
 
-  // ---- init ----
   (async () => {
     try {
       items = await loadAgenda();
+      // start op week (maar render() schakelt zelf naar "alles" als week leeg is)
       setActive("week");
       render("week");
     } catch (e) {
+      console.error(e);
       elLoad.style.display = "none";
       elErr.style.display = "block";
       elErr.textContent = "⚠️ Kon agenda niet laden: " + e.message;
     }
   })();
 
-  // tab handlers
   tabs.forEach(btn => {
     btn.addEventListener("click", () => {
       setActive(btn.dataset.tab);
