@@ -89,15 +89,24 @@ body{
   .brand{ font-size:18px; }
   .topbar .container{ min-height:
 
-    #resetKnop {
-  background: #f44336;
-  color: white;
+ #superhond-score {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 1rem;
+}
+
+#superhond-score button {
+  background: #007bff;
   border: none;
   padding: 8px 14px;
   border-radius: 6px;
+  color: white;
   cursor: pointer;
+  font-weight: 600;
+  
 }
 
-#resetKnop:hover {
-  background: #c62828;
+#superhond-score button:hover {
+  background: #0056b3;
 }
