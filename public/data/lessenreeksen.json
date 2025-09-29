@@ -1,35 +1,14 @@
 [
   {
-    "id": "LR300",
-    "naam": "Puppy Najaar 2025",
-    "klasId": "C100",
-    "pakketId": "LP200",
-    "aantalStrippen": 8,
-    "geldigheidWeken": 12,
+    "id": 101,
+    "titel": "Puppy Reeks Oktober",
     "startdatum": "2025-10-05",
-    "maxDeelnemers": 8,
-    "lesduurMin": 60,
-    "status": "actief",
-    "opmerkingen": "Eerste reeks najaar",
-    "planning": {
-      "weekdag": "zondag",
-      "starttijd": "10:00"
-    }
+    "lessen": [1, 2]
   },
   {
-    "id": "LR310",
-    "naam": "Pubers Okt-2025",
-    "klasId": "C110",
-    "pakketId": "LP210",
-    "aantalStrippen": 10,
-    "geldigheidWeken": 16,
+    "id": 102,
+    "titel": "Agility Reeks Herfst",
     "startdatum": "2025-10-07",
-    "maxDeelnemers": 10,
-    "lesduurMin": 60,
-    "status": "actief",
-    "planning": {
-      "weekdag": "dinsdag",
-      "starttijd": "18:30"
-    }
+    "lessen": [3]
   }
 ]
