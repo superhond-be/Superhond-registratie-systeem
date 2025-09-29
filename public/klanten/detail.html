@@ -1,24 +1,49 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Klant detail</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/style.css" />
   <script src="/js/layout.js" defer></script>
-  <script src="/klanten/detail.js" defer></script>
+  <script type="module" src="/klanten/detail.js" defer></script>
+  <style>
+    .grid { display:grid; gap:.5rem; grid-template-columns: 1fr 2fr; max-width:800px; }
+    .actions button { margin-right:.25rem; }
+  </style>
 </head>
 <body>
-  <header id="topbar"></header>
+<header id="topbar"></header>
 
-  <main>
-    <h1>Klant detail</h1>
-    <div id="loader">⏳ Laden...</div>
-    <div id="error" style="display:none; color:red;"></div>
-    <div id="klant-detail" style="display:none;"></div>
-    <p><a href="/klanten/index.html" class="btn">⬅️ Terug naar klanten</a></p>
-  </main>
+<main>
+  <h1>Klant detail</h1>
+  <div id="loader">⏳ Laden…</div>
+  <div id="error" style="display:none;color:red;"></div>
 
-  <footer id="footer"></footer>
+  <section id="klant" style="display:none;">
+    <div class="grid">
+      <div>Naam</div><div id="d-naam"></div>
+      <div>Email</div><div id="d-email"></div>
+      <div>Telefoon</div><div id="d-telefoon"></div>
+      <div>Adres</div><div id="d-adres"></div>
+      <div>Land</div><div id="d-land"></div>
+    </div>
+    <p class="actions">
+      <button id="btn-edit">✏️ Wijzig</button>
+      <a class="btn" href="/klanten/index.html">⬅️ Terug naar klanten</a>
+    </p>
+  </section>
+
+  <section id="honden" style="display:none;">
+    <h2>Honden van deze klant</h2>
+    <p><a class="btn" id="btn-nieuwe-hond" href="/honden/index.html?owner={{ID}}">+ Nieuwe hond voor deze klant</a></p>
+    <table style="width:100%">
+      <thead><tr><th>Naam</th><th>Ras</th><th>Geboortedatum</th><th></th></tr></thead>
+      <tbody id="honden-body"></tbody>
+    </table>
+  </section>
+</main>
+
+<footer id="footer"></footer>
 </body>
 </html>
