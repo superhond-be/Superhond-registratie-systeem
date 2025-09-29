@@ -1,5 +1,5 @@
 import {
-  ensureData, getKlanten, setKlanten, getHonden, newKlantId, debounce
+  ensureData, getKlanten, setKlanten, getHonden, debounce
 } from "../js/store.js";
 
 const loader = document.getElementById("loader");
@@ -16,24 +16,45 @@ const confirmMsg = document.getElementById("confirm-msg");
 let klantCache = [];
 let hondCache  = [];
 
-// --- helpers (defensief) ---
+/* ---------- helpers ---------- */
 const S = v => String(v ?? "");
 const cmpBy = key => (a,b) => S(a?.[key]).localeCompare(S(b?.[key]));
+const byId = (list, id) => (list || []).find(x => String(x?.id) === String(id));
 
-function countDogs(klantId) {
-  return (hondCache || []).filter(h => String(h?.eigenaarId) === String(klantId)).length;
+function guessNameFromEmail(email){
+  const local = S(email).split("@")[0];
+  return local.split(/[._-]+/).map(s=>s? s[0].toUpperCase()+s.slice(1):"").join(" ").trim();
+}
+function ensureNaam(k){
+  const n = S(k.naam).trim();
+  if (n) return n;
+  const comb = [k.voornaam, k.achternaam].filter(Boolean).join(" ").trim();
+  return comb || guessNameFromEmail(k.email) || `Klant #${k.id}`;
+}
+function dogsOf(klantId){
+  // tolerant voor schema; uiteindelijk slaan we overal eigenaarId op
+  return (hondCache || []).filter(h => String(h?.eigenaarId ?? h?.ownerId ?? h?.klantId) === String(klantId));
 }
 
+/* ---------- render ---------- */
 function rowHtml(k) {
-  const dogs = countDogs(k.id);
-  const linkDogs = `<a href="../honden/index.html?owner=${k.id}" title="Toon honden van ${S(k.naam)}">${dogs}</a>`;
+  const naam = ensureNaam(k);
+  const dogs = dogsOf(k.id);
+  const maxChips = 3;
+  const chips = dogs.slice(0, maxChips).map(h => `
+    <span class="chip"><a href="../honden/detail.html?id=${h.id}" title="Open ${S(h.naam)}">${S(h.naam)}</a></span>
+  `).join("");
+  const more = dogs.length > maxChips
+    ? `<span class="chip more" title="${dogs.slice(maxChips).map(h=>S(h.naam)).join(', ')}">+${dogs.length - maxChips}</span>`
+    : (dogs.length === 0 ? `<a class="chip more" href="../honden/index.html?owner=${k.id}" title="Nieuwe hond">+ Hond</a>` : "");
+
   return `
     <tr>
-      <td><a href="./detail.html?id=${k.id}">${S(k.naam)}</a></td>
+      <td><a href="./detail.html?id=${k.id}">${naam}</a></td>
       <td>${S(k.email)}</td>
       <td>${S(k.telefoon)}</td>
-      <td style="text-align:center">${linkDogs}</td>
-      <td class="actions" style="text-align:right;white-space:nowrap">
+      <td><div class="chips">${chips}${more}</div></td>
+      <td class="right nowrap">
         <button data-act="edit" data-id="${k.id}" title="Wijzig">✏️</button>
         <button data-act="del"  data-id="${k.id}" title="Verwijder">🗑️</button>
       </td>
@@ -44,19 +65,31 @@ function render(filter="") {
   const f = S(filter).trim().toLowerCase();
   const lijst = (klantCache || [])
     .filter(Boolean)
+    .map(k => ({ ...k, naam: ensureNaam(k) })) // zorg dat naam altijd gevuld is
     .filter(k => !f || S(k.naam).toLowerCase().includes(f) || S(k.email).toLowerCase().includes(f))
     .sort(cmpBy("naam"));
 
   tbody.innerHTML = lijst.map(rowHtml).join("");
   loader.style.display = "none";
-  tabel.style.display = "";
+  document.getElementById("wrap").style.display = lijst.length ? "" : "none";
 }
 
+/* ---------- init ---------- */
 async function init() {
   try {
     await ensureData();
     klantCache = getKlanten() || [];
     hondCache  = getHonden() || [];
+
+    // MIGRATIE: sla ontbrekende naam direct op zodat het blijvend is
+    let changed = false;
+    klantCache = klantCache.map(k => {
+      const n = ensureNaam(k);
+      if (n !== S(k.naam)) { changed = true; return { ...k, naam: n }; }
+      return k;
+    });
+    if (changed) setKlanten(klantCache);
+
     render();
   } catch (e) {
     loader.style.display = "none";
@@ -65,6 +98,7 @@ async function init() {
   }
 }
 
+/* ---------- events ---------- */
 tbody.addEventListener("click", e => {
   const btn = e.target.closest("button[data-act]");
   if (!btn) return;
@@ -78,15 +112,17 @@ zoek.addEventListener("input", debounce(() => render(zoek.value), 300));
 
 function openEdit(id) {
   const isNew = !id;
-  const k = isNew ? { id:"", naam:"", email:"", telefoon:"", adres:"", land:"BE" }
-                  : klantCache.find(x => String(x?.id) === String(id));
+  const k = isNew ? { id:"", naam:"", voornaam:"", achternaam:"", email:"", telefoon:"", adres:"", land:"BE" }
+                  : klantCache.find(x => String(x?.id) === String(id)) || {};
   form.reset();
-  form.id.value = k?.id || "";
-  form.naam.value = S(k?.naam);
-  form.email.value = S(k?.email);
-  form.telefoon.value = S(k?.telefoon);
-  form.adres.value = S(k?.adres);
-  form.land.value = S(k?.land || "BE");
+  form.id.value = k.id || "";
+  form.naam.value = S(k.naam);
+  form.voornaam.value = S(k.voornaam);
+  form.achternaam.value = S(k.achternaam);
+  form.email.value = S(k.email);
+  form.telefoon.value = S(k.telefoon);
+  form.adres.value = S(k.adres);
+  form.land.value = S(k.land || "BE");
   document.getElementById("modal-title").textContent = isNew ? "Nieuwe klant" : "Klant wijzigen";
   modal.showModal();
 }
@@ -95,10 +131,11 @@ form.addEventListener("submit", e => e.preventDefault());
 modal.addEventListener("close", () => {
   if (modal.returnValue !== "ok") return;
   const data = Object.fromEntries(new FormData(form).entries());
-  if (!S(data.naam).trim()) return;
+
+  // bereken en bewaar consistente naam
+  data.naam = S(data.naam).trim() || ([data.voornaam, data.achternaam].filter(Boolean).join(" ").trim()) || guessNameFromEmail(data.email);
 
   if (!data.id) {
-    // nieuw
     const max = (klantCache || []).reduce((m,x)=>Math.max(m, Number(x?.id)||0), 0);
     data.id = max + 1;
     klantCache.push(data);
@@ -111,7 +148,7 @@ modal.addEventListener("close", () => {
 });
 
 function tryDelete(id) {
-  const dogs = countDogs(id);
+  const dogs = dogsOf(id).length;
   if (dogs > 0) {
     confirmMsg.textContent = `Klant heeft nog ${dogs} hond(en). Verwijder of herwijs eerst de honden.`;
     confirmDel.showModal();
