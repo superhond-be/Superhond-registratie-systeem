@@ -8,8 +8,6 @@ const sec    = document.getElementById("hond");
 
 const S = v => String(v ?? "");
 const byId = (list, _id) => (list || []).find(x => String(x?.id) === String(_id));
-
-// tolerant voor verschillende keys
 const getEigenaarId = h => h?.eigenaarId ?? h?.ownerId ?? h?.klantId ?? h?.eigenaar ?? h?.owner ?? null;
 
 function guessNameFromEmail(email){
@@ -26,12 +24,19 @@ function ensureNaam(k){
 async function init() {
   try {
     await ensureData();
-    const honden = getHonden() || [];
-    const klanten = getKlanten() || [];
+
+    // Data ophalen
+    const honden   = getHonden() || [];
+    const klanten  = getKlanten() || [];
+
+    // Lessen demo-data (uit /data/lessen.json)
+    const r = await fetch("../data/lessen.json");
+    const lessen = await r.json();
 
     const h = byId(honden, id);
     if (!h) throw new Error(`Hond met id=${id} niet gevonden`);
 
+    // Eigenaar tonen
     const eigId = getEigenaarId(h);
     const eigenaar = byId(klanten, eigId);
 
@@ -42,6 +47,22 @@ async function init() {
     document.getElementById("d-owner").innerHTML  = eigenaar
       ? `<a href="../klanten/detail.html?id=${eigenaar.id}">${ensureNaam(eigenaar)}</a>`
       : "—";
+
+    // Ingeschreven lessen (demo: filter op hondId)
+    const rows = lessen
+      .filter(l => (l.hondId && String(l.hondId) === String(h.id)))
+      .map(l => `
+        <tr>
+          <td><a href="../lessen/detail.html?id=${l.id}">${S(l.naam)}</a></td>
+          <td>${S(l.datum)}</td>
+          <td>${S(l.locatie)}</td>
+          <td>${S(l.trainer)}</td>
+        </tr>
+      `).join("");
+
+    document.querySelector("#lessen tbody").innerHTML = rows || `
+      <tr><td colspan="4"><em>Geen lessen ingeschreven</em></td></tr>
+    `;
 
     loader.style.display = "none";
     sec.style.display = "";
