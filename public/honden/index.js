@@ -14,24 +14,21 @@ const selEigenaar = document.getElementById("sel-eigenaar");
 let hondCache = [];
 let klantCache = [];
 
-// helpers
 const S = v => String(v ?? "");
 const cmpBy = key => (a,b) => S(a?.[key]).localeCompare(S(b?.[key]));
 const byId = (list, id) => (list || []).find(x => String(x?.id) === String(id));
-// eigenaarId uit verschillende schema's
+
+// Tolerant owner-key + altijd opslaan als eigenaarId
 const getEigenaarId = h => h?.eigenaarId ?? h?.ownerId ?? h?.klantId ?? h?.eigenaar ?? h?.owner ?? null;
 
-// duidelijke weergavenaam voor klant
-function klantDisplay(k) {
-  if (!k) return "—";
-  return S(k.naam).trim() || S(k.email).trim() || `Klant #${k.id}`;
-}
+// >>> ENKEL naam (geen e-mail meer in de tabel)
+function klantDisplayNaam(k) { return (k?.naam && k.naam.trim()) ? k.naam : (k ? `Klant #${k.id}` : "—"); }
 
 function rowHtml(h) {
   const eigId = getEigenaarId(h);
   const eigenaar = byId(klantCache, eigId);
   const eigenaarCell = eigId && eigenaar
-    ? `<a href="../klanten/detail.html?id=${eigenaar.id}">${klantDisplay(eigenaar)}</a>`
+    ? `<a href="../klanten/detail.html?id=${eigenaar.id}">${klantDisplayNaam(eigenaar)}</a>`
     : "—";
 
   return `
@@ -66,14 +63,14 @@ function populateOwnerSelects(selectedId="") {
   const sorted = (klantCache || []).slice().sort(cmpBy("naam"));
   selEigenaar.innerHTML =
     `<option value="" disabled ${selectedId?"":"selected"}>— Kies eigenaar —</option>` +
-    sorted.map(k => `<option value="${k.id}" ${String(k.id)===String(selectedId)?"selected":""}>${klantDisplay(k)}</option>`).join("");
+    sorted.map(k => `<option value="${k.id}" ${String(k.id)===String(selectedId)?"selected":""}>${klantDisplayNaam(k)}</option>`).join("");
 
   ownerFilter.innerHTML =
     `<option value="">— Filter op eigenaar —</option>` +
-    sorted.map(k => `<option value="${k.id}">${klantDisplay(k)}</option>`).join("");
+    sorted.map(k => `<option value="${k.id}">${klantDisplayNaam(k)}</option>`).join("");
 }
 
-// éénmalige migratie: zet ownerId/klantId -> eigenaarId in localStorage
+// migratie: forceer eigenaarId-key in localStorage
 function migrateOwnerKey() {
   let changed = false;
   hondCache = (hondCache || []).map(h => {
@@ -141,8 +138,7 @@ modal.addEventListener("close", () => {
   const data = Object.fromEntries(new FormData(form).entries());
   if (!S(data.naam).trim() || !data.eigenaarId) return;
 
-  // bewaar consistent als eigenaarId (nummer)
-  data.eigenaarId = Number(data.eigenaarId);
+  data.eigenaarId = Number(data.eigenaarId); // altijd eigenaarId bewaren
 
   if (!data.id) {
     const max = (hondCache || []).reduce((m,x)=>Math.max(m, Number(x?.id)||0), 0);
