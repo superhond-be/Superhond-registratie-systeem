@@ -1,49 +1,32 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Klanten – Superhond</title>
-  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klanten</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/layout.js" defer></script>
+  <script src="/klanten/index.js" defer></script>
 </head>
 <body>
-  <main class="container">
-    <section class="card">
-      <h2>Klantenlijst</h2>
+  <header id="topbar"></header>
 
-      <div class="toolbar" style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;">
-        <input id="q" class="input" type="search" placeholder="Zoek (naam/e-mail)…" aria-label="Zoeken">
-        <input id="minDogs" class="input input-nr" type="number" min="0" value="0" title="Min. # honden" aria-label="Minimum aantal honden">
-        <select id="land" class="select" aria-label="Filter op land">
-          <option value="ALL">Alle landen</option>
-          <option value="BE">België</option>
-          <option value="NL">Nederland</option>
-        </select>
-        <span id="count-badge" class="badge">0 klanten</span>
-      </div>
-
-      <div id="klanten-loader" class="loader">Klanten laden…</div>
-      <p id="klanten-error" class="error" hidden></p>
-
-      <div class="table-wrap">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Klant</th>
-              <th>E-mail</th>
-              <th>Plaats</th>
-              <th>Honden</th>
-              <th>Acties</th>
-            </tr>
-          </thead>
-          <tbody id="klanten-tbody"></tbody>
-        </table>
-      </div>
-    </section>
+  <main>
+    <h1>Klanten</h1>
+    <div id="loader">⏳ Laden...</div>
+    <div id="error" style="display:none; color:red;"></div>
+    <table id="klanten-tabel" style="display:none;">
+      <thead>
+        <tr>
+          <th>Naam</th>
+          <th>Email</th>
+          <th># Honden</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </main>
 
-  <script src="/ui/layout.js?v=0.18.9"></script>
-  <script src="/js/klanten.js?v=0.18.9" defer></script>
-  <script>SuperhondUI.mount({ title: 'Klanten', icon: '👤', back: '/' });</script>
+  <footer id="footer"></footer>
 </body>
 </html>
