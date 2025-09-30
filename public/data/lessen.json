@@ -1,5 +1,11 @@
 [
-  { "id": 101, "naam": "Puppyles 1", "datum": "2025-10-05", "locatie": "Terrein A", "trainer": "Anja", "hondId": 1 },
-  { "id": 102, "naam": "Puppyles 2", "datum": "2025-10-12", "locatie": "Terrein A", "trainer": "Anja", "hondId": 1 },
-  { "id": 201, "naam": "Puberles 1", "datum": "2025-10-07", "locatie": "Terrein B", "trainer": "Tom", "hondId": 2 }
+  {
+    "id": "les-001",
+    "reeksId": "reeks-01",
+    "trainerId": "tr-01",
+    "locatieId": "loc-01",
+    "datum": "2025-10-02",
+    "starttijd": "19:00",
+    "eindtijd": "20:00"
+  }
 ]
