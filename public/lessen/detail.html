@@ -1,43 +1,65 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Les detail</title>
-
-  <!-- UI-styles -->
-  <link rel="stylesheet" href="../ui/style.css">
-
-  <!-- Layout (topbar/footer) -->
-  <script src="../js/layout.js" defer></script>
-
-  <!-- Pagina logic -->
-  <script type="module" src="./detail.js" defer></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Les – Superhond</title>
+  <link rel="stylesheet" href="../ui/style.css?v=0.19.0">
 </head>
 <body>
-<header id="topbar"></header>
 
-<main>
-  <h1>Les detail</h1>
-
-  <div id="loader">⏳ Laden…</div>
-  <div id="error" style="display:none;"></div>
-
-  <section id="les" style="display:none;">
-    <div class="card grid two">
-      <div><strong>Naam</strong></div><div id="d-naam"></div>
-      <div><strong>Datum</strong></div><div id="d-datum"></div>
-      <div><strong>Locatie</strong></div><div id="d-locatie"></div>
-      <div><strong>Trainer</strong></div><div id="d-trainer"></div>
-      <div><strong>Hond</strong></div><div id="d-hond"></div>
+  <main class="container">
+    <h2 class="page-title">Lesdetail</h2>
+    <div id="les-detail" class="card">
+      <p>Laden…</p>
     </div>
 
-    <p style="margin-top:1rem">
-      <a class="btn" href="./index.html">⬅️ Terug naar lessen</a>
-    </p>
-  </section>
-</main>
+    <p><a href="../index.html">← Terug naar dashboard</a></p>
+  </main>
 
-<footer id="footer"></footer>
+  <footer class="footer">
+    <small>&copy; 2025 Superhond</small>
+  </footer>
+
+  <script src="../ui/layout.js?v=0.19.0"></script>
+  <script type="module">
+    import { loadAll, indexById, humanDate, timeRange } from "../js/data.js?v=0.19.0";
+
+    // Helper om querystring uit te lezen
+    function getParam(name) {
+      return new URLSearchParams(window.location.search).get(name);
+    }
+
+    const lesId = getParam("id");
+    const box = document.getElementById("les-detail");
+
+    (async () => {
+      const all = await loadAll();
+      const lessenById = indexById(all.lessen);
+      const reeksenById = indexById(all.reeksen);
+      const trainersById = indexById(all.trainers);
+      const locatiesById = indexById(all.locaties);
+
+      const les = lessenById[lesId];
+      if (!les) {
+        box.innerHTML = `<p class="error">Les met id <code>${lesId}</code> niet gevonden.</p>`;
+        return;
+      }
+
+      const reeks = reeksenById[les.reeksId];
+      const trainer = trainersById[les.trainerId];
+      const locatie = locatiesById[les.locatieId];
+
+      box.innerHTML = `
+        <h3>${reeks ? reeks.naam : "Onbekende reeks"}</h3>
+        <ul>
+          <li><strong>Datum:</strong> ${humanDate(les.datum)}</li>
+          <li><strong>Tijd:</strong> ${timeRange(les.starttijd, les.eindtijd)}</li>
+          <li><strong>Trainer:</strong> ${trainer ? trainer.voornaam+" "+trainer.achternaam : "—"}</li>
+          <li><strong>Locatie:</strong> ${locatie ? locatie.naam : "—"}</li>
+        </ul>
+      `;
+    })();
+  </script>
 </body>
 </html>
