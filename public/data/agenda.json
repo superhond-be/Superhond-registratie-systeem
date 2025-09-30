@@ -1,5 +1,26 @@
 [
-  { "datum": "2025-10-02T19:00", "titel": "Puppyles groep A", "type": "Les", "href": "/lessen/detail.html?id=les-001" },
-  { "datum": "2025-10-03T18:30", "titel": "Reeks: Basis 6-weken", "type": "Reeks", "href": "/reeksen/detail.html?id=reeks-07" },
-  { "datum": "2025-10-04T10:00", "titel": "Mededeling: Parking afgesloten", "type": "Mededeling", "href": "/mededelingen/detail.html?id=md-101" }
+  {
+    "datum": "2025-10-03T19:00:00",
+    "titel": "Puppy – Groep A",
+    "type": "Les",
+    "href": "/lessen/detail.html?id=les-001"
+  },
+  {
+    "datum": "2025-10-06T19:00:00",
+    "titel": "Puppy – Groep A",
+    "type": "Les",
+    "href": "/lessen/detail.html?id=les-002"
+  },
+  {
+    "datum": "2025-10-10T10:00:00",
+    "titel": "Puppy – Groep A",
+    "type": "Les",
+    "href": "/lessen/detail.html?id=les-003"
+  },
+  {
+    "datum": "2025-10-04T08:00:00",
+    "titel": "Parking afgesloten",
+    "type": "Mededeling",
+    "href": "/mededelingen/detail.html?id=msg-001"
+  }
 ]
