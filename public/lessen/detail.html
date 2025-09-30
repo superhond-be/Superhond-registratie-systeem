@@ -3,63 +3,47 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Les – Superhond</title>
-  <link rel="stylesheet" href="../ui/style.css?v=0.19.0">
+  <title>Les detail – Superhond</title>
+  <link rel="stylesheet" href="/ui/style.css">
 </head>
 <body>
-
   <main class="container">
-    <h2 class="page-title">Lesdetail</h2>
-    <div id="les-detail" class="card">
-      <p>Laden…</p>
-    </div>
-
-    <p><a href="../index.html">← Terug naar dashboard</a></p>
+    <h2 class="page-title">Les detail</h2>
+    <div id="les-detail" class="card">Bezig met laden…</div>
+    <p><a href="/" class="btn">← Terug naar dashboard</a></p>
   </main>
 
-  <footer class="footer">
-    <small>&copy; 2025 Superhond</small>
-  </footer>
+  <script src="/ui/layout.js"></script>
+  <script>
+    SuperhondUI.mount({ title:'Les detail', icon:'📅', back:'/' });
 
-  <script src="../ui/layout.js?v=0.19.0"></script>
-  <script type="module">
-    import { loadAll, indexById, humanDate, timeRange } from "../js/data.js?v=0.19.0";
+    // Haal ID uit querystring: ?id=...
+    const params = new URLSearchParams(location.search);
+    const id = params.get("id");
 
-    // Helper om querystring uit te lezen
-    function getParam(name) {
-      return new URLSearchParams(window.location.search).get(name);
+    async function load() {
+      try {
+        const res = await fetch("/data/agenda.json");
+        const data = await res.json();
+
+        const les = data.find(item => item.href.includes(id));
+        if (!les) {
+          document.getElementById("les-detail").innerHTML = "<p>Les niet gevonden.</p>";
+          return;
+        }
+
+        document.getElementById("les-detail").innerHTML = `
+          <h3>${les.titel}</h3>
+          <p><strong>Datum:</strong> ${new Date(les.datum).toLocaleString("nl-BE")}</p>
+          <p><strong>Type:</strong> ${les.type}</p>
+          <p>ID: ${id}</p>
+        `;
+      } catch (err) {
+        document.getElementById("les-detail").innerHTML = "<p>Fout bij laden van les.</p>";
+      }
     }
 
-    const lesId = getParam("id");
-    const box = document.getElementById("les-detail");
-
-    (async () => {
-      const all = await loadAll();
-      const lessenById = indexById(all.lessen);
-      const reeksenById = indexById(all.reeksen);
-      const trainersById = indexById(all.trainers);
-      const locatiesById = indexById(all.locaties);
-
-      const les = lessenById[lesId];
-      if (!les) {
-        box.innerHTML = `<p class="error">Les met id <code>${lesId}</code> niet gevonden.</p>`;
-        return;
-      }
-
-      const reeks = reeksenById[les.reeksId];
-      const trainer = trainersById[les.trainerId];
-      const locatie = locatiesById[les.locatieId];
-
-      box.innerHTML = `
-        <h3>${reeks ? reeks.naam : "Onbekende reeks"}</h3>
-        <ul>
-          <li><strong>Datum:</strong> ${humanDate(les.datum)}</li>
-          <li><strong>Tijd:</strong> ${timeRange(les.starttijd, les.eindtijd)}</li>
-          <li><strong>Trainer:</strong> ${trainer ? trainer.voornaam+" "+trainer.achternaam : "—"}</li>
-          <li><strong>Locatie:</strong> ${locatie ? locatie.naam : "—"}</li>
-        </ul>
-      `;
-    })();
+    load();
   </script>
 </body>
 </html>
