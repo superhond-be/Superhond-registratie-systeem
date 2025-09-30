@@ -1,48 +1,104 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Klant detail</title>
-
-  <!-- UI-styles -->
-  <link rel="stylesheet" href="../ui/style.css">
-
-  <!-- Layout met topbar/footer -->
-  <script src="../js/layout.js" defer></script>
-
-  <!-- Pagina logic -->
-  <script type="module" src="./detail.js" defer></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Klant – Superhond</title>
+  <link rel="stylesheet" href="../ui/style.css?v=0.19.0">
 </head>
 <body>
-<header id="topbar"></header>
 
-<main>
-  <h1>Klant detail</h1>
+  <main class="container">
+    <h2 class="page-title">Klantdetail</h2>
 
-  <div id="loader">⏳ Laden…</div>
-  <div id="error" style="display:none;"></div>
-
-  <section id="klant" style="display:none;">
-    <div class="card grid two">
-      <div><strong>Naam</strong></div><div id="d-naam"></div>
-      <div><strong>Voornaam</strong></div><div id="d-voornaam"></div>
-      <div><strong>Achternaam</strong></div><div id="d-achternaam"></div>
-      <div><strong>E-mail</strong></div><div id="d-email"></div>
-      <div><strong>Telefoon</strong></div><div id="d-telefoon"></div>
-      <div><strong>Adres</strong></div><div id="d-adres"></div>
-      <div><strong>Land</strong></div><div id="d-land"></div>
+    <div id="klant-box" class="card">
+      <p>Laden…</p>
     </div>
 
-    <h2>Honden van deze klant</h2>
-    <div id="honden" class="chips"></div>
+    <section class="card" style="margin-top:1rem">
+      <h3 style="margin-top:0">Honden van deze klant</h3>
+      <div id="honden-wrap" class="table-wrap" hidden>
+        <table id="honden-tbl">
+          <thead>
+            <tr>
+              <th>Naam</th>
+              <th>Ras</th>
+              <th>Chip</th>
+              <th>Geboorte</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody><!-- gevuld via JS --></tbody>
+        </table>
+      </div>
+      <p id="honden-empty" class="muted" hidden>Geen honden geregistreerd.</p>
+    </section>
 
-    <p style="margin-top:1rem">
-      <a class="btn" href="./index.html">⬅️ Terug naar klanten</a>
-    </p>
-  </section>
-</main>
+    <p style="margin-top:1rem"><a href="../index.html">← Terug naar dashboard</a></p>
+  </main>
 
-<footer id="footer"></footer>
+  <footer class="footer">
+    <small>&copy; 2025 Superhond</small>
+  </footer>
+
+  <script src="../ui/layout.js?v=0.19.0"></script>
+  <script type="module">
+    import { loadAll, indexById } from "../js/data.js?v=0.19.0";
+
+    const params = new URLSearchParams(location.search);
+    const klantId = params.get("id");
+
+    const box   = document.getElementById("klant-box");
+    const wrap  = document.getElementById("honden-wrap");
+    const tbody = document.querySelector("#honden-tbl tbody");
+    const empty = document.getElementById("honden-empty");
+
+    (async () => {
+      if (!klantId) {
+        box.innerHTML = '<p class="error">Geen <code>id</code> opgegeven.</p>';
+        return;
+      }
+
+      const all = await loadAll();
+      const klantenById = indexById(all.klanten);
+      const klant = klantenById[klantId];
+
+      if (!klant) {
+        box.innerHTML = `<p class="error">Klant <code>${klantId}</code> niet gevonden.</p>`;
+        return;
+      }
+
+      box.innerHTML = `
+        <h3 style="margin-top:0">${klant.naam}</h3>
+        <ul>
+          <li><strong>Email:</strong> ${klant.email || "—"}</li>
+          <li><strong>Telefoon:</strong> ${klant.telefoon || "—"}</li>
+          <li><strong>Adres:</strong> ${klant.adres || "—"}</li>
+        </ul>
+      `;
+
+      // Honden van deze klant
+      const rows = (all.honden || [])
+        .filter(h => String(h.eigenaarId) === String(klantId))
+        .map(h => `
+          <tr>
+            <td>${h.naam}</td>
+            <td>${h.ras || "—"}</td>
+            <td>${h.chip || "—"}</td>
+            <td>${h.geboortedatum || "—"}</td>
+            <td><a href="../honden/detail.html?id=${encodeURIComponent(h.id)}">Open</a></td>
+          </tr>
+        `);
+
+      if (rows.length) {
+        tbody.innerHTML = rows.join("");
+        wrap.hidden = false;
+        empty.hidden = true;
+      } else {
+        wrap.hidden = true;
+        empty.hidden = false;
+      }
+    })();
+  </script>
 </body>
 </html>
