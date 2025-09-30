@@ -4,7 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Superhond Registratie</title>
-  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
+  <link rel="stylesheet" href="/ui/style.css?v=0.19.0">
+  <style>
+    .tabs{display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
+    .tab{padding:.4rem .8rem;border:1px solid #d1d5db;border-radius:.5rem;background:#fff;cursor:pointer}
+    .tab[aria-pressed="true"]{background:var(--brand,#ffcc33);font-weight:600}
+    .error{color:#b00;margin:.5rem 0}
+  </style>
 </head>
 <body>
 
@@ -22,10 +28,17 @@
       <a class="tile" href="/instellingen/"><span>⚙️</span> Instellingen</a>
     </div>
 
+    <!-- Agenda blok met tabs -->
     <section class="container" style="margin-top:1.25rem">
       <h2 class="page-title">Agenda</h2>
 
-      <div id="agenda-error" style="color:#b00;margin:.5rem 0;"></div>
+      <div class="tabs">
+        <button class="tab" data-tab="week" aria-pressed="true">Deze week</button>
+        <button class="tab" data-tab="alles" aria-pressed="false">Alles</button>
+        <button class="tab" data-tab="mededelingen" aria-pressed="false">Mededelingen</button>
+      </div>
+
+      <div id="agenda-error" class="error"></div>
 
       <div id="agenda-table-wrap" class="table-wrap" hidden>
         <table id="agenda-table">
@@ -42,21 +55,13 @@
     </section>
   </main>
 
-  <!-- Superhond Teller (één keer, buiten main) -->
-  <div id="superhond-score" style="margin: 1rem 0; text-align:center;">
-    <button id="plusKnop" type="button">+1 voor Superhond</button>
-    <span id="score">0</span>
-    <button id="resetKnop" type="button">Reset</button>
-  </div>
-
   <footer class="footer">
     <small>&copy; 2025 Superhond</small>
   </footer>
 
   <!-- Scripts -->
-  <script src="/ui/layout.js?v=0.18.9"></script>
-  <!-- 👉 voeg dit toe zodat de teller werkt -->
-  <script src="/js/script.js?v=0.18.9"></script>
+  <script src="/ui/layout.js?v=0.19.0"></script>
+  <script src="/js/agenda.js?v=0.19.0"></script>
   <script>
     SuperhondUI.mount({ title: 'Superhond Registratie', icon: '🐾', home: true });
   </script>
