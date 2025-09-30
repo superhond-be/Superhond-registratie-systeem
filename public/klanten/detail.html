@@ -3,102 +3,50 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Klant – Superhond</title>
-  <link rel="stylesheet" href="../ui/style.css?v=0.19.0">
+  <title>Klant detail – Superhond</title>
+  <link rel="stylesheet" href="/ui/style.css">
 </head>
 <body>
-
   <main class="container">
-    <h2 class="page-title">Klantdetail</h2>
-
-    <div id="klant-box" class="card">
-      <p>Laden…</p>
-    </div>
-
-    <section class="card" style="margin-top:1rem">
-      <h3 style="margin-top:0">Honden van deze klant</h3>
-      <div id="honden-wrap" class="table-wrap" hidden>
-        <table id="honden-tbl">
-          <thead>
-            <tr>
-              <th>Naam</th>
-              <th>Ras</th>
-              <th>Chip</th>
-              <th>Geboorte</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody><!-- gevuld via JS --></tbody>
-        </table>
-      </div>
-      <p id="honden-empty" class="muted" hidden>Geen honden geregistreerd.</p>
-    </section>
-
-    <p style="margin-top:1rem"><a href="../index.html">← Terug naar dashboard</a></p>
+    <h2 class="page-title">Klant detail</h2>
+    <div id="klant-detail" class="card">Bezig met laden…</div>
+    <p><a href="/" class="btn">← Terug naar dashboard</a></p>
   </main>
 
-  <footer class="footer">
-    <small>&copy; 2025 Superhond</small>
-  </footer>
-
-  <script src="../ui/layout.js?v=0.19.0"></script>
-  <script type="module">
-    import { loadAll, indexById } from "../js/data.js?v=0.19.0";
+  <script src="/ui/layout.js"></script>
+  <script>
+    SuperhondUI.mount({ title:'Klant detail', icon:'👤', back:'/' });
 
     const params = new URLSearchParams(location.search);
-    const klantId = params.get("id");
+    const id = params.get("id");
 
-    const box   = document.getElementById("klant-box");
-    const wrap  = document.getElementById("honden-wrap");
-    const tbody = document.querySelector("#honden-tbl tbody");
-    const empty = document.getElementById("honden-empty");
+    async function load() {
+      try {
+        const res = await fetch("/data/klanten.json");
+        const klanten = await res.json();
+        const klant = klanten.find(k => k.id === id);
 
-    (async () => {
-      if (!klantId) {
-        box.innerHTML = '<p class="error">Geen <code>id</code> opgegeven.</p>';
-        return;
+        if (!klant) {
+          document.getElementById("klant-detail").innerHTML = "<p>Klant niet gevonden.</p>";
+          return;
+        }
+
+        document.getElementById("klant-detail").innerHTML = `
+          <h3>${klant.naam}</h3>
+          <p><strong>Email:</strong> ${klant.email || "—"}</p>
+          <p><strong>Telefoon:</strong> ${klant.telefoon || "—"}</p>
+          <p><strong>Adres:</strong> ${klant.adres || "—"}</p>
+          <h4>Honden</h4>
+          <ul>
+            ${(klant.honden || []).map(h => `<li><a href="/honden/detail.html?id=${h.id}">${h.naam}</a></li>`).join("")}
+          </ul>
+        `;
+      } catch (err) {
+        document.getElementById("klant-detail").innerHTML = "<p>Fout bij laden van klant.</p>";
       }
+    }
 
-      const all = await loadAll();
-      const klantenById = indexById(all.klanten);
-      const klant = klantenById[klantId];
-
-      if (!klant) {
-        box.innerHTML = `<p class="error">Klant <code>${klantId}</code> niet gevonden.</p>`;
-        return;
-      }
-
-      box.innerHTML = `
-        <h3 style="margin-top:0">${klant.naam}</h3>
-        <ul>
-          <li><strong>Email:</strong> ${klant.email || "—"}</li>
-          <li><strong>Telefoon:</strong> ${klant.telefoon || "—"}</li>
-          <li><strong>Adres:</strong> ${klant.adres || "—"}</li>
-        </ul>
-      `;
-
-      // Honden van deze klant
-      const rows = (all.honden || [])
-        .filter(h => String(h.eigenaarId) === String(klantId))
-        .map(h => `
-          <tr>
-            <td>${h.naam}</td>
-            <td>${h.ras || "—"}</td>
-            <td>${h.chip || "—"}</td>
-            <td>${h.geboortedatum || "—"}</td>
-            <td><a href="../honden/detail.html?id=${encodeURIComponent(h.id)}">Open</a></td>
-          </tr>
-        `);
-
-      if (rows.length) {
-        tbody.innerHTML = rows.join("");
-        wrap.hidden = false;
-        empty.hidden = true;
-      } else {
-        wrap.hidden = true;
-        empty.hidden = false;
-      }
-    })();
+    load();
   </script>
 </body>
 </html>
