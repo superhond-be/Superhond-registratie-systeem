@@ -1,3 +1,15 @@
 [
-  { "id": "reeks-01", "naam": "Puppy – Groep A" }
+  {
+    "id": "reeks-01",
+    "naam": "Puppy – Groep A",
+    "type": "Puppy",
+    "thema": "Start",
+    "aantalStrippen": 6,
+    "maxDeelnemers": 8,
+    "lesduurMinuten": 60,
+    "geldigheidsduurWeken": 8,
+    "prijsExcl": 120,
+    "status": "Actief",
+    "omschrijving": "Basisreeks voor jonge honden. Focus op socialisatie en gehoorzaamheid."
+  }
 ]
