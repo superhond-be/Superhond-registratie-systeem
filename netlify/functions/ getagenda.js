@@ -1,4 +1,4 @@
-// netlify/functions/get-agenda.js
+// netlify/functions/getagenda.js
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
