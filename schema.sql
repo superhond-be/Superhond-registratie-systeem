@@ -150,6 +150,67 @@ create policy inschrijvingen_self
     )
   );
 
+-- 3) Inschrijvingen: alleen jouw eigen (via klant_id → user_id)
+create policy inschrijvingen_self
+  on public.inschrijvingen
+  for all
+  using (
+    exists (
+      select 1 from public.klanten k
+      where k.id = inschrijvingen.klant_id and k.user_id = auth.uid()
+    )
+  );
+
+-- 4) Lessen & Reeksen & Mededelingen:
+create policy reeksen_public_read
+  on public.reeksen
+  for select
+  using (is_public = true);
+
+...
+
+-- ✅ Voeg hierna de expliciete WITH CHECK toe
+alter policy klanten_self_update
+  on public.klanten
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+alter policy honden_owner_modify
+  on public.honden
+  using (
+    exists (
+      select 1 from public.klanten k
+      where k.id = honden.eigenaar_id and k.user_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.klanten k
+      where k.id = honden.eigenaar_id and k.user_id = auth.uid()
+    )
+  );
+
+alter policy inschrijvingen_self
+  on public.inschrijvingen
+  using (
+    exists (
+      select 1 from public.klanten k
+      where k.id = inschrijvingen.klant_id and k.user_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.klanten k
+      where k.id = inschrijvingen.klant_id and k.user_id = auth.uid()
+    )
+  );
+
+-- =========================
+-- P U B L I E K E  A G E N D A  R P C
+-- =========================
+
+
+
 -- 4) Lessen & Reeksen & Mededelingen:
 --    publiek leesbaar als is_public = true (voor agenda/website)
 create policy reeksen_public_read
