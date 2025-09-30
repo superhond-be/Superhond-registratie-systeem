@@ -12,7 +12,7 @@
 
 # Maak een nette API-route
 [[redirects]]
-  from = "/api/get-agenda"
+  from = "/api/get_agenda"
   to   = "/.netlify/functions/get-agenda"
   status = 200
 
