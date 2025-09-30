@@ -13,7 +13,7 @@
 # Maak een nette API-route
 [[redirects]]
   from = "/api/get_agenda"
-  to   = "/.netlify/functions/get-agenda"
+  to   = "/.netlify/functions/get_agenda"
   status = 200
 
 # Cache headers voor statische assets
