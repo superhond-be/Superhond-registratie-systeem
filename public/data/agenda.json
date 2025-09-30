@@ -1,5 +1,5 @@
 [
-  { "id": 401, "type": "les",        "naam": "Puppyles – basis", "datum": "2025-09-30", "locatie": "Terrein A" },
-  { "id": 402, "type": "mededeling", "naam": "Herfstvakantie: aangepaste uren", "datum": "2025-10-01" },
-  { "id": 403, "type": "reeks",      "naam": "Basiscursus start", "datum": "2025-10-02", "locatie": "Terrein B" }
+  { "datum": "2025-10-02T19:00", "titel": "Puppyles groep A", "type": "Les", "href": "/lessen/detail.html?id=les-001" },
+  { "datum": "2025-10-03T18:30", "titel": "Reeks: Basis 6-weken", "type": "Reeks", "href": "/reeksen/detail.html?id=reeks-07" },
+  { "datum": "2025-10-04T10:00", "titel": "Mededeling: Parking afgesloten", "type": "Mededeling", "href": "/mededelingen/detail.html?id=md-101" }
 ]
