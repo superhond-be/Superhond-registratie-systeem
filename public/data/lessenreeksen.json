@@ -1,5 +1,3 @@
 [
-  { "id": 1, "naam": "Puppycursus", "thema": "Puppy", "aantalLessen": 5, "prijs": 120 },
-  { "id": 2, "naam": "Pubertraining", "thema": "Puber", "aantalLessen": 6, "prijs": 140 },
-  { "id": 3, "naam": "Basiscursus", "thema": "Basis", "aantalLessen": 8, "prijs": 180 }
+  { "id": "reeks-01", "naam": "Puppy – Groep A" }
 ]
