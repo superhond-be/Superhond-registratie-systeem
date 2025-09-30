@@ -62,7 +62,12 @@ create index if not exists lessen_reeks_idx on public.lessen (reeks_id);
 create index if not exists lessen_datum_idx on public.lessen (datum);
 
 -- 5) Inschrijvingen (koppeling hond/klant aan les)
-create type public.inschrijf_status as enum ('aangemeld','aanwezig','afgemeld','geannuleerd');
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'inschrijf_status') then
+    create type public.inschrijf_status as enum ('aangemeld','aanwezig','afgemeld','geannuleerd');
+  end if;
+end$$;
 
 create table if not exists public.inschrijvingen (
   id uuid primary key default gen_random_uuid(),
@@ -93,7 +98,6 @@ create index if not exists mededelingen_public_idx on public.mededelingen (is_pu
 -- =========================
 -- R L S   (Row Level Security)
 -- =========================
-
 alter table public.klanten        enable row level security;
 alter table public.honden         enable row level security;
 alter table public.reeksen        enable row level security;
@@ -106,70 +110,109 @@ alter table public.mededelingen   enable row level security;
 -- Admins gebruiken de Service Role key (bypasst RLS automatisch).
 
 -- 1) Klanten: eigen record lezen/bewerken
-create policy klanten_self_select
-  on public.klanten
-  for select
-  using (user_id = auth.uid());
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='klanten' and policyname='klanten_self_select'
+  ) then
+    create policy klanten_self_select
+      on public.klanten
+      for select
+      using (user_id = auth.uid());
+  end if;
 
-create policy klanten_self_update
-  on public.klanten
-  for update
-  using (user_id = auth.uid());
-
--- (Admins/service role: geen policy nodig, bypass RLS.)
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='klanten' and policyname='klanten_self_update'
+  ) then
+    create policy klanten_self_update
+      on public.klanten
+      for update
+      using (user_id = auth.uid());
+  end if;
+end$$;
 
 -- 2) Honden: alleen honden zien/beheren van je eigen klantrecord
-create policy honden_owner_select
-  on public.honden
-  for select
-  using (
-    exists (
-      select 1 from public.klanten k
-      where k.id = honden.eigenaar_id and k.user_id = auth.uid()
-    )
-  );
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='honden' and policyname='honden_owner_select'
+  ) then
+    create policy honden_owner_select
+      on public.honden
+      for select
+      using (
+        exists (
+          select 1 from public.klanten k
+          where k.id = honden.eigenaar_id and k.user_id = auth.uid()
+        )
+      );
+  end if;
 
-create policy honden_owner_modify
-  on public.honden
-  for all
-  using (
-    exists (
-      select 1 from public.klanten k
-      where k.id = honden.eigenaar_id and k.user_id = auth.uid()
-    )
-  );
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='honden' and policyname='honden_owner_modify'
+  ) then
+    create policy honden_owner_modify
+      on public.honden
+      for all
+      using (
+        exists (
+          select 1 from public.klanten k
+          where k.id = honden.eigenaar_id and k.user_id = auth.uid()
+        )
+      );
+  end if;
+end$$;
 
 -- 3) Inschrijvingen: alleen jouw eigen (via klant_id → user_id)
-create policy inschrijvingen_self
-  on public.inschrijvingen
-  for all
-  using (
-    exists (
-      select 1 from public.klanten k
-      where k.id = inschrijvingen.klant_id and k.user_id = auth.uid()
-    )
-  );
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='inschrijvingen' and policyname='inschrijvingen_self'
+  ) then
+    create policy inschrijvingen_self
+      on public.inschrijvingen
+      for all
+      using (
+        exists (
+          select 1 from public.klanten k
+          where k.id = inschrijvingen.klant_id and k.user_id = auth.uid()
+        )
+      );
+  end if;
+end$$;
 
--- 3) Inschrijvingen: alleen jouw eigen (via klant_id → user_id)
-create policy inschrijvingen_self
-  on public.inschrijvingen
-  for all
-  using (
-    exists (
-      select 1 from public.klanten k
-      where k.id = inschrijvingen.klant_id and k.user_id = auth.uid()
-    )
-  );
+-- 4) Lessen & Reeksen & Mededelingen: publiek leesbaar indien is_public=true
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='reeksen' and policyname='reeksen_public_read'
+  ) then
+    create policy reeksen_public_read
+      on public.reeksen
+      for select
+      using (is_public = true);
+  end if;
 
--- 4) Lessen & Reeksen & Mededelingen:
-create policy reeksen_public_read
-  on public.reeksen
-  for select
-  using (is_public = true);
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='lessen' and policyname='lessen_public_read'
+  ) then
+    create policy lessen_public_read
+      on public.lessen
+      for select
+      using (is_public = true);
+  end if;
 
-...
+  if not exists (
+    select 1 from pg_policies where schemaname='public' and tablename='mededelingen' and policyname='mededelingen_public_read'
+  ) then
+    create policy mededelingen_public_read
+      on public.mededelingen
+      for select
+      using (is_public = true);
+  end if;
+end$$;
 
--- ✅ Voeg hierna de expliciete WITH CHECK toe
+-- ✅ Expliciet WITH CHECK toevoegen (na de create policies, vóór de RPC)
 alter policy klanten_self_update
   on public.klanten
   using (user_id = auth.uid())
@@ -204,31 +247,6 @@ alter policy inschrijvingen_self
       where k.id = inschrijvingen.klant_id and k.user_id = auth.uid()
     )
   );
-
--- =========================
--- P U B L I E K E  A G E N D A  R P C
--- =========================
-
-
-
--- 4) Lessen & Reeksen & Mededelingen:
---    publiek leesbaar als is_public = true (voor agenda/website)
-create policy reeksen_public_read
-  on public.reeksen
-  for select
-  using (is_public = true);
-
-create policy lessen_public_read
-  on public.lessen
-  for select
-  using (is_public = true);
-
-create policy mededelingen_public_read
-  on public.mededelingen
-  for select
-  using (is_public = true);
-
--- (Optioneel: authenticated users mogen meer zien, voeg extra policies toe.)
 
 -- =========================
 -- P U B L I E K E  A G E N D A  R P C
