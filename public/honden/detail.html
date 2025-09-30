@@ -3,112 +3,47 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hond – Superhond</title>
-  <link rel="stylesheet" href="../ui/style.css?v=0.19.0">
+  <title>Hond detail – Superhond</title>
+  <link rel="stylesheet" href="/ui/style.css">
 </head>
 <body>
-
   <main class="container">
-    <h2 class="page-title">Hondendetail</h2>
-
-    <div id="hond-box" class="card">
-      <p>Laden…</p>
-    </div>
-
-    <section class="card" style="margin-top:1rem">
-      <h3 style="margin-top:0">Ingeschreven lessen</h3>
-      <div id="lessen-wrap" class="table-wrap" hidden>
-        <table id="lessen-tbl">
-          <thead>
-            <tr>
-              <th>Datum</th>
-              <th>Tijd</th>
-              <th>Reeks</th>
-              <th>Trainer</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody><!-- gevuld via JS --></tbody>
-        </table>
-      </div>
-      <p id="lessen-empty" class="muted" hidden>Geen lessen gevonden.</p>
-    </section>
-
-    <p style="margin-top:1rem"><a href="../index.html">← Terug naar dashboard</a></p>
+    <h2 class="page-title">Hond detail</h2>
+    <div id="hond-detail" class="card">Bezig met laden…</div>
+    <p><a href="/" class="btn">← Terug naar dashboard</a></p>
   </main>
 
-  <footer class="footer">
-    <small>&copy; 2025 Superhond</small>
-  </footer>
-
-  <script src="../ui/layout.js?v=0.19.0"></script>
-  <script type="module">
-    import { loadAll, indexById, humanDate, timeRange } from "../js/data.js?v=0.19.0";
+  <script src="/ui/layout.js"></script>
+  <script>
+    SuperhondUI.mount({ title:'Hond detail', icon:'🐶', back:'/' });
 
     const params = new URLSearchParams(location.search);
-    const hondId = params.get("id");
+    const id = params.get("id");
 
-    const box   = document.getElementById("hond-box");
-    const wrap  = document.getElementById("lessen-wrap");
-    const tbody = document.querySelector("#lessen-tbl tbody");
-    const empty = document.getElementById("lessen-empty");
+    async function load() {
+      try {
+        const res = await fetch("/data/honden.json");
+        const honden = await res.json();
+        const hond = honden.find(h => h.id === id);
 
-    (async () => {
-      if (!hondId) {
-        box.innerHTML = '<p class="error">Geen <code>id</code> opgegeven.</p>';
-        return;
+        if (!hond) {
+          document.getElementById("hond-detail").innerHTML = "<p>Hond niet gevonden.</p>";
+          return;
+        }
+
+        document.getElementById("hond-detail").innerHTML = `
+          <h3>${hond.naam}</h3>
+          <p><strong>Ras:</strong> ${hond.ras || "—"}</p>
+          <p><strong>Chip:</strong> ${hond.chip || "—"}</p>
+          <p><strong>Geboortedatum:</strong> ${hond.geboortedatum || "—"}</p>
+          <p><strong>Eigenaar:</strong> <a href="/klanten/detail.html?id=${hond.eigenaarId}">${hond.eigenaarNaam || hond.eigenaarId}</a></p>
+        `;
+      } catch (err) {
+        document.getElementById("hond-detail").innerHTML = "<p>Fout bij laden van hond.</p>";
       }
+    }
 
-      const all = await loadAll();
-      const hondenById   = indexById(all.honden);
-      const klantenById  = indexById(all.klanten);
-      const reeksenById  = indexById(all.reeksen);
-      const trainersById = indexById(all.trainers);
-
-      const hond = hondenById[hondId];
-      if (!hond) {
-        box.innerHTML = `<p class="error">Hond <code>${hondId}</code> niet gevonden.</p>`;
-        return;
-      }
-
-      const eigenaar = klantenById[hond.eigenaarId];
-
-      box.innerHTML = `
-        <h3 style="margin-top:0">${hond.naam}</h3>
-        <ul>
-          <li><strong>Ras:</strong> ${hond.ras || "—"}</li>
-          <li><strong>Chip:</strong> ${hond.chip || "—"}</li>
-          <li><strong>Geboorte:</strong> ${hond.geboortedatum || "—"}</li>
-          <li><strong>Eigenaar:</strong> ${eigenaar ? `<a href="../klanten/detail.html?id=${encodeURIComponent(eigenaar.id)}">${eigenaar.naam}</a>` : "—"}</li>
-        </ul>
-      `;
-
-      // Lessen waaraan deze hond deelneemt
-      const rows = (all.lessen || [])
-        .filter(l => Array.isArray(l.hondenIds) && l.hondenIds.includes(hondId))
-        .map(l => {
-          const r = reeksenById[l.reeksId];
-          const t = trainersById[l.trainerId];
-          return `
-            <tr>
-              <td>${humanDate(l.datum)}</td>
-              <td>${timeRange(l.starttijd, l.eindtijd)}</td>
-              <td>${r ? r.naam : "—"}</td>
-              <td>${t ? t.voornaam + " " + t.achternaam : "—"}</td>
-              <td><a href="../lessen/detail.html?id=${encodeURIComponent(l.id)}">Open</a></td>
-            </tr>
-          `;
-        });
-
-      if (rows.length) {
-        tbody.innerHTML = rows.join("");
-        wrap.hidden = false;
-        empty.hidden = true;
-      } else {
-        wrap.hidden = true;
-        empty.hidden = false;
-      }
-    })();
+    load();
   </script>
 </body>
 </html>
