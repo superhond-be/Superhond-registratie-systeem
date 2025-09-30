@@ -1,3 +1,7 @@
+# =========================
+# Netlify configuratie
+# =========================
+
 # Publieke site is puur statisch (geen build nodig).
 [build]
   publish = "."           # root van je repo (waar index.html staat)
@@ -7,13 +11,17 @@
 [functions]
   node_bundler = "esbuild"
   included_files = [
-    "data/agenda.json"    # ← neem dit bestand mee in de function bundle (fallback)
+    "data/agenda.json"    # neem dit bestand mee in de function bundle (fallback)
   ]
 
-# Maak een nette API-route
+# =========================
+# Redirects
+# =========================
+
+# API-route voor agenda
 [[redirects]]
-  from = "/api/get_agenda"
-  to   = "/.netlify/functions/get_agenda"
+  from = "/api/getagenda"
+  to   = "/.netlify/functions/getagenda"
   status = 200
 
 # Cache headers voor statische assets
