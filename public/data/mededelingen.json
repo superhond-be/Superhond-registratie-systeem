@@ -17,4 +17,22 @@
     "status": "actief",
     "aangemaaktOp": "2025-09-28T11:30:00+02:00"
   }
+
+
+  {
+    "id": "md-101",
+    "titel": "Parking afgesloten",
+    "tekst": "Let op: het terrein is op 4 oktober niet bereikbaar met de wagen.\nGelieve te parkeren aan de overkant.",
+    "aangemaaktOp": "2025-10-01T08:30:00Z",
+    "scope": { "type": "reeks", "reeksId": "reeks-01" },
+    "kanalen": ["dashboard","mail"]
+  }
 ]
+
+
+
+
+
+
+
+
