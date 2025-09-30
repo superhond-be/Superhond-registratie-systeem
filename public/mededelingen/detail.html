@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mededeling – Superhond</title>
+  <link rel="stylesheet" href="../ui/style.css?v=0.19.0">
+  <style>
+    .meta { color:#6b7280; font-size:.9rem }
+    .msg-body { margin-top:1rem; white-space:pre-line }
+  </style>
+</head>
+<body>
+
+  <main class="container">
+    <h2 class="page-title">Mededeling</h2>
+
+    <div id="msg-box" class="card">
+      <p>Laden…</p>
+    </div>
+
+    <p style="margin-top:1rem"><a href="../index.html">← Terug naar dashboard</a></p>
+  </main>
+
+  <footer class="footer">
+    <small>&copy; 2025 Superhond</small>
+  </footer>
+
+  <script src="../ui/layout.js?v=0.19.0"></script>
+  <script type="module">
+    import { loadAll, indexById, humanDate } from "../js/data.js?v=0.19.0";
+
+    const params = new URLSearchParams(location.search);
+    const msgId  = params.get("id");
+    const box    = document.getElementById("msg-box");
+
+    (async () => {
+      if (!msgId) {
+        box.innerHTML = '<p class="error">Geen <code>id</code> opgegeven.</p>';
+        return;
+      }
+
+      const all = await loadAll();
+      const msgsById = indexById(all.mededelingen);
+
+      const m = msgsById[msgId];
+      if (!m) {
+        box.innerHTML = `<p class="error">Mededeling <code>${msgId}</code> niet gevonden.</p>`;
+        return;
+      }
+
+      // Datum
+      const date = m.aangemaaktOp
+        ? humanDate(m.aangemaaktOp.slice(0,10))
+        : "";
+
+      // Scope (optioneel: koppeling naar les of reeks)
+      let scopeTxt = "Algemeen";
+      if (m.scope?.type === "les") scopeTxt = `Les ${m.scope.lesId}`;
+      if (m.scope?.type === "reeks") scopeTxt = `Reeks ${m.scope.reeksId}`;
+
+      // Kanalen
+      const kanalen = Array.isArray(m.kanalen) ? m.kanalen.join(", ") : "—";
+
+      box.innerHTML = `
+        <h3 style="margin-top:0">${m.titel}</h3>
+        <p class="meta">${date} • ${scopeTxt} • Kanalen: ${kanalen}</p>
+        <div class="msg-body">${m.tekst || "Geen inhoud."}</div>
+      `;
+    })();
+  </script>
+</body>
+</html>
