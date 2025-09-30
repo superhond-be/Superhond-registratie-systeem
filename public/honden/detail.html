@@ -1,58 +1,114 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Hond detail</title>
-
-  <!-- UI-styles -->
-  <link rel="stylesheet" href="../ui/style.css">
-
-  <!-- Layout met topbar/footer -->
-  <script src="../js/layout.js" defer></script>
-
-  <!-- Pagina logic -->
-  <script type="module" src="./detail.js" defer></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hond – Superhond</title>
+  <link rel="stylesheet" href="../ui/style.css?v=0.19.0">
 </head>
 <body>
-<header id="topbar"></header>
 
-<main>
-  <h1>Hond detail</h1>
+  <main class="container">
+    <h2 class="page-title">Hondendetail</h2>
 
-  <div id="loader">⏳ Laden…</div>
-  <div id="error" style="display:none;"></div>
-
-  <section id="hond" style="display:none;">
-    <div class="card grid two">
-      <div><strong>Naam</strong></div><div id="d-naam"></div>
-      <div><strong>Ras</strong></div><div id="d-ras"></div>
-      <div><strong>Geboortedatum</strong></div><div id="d-dob"></div>
-      <div><strong>Chip</strong></div><div id="d-chip"></div>
-      <div><strong>Eigenaar</strong></div><div id="d-owner"></div>
+    <div id="hond-box" class="card">
+      <p>Laden…</p>
     </div>
 
-    <h2>Ingeschreven lessen</h2>
-    <div class="table-wrap">
-      <table id="lessen">
-        <thead>
-          <tr>
-            <th>Les</th>
-            <th>Datum</th>
-            <th>Locatie</th>
-            <th>Trainer</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+    <section class="card" style="margin-top:1rem">
+      <h3 style="margin-top:0">Ingeschreven lessen</h3>
+      <div id="lessen-wrap" class="table-wrap" hidden>
+        <table id="lessen-tbl">
+          <thead>
+            <tr>
+              <th>Datum</th>
+              <th>Tijd</th>
+              <th>Reeks</th>
+              <th>Trainer</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody><!-- gevuld via JS --></tbody>
+        </table>
+      </div>
+      <p id="lessen-empty" class="muted" hidden>Geen lessen gevonden.</p>
+    </section>
 
-    <p style="margin-top:1rem">
-      <a class="btn" href="./index.html">⬅️ Terug naar honden</a>
-    </p>
-  </section>
-</main>
+    <p style="margin-top:1rem"><a href="../index.html">← Terug naar dashboard</a></p>
+  </main>
 
-<footer id="footer"></footer>
+  <footer class="footer">
+    <small>&copy; 2025 Superhond</small>
+  </footer>
+
+  <script src="../ui/layout.js?v=0.19.0"></script>
+  <script type="module">
+    import { loadAll, indexById, humanDate, timeRange } from "../js/data.js?v=0.19.0";
+
+    const params = new URLSearchParams(location.search);
+    const hondId = params.get("id");
+
+    const box   = document.getElementById("hond-box");
+    const wrap  = document.getElementById("lessen-wrap");
+    const tbody = document.querySelector("#lessen-tbl tbody");
+    const empty = document.getElementById("lessen-empty");
+
+    (async () => {
+      if (!hondId) {
+        box.innerHTML = '<p class="error">Geen <code>id</code> opgegeven.</p>';
+        return;
+      }
+
+      const all = await loadAll();
+      const hondenById   = indexById(all.honden);
+      const klantenById  = indexById(all.klanten);
+      const reeksenById  = indexById(all.reeksen);
+      const trainersById = indexById(all.trainers);
+
+      const hond = hondenById[hondId];
+      if (!hond) {
+        box.innerHTML = `<p class="error">Hond <code>${hondId}</code> niet gevonden.</p>`;
+        return;
+      }
+
+      const eigenaar = klantenById[hond.eigenaarId];
+
+      box.innerHTML = `
+        <h3 style="margin-top:0">${hond.naam}</h3>
+        <ul>
+          <li><strong>Ras:</strong> ${hond.ras || "—"}</li>
+          <li><strong>Chip:</strong> ${hond.chip || "—"}</li>
+          <li><strong>Geboorte:</strong> ${hond.geboortedatum || "—"}</li>
+          <li><strong>Eigenaar:</strong> ${eigenaar ? `<a href="../klanten/detail.html?id=${encodeURIComponent(eigenaar.id)}">${eigenaar.naam}</a>` : "—"}</li>
+        </ul>
+      `;
+
+      // Lessen waaraan deze hond deelneemt
+      const rows = (all.lessen || [])
+        .filter(l => Array.isArray(l.hondenIds) && l.hondenIds.includes(hondId))
+        .map(l => {
+          const r = reeksenById[l.reeksId];
+          const t = trainersById[l.trainerId];
+          return `
+            <tr>
+              <td>${humanDate(l.datum)}</td>
+              <td>${timeRange(l.starttijd, l.eindtijd)}</td>
+              <td>${r ? r.naam : "—"}</td>
+              <td>${t ? t.voornaam + " " + t.achternaam : "—"}</td>
+              <td><a href="../lessen/detail.html?id=${encodeURIComponent(l.id)}">Open</a></td>
+            </tr>
+          `;
+        });
+
+      if (rows.length) {
+        tbody.innerHTML = rows.join("");
+        wrap.hidden = false;
+        empty.hidden = true;
+      } else {
+        wrap.hidden = true;
+        empty.hidden = false;
+      }
+    })();
+  </script>
 </body>
 </html>
