@@ -1,0 +1,40 @@
+# Publieke site is puur statisch (geen build nodig).
+[build]
+  publish = "."           # root van je repo (waar index.html staat)
+  command = ""            # geen buildstap nodig
+
+# Functions-instellingen
+[functions]
+  node_bundler = "esbuild"
+  included_files = [
+    "data/agenda.json"    # ← neem dit bestand mee in de function bundle (fallback)
+  ]
+
+# Maak een nette API-route
+[[redirects]]
+  from = "/api/get-agenda"
+  to   = "/.netlify/functions/get-agenda"
+  status = 200
+
+# Cache headers voor statische assets
+[[headers]]
+  for = "/ui/*"
+  [headers.values]
+  Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+  Cache-Control = "public, max-age=31536000, immutable"
+
+# JSON-data kort cachen (en makkelijk te overrulen)
+[[headers]]
+  for = "/data/*"
+  [headers.values]
+  Cache-Control = "public, max-age=60"
+
+# (Optioneel) SPA-fallbacks als je ooit client-side routing gebruikt
+# [[redirects]]
+#   from = "/*"
+#   to = "/index.html"
+#   status = 200
