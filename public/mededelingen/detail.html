@@ -4,70 +4,45 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Mededeling – Superhond</title>
-  <link rel="stylesheet" href="../ui/style.css?v=0.19.0">
-  <style>
-    .meta { color:#6b7280; font-size:.9rem }
-    .msg-body { margin-top:1rem; white-space:pre-line }
-  </style>
+  <link rel="stylesheet" href="/ui/style.css">
 </head>
 <body>
-
   <main class="container">
     <h2 class="page-title">Mededeling</h2>
-
-    <div id="msg-box" class="card">
-      <p>Laden…</p>
-    </div>
-
-    <p style="margin-top:1rem"><a href="../index.html">← Terug naar dashboard</a></p>
+    <div id="msg-detail" class="card">Bezig met laden…</div>
+    <p><a href="/" class="btn">← Terug naar dashboard</a></p>
   </main>
 
-  <footer class="footer">
-    <small>&copy; 2025 Superhond</small>
-  </footer>
-
-  <script src="../ui/layout.js?v=0.19.0"></script>
-  <script type="module">
-    import { loadAll, indexById, humanDate } from "../js/data.js?v=0.19.0";
+  <script src="/ui/layout.js"></script>
+  <script>
+    SuperhondUI.mount({ title:'Mededeling', icon:'ℹ️', back:'/' });
 
     const params = new URLSearchParams(location.search);
-    const msgId  = params.get("id");
-    const box    = document.getElementById("msg-box");
+    const id = params.get("id");
 
-    (async () => {
-      if (!msgId) {
-        box.innerHTML = '<p class="error">Geen <code>id</code> opgegeven.</p>';
-        return;
+    async function load() {
+      try {
+        const res = await fetch("/data/agenda.json");
+        const data = await res.json();
+
+        const msg = data.find(item => item.href.includes(id));
+        if (!msg) {
+          document.getElementById("msg-detail").innerHTML = "<p>Mededeling niet gevonden.</p>";
+          return;
+        }
+
+        document.getElementById("msg-detail").innerHTML = `
+          <h3>${msg.titel}</h3>
+          <p><strong>Datum:</strong> ${new Date(msg.datum).toLocaleString("nl-BE")}</p>
+          <p><strong>Type:</strong> ${msg.type}</p>
+          <p>ID: ${id}</p>
+        `;
+      } catch (err) {
+        document.getElementById("msg-detail").innerHTML = "<p>Fout bij laden van mededeling.</p>";
       }
+    }
 
-      const all = await loadAll();
-      const msgsById = indexById(all.mededelingen);
-
-      const m = msgsById[msgId];
-      if (!m) {
-        box.innerHTML = `<p class="error">Mededeling <code>${msgId}</code> niet gevonden.</p>`;
-        return;
-      }
-
-      // Datum
-      const date = m.aangemaaktOp
-        ? humanDate(m.aangemaaktOp.slice(0,10))
-        : "";
-
-      // Scope (optioneel: koppeling naar les of reeks)
-      let scopeTxt = "Algemeen";
-      if (m.scope?.type === "les") scopeTxt = `Les ${m.scope.lesId}`;
-      if (m.scope?.type === "reeks") scopeTxt = `Reeks ${m.scope.reeksId}`;
-
-      // Kanalen
-      const kanalen = Array.isArray(m.kanalen) ? m.kanalen.join(", ") : "—";
-
-      box.innerHTML = `
-        <h3 style="margin-top:0">${m.titel}</h3>
-        <p class="meta">${date} • ${scopeTxt} • Kanalen: ${kanalen}</p>
-        <div class="msg-body">${m.tekst || "Geen inhoud."}</div>
-      `;
-    })();
+    load();
   </script>
 </body>
 </html>
