@@ -2,4 +2,3 @@
 [{ "id":1, "naam":"Puppy Pack", "lesduurMinuten":60, "maxDeelnemers":8 }]
 // trainers.json [{ "id":1,"voornaam":"Jan","achternaam":"Peeters" }, ...]
 // locaties.json [{ "id":1,"naam":"Retie Terrein","adres":"..." }, ...]
-
