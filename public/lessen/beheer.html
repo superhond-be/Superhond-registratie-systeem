@@ -1,0 +1,31 @@
+<!doctype html><html lang="nl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lessenbeheer</title>
+<link rel="stylesheet" href="/css/style.css?v=0.19.6">
+<script src="/js/layout.js?v=0.19.6" defer></script>
+<script type="module" src="/js/lessen.beheer.js?v=0.19.6" defer></script>
+</head><body>
+<header id="topbar" class="topbar"></header>
+<main class="container">
+  <h1 class="page-title">Beheer (lessen samenstellen & bewerken)</h1>
+  <div class="toolbar" style="display:flex;gap:.5rem;flex-wrap:wrap">
+    <button id="btn-add" class="btn primary">+ Les toevoegen</button>
+    <span style="margin-left:auto"></span>
+    <button id="btn-export" class="btn">⬇︎ Export JSON</button>
+    <label class="btn"><input type="file" id="file-import" hidden> ⬆︎ Import JSON</label>
+    <a class="btn" href="/">→ Dashboard</a>
+  </div>
+
+  <div class="table-wrap card" style="margin-top:.75rem">
+    <table class="table" id="tbl-lessen">
+      <thead><tr>
+        <th>Naam</th><th>Type</th><th>Locatie</th><th>Thema</th>
+        <th>Trainer</th><th>Datum</th><th>Tijd</th><th>Capaciteit</th><th>Acties</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</main>
+<footer id="footer" class="footer"></footer>
+<script>window.addEventListener('DOMContentLoaded',()=>SuperhondUI.mount({title:'Superhond — Lessenbeheer',icon:'📅',back:'/'}));</script>
+</body></html>
