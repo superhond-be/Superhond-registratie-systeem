@@ -24,3 +24,8 @@
     "href": "/mededelingen/detail.html?id=msg-001"
   }
 ]
+[
+  { "id": 101, "type": "les",        "naam": "Puppyles 1",    "datum": "2025-09-30", "locatie": "Terrein A" },
+  { "id": 201, "type": "reeks",      "naam": "Basiscursus",   "datum": "2025-10-02", "locatie": "Terrein B" },
+  { "id": 301, "type": "mededeling", "naam": "Geen les op 1/11", "datum": "2025-11-01" }
+]
