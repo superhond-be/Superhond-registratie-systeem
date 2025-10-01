@@ -2,6 +2,8 @@
  * @typedef {{ id: string|number, naam: string, email: string, telefoon?: string, status?: 'actief'|'inactief'|'proef'|string, aangemaakt?: string|number|Date }} Klant
  */
 
+const API_BASE = (window.__API_BASE || "").replace(/\/$/, ""); // bv. "https://superhond-api.onrender.com"
+
 const state = {
   klanten: /** @type {Klant[]} */([]),
   filtered: /** @type {Klant[]} */([]),
@@ -38,6 +40,7 @@ function boot(){
 /* =================== THEME TOGGLE =================== */
 function initThemeToggle(){
   const btn = /** @type {HTMLButtonElement} */(document.getElementById('themeToggle'));
+  if(!btn) return;
   const icons = {
     sun: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M6.76 4.84l-1.8-1.79L3.17 4.85l1.79 1.79 1.8-1.8zM1 10.5h3v3H1v-3zm10.5-9h-3v3h3v-3zM4.84 17.24l-1.8 1.8 1.79 1.79 1.8-1.8-1.79-1.79zM10.5 20h3v3h-3v-3zm9-9h3v3h-3v-3zM19.16 4.84l-1.79-1.79-1.8 1.8 1.79 1.79 1.8-1.8zM17.24 19.16l1.79 1.79 1.8-1.8-1.79-1.79-1.8 1.8zM12 7.5A4.5 4.5 0 1 1 7.5 12 4.505 4.505 0 0 1 12 7.5z"/></svg>',
     moon:'<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.01 2c-1.07 0-2.1.17-3.06.5 5.24 1.77 8.07 7.48 6.3 12.72-1.12 3.32-3.87 5.86-7.29 6.68A10 10 0 1 0 12.01 2z"/></svg>'
@@ -71,7 +74,6 @@ function initThemeToggle(){
     apply(next);
   });
 
-  // update when OS changes (in 'auto')
   const mq = window.matchMedia?.('(prefers-color-scheme: dark)');
   mq?.addEventListener?.('change', () => { if (!localStorage.getItem('theme')) apply('auto'); });
 }
@@ -83,7 +85,7 @@ async function fetchKlanten(){
   state.aborter = new AbortController();
 
   try{
-    const res = await fetch('/api/klanten', {
+    const res = await fetch(`${API_BASE}/api/klanten`, {
       method:'GET',
       headers:{'Accept':'application/json'},
       signal: state.aborter.signal
@@ -104,7 +106,7 @@ async function fetchKlanten(){
   }
 }
 
-/** @returns {Klant} */
+/** @returns {Klant|null} */
 function normalizeKlant(k){
   if(!k) return null;
   const naam = k.naam ?? k.name ?? `${k.voornaam ?? ''} ${k.achternaam ?? ''}`.trim();
@@ -123,7 +125,7 @@ function cryptoRandomId(){
 /* =================== SEARCH/SORT/PAGINATION =================== */
 function bindSearch(){
   const debounced = debounce(() => { state.page = 1; applyFilterSortPaginate(); }, 180);
-  searchInput.addEventListener('input', debounced);
+  searchInput?.addEventListener('input', debounced);
 }
 function bindSorting(){
   document.querySelectorAll('th[data-sortable="true"]').forEach(th => {
@@ -139,18 +141,18 @@ function bindSorting(){
   });
 }
 function bindPagination(){
-  prevPage.addEventListener('click', () => { if(state.page > 1){ state.page--; render(); }});
-  nextPage.addEventListener('click', () => {
+  prevPage?.addEventListener('click', () => { if(state.page > 1){ state.page--; render(); }});
+  nextPage?.addEventListener('click', () => {
     const max = Math.max(1, Math.ceil(state.filtered.length / state.pageSize));
     if(state.page < max){ state.page++; render(); }
   });
-  pageSizeSel.addEventListener('change', () => {
+  pageSizeSel?.addEventListener('change', () => {
     state.pageSize = parseInt(pageSizeSel.value, 10) || 25;
     state.page = 1; render();
   });
 }
 function applyFilterSortPaginate(){
-  const q = searchInput.value.trim().toLowerCase();
+  const q = (searchInput?.value || '').trim().toLowerCase();
   state.filtered = !q ? [...state.klanten] : state.klanten.filter(k =>
     [k.naam, k.email, k.telefoon].some(v => (v ?? '').toLowerCase().includes(q))
   );
@@ -195,7 +197,7 @@ function render(){
       const st = (k.status || '').toLowerCase();
       badge.textContent = st ? capitalize(st) : 'Onbekend';
       const { bg, fg, br } = statusColor(st);
-      badge.style.background = bg; badge.style.color = fg; badge.style.borderColor = br;
+      Object.assign(badge.style, { background: bg, color: fg, borderColor: br });
 
       node.querySelector('[data-col="aangemaakt"]').textContent = formatDate(k.aangemaakt);
       frag.appendChild(node);
@@ -235,7 +237,7 @@ function showError(err){
   errorState.classList.remove('hidden');
   errorDetails.textContent = (err?.stack || err?.message || String(err)).slice(0, 2000);
 }
-retryBtn.addEventListener('click', fetchKlanten);
+retryBtn?.addEventListener('click', fetchKlanten);
 
 /* =================== UTILS =================== */
 function debounce(fn, ms=200){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
