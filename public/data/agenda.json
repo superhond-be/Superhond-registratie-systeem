@@ -1,29 +1,48 @@
 [
   {
-    "id": 1,
+    "id": 301,
     "type": "les",
-    "naam": "Puppy Pack",
+    "naam": "Puppy Pack – Najaar",
     "datum": "2025-10-05T10:00:00",
-    "locatie": "Retie Terrein"
+    "locatie": "Retie Terrein",
+    "trainer": "Sofie De Smet"
   },
   {
-    "id": 2,
+    "id": 302,
     "type": "les",
-    "naam": "Puppy Pack",
+    "naam": "Puppy Pack – Najaar",
+    "datum": "2025-10-12T10:00:00",
+    "locatie": "Retie Terrein",
+    "trainer": "Jan Peeters"
+  },
+  {
+    "id": 303,
+    "type": "les",
+    "naam": "Basis – Herfst",
     "datum": "2025-10-12T09:30:00",
-    "locatie": "Dessel Sporthal"
+    "locatie": "Dessel Sporthal",
+    "trainer": "Paul Thijs"
   },
   {
-    "id": 3,
+    "id": 304,
     "type": "les",
-    "naam": "Basisgroep",
+    "naam": "Basis – Herfst",
     "datum": "2025-10-19T11:00:00",
-    "locatie": "Retie Terrein"
+    "locatie": "Retie Terrein",
+    "trainer": "Sofie De Smet"
+  },
+  {
+    "id": 305,
+    "type": "les",
+    "naam": "Puppy Pack – Najaar",
+    "datum": "2025-10-19T10:00:00",
+    "locatie": "Retie Terrein",
+    "trainer": "Jan Peeters"
   },
   {
     "id": "m1",
     "type": "mededeling",
-    "naam": "Geen les tijdens herfstvakantie",
+    "naam": "Herfstvakantie: geen les",
     "datum": "2025-10-26T00:00:00",
     "locatie": ""
   }
