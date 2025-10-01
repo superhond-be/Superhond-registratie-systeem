@@ -1,3 +1,6 @@
+# render.yaml — Superhond Registratie
+# Maakt 1 Postgres DB, 1 Node/Express Web Service en 1 Static Site aan.
+
 databases:
   - name: superhond-db
     databaseName: superhond
@@ -5,6 +8,7 @@ databases:
     plan: free
 
 services:
+  # --- API (Node/Express) ---
   - type: web
     name: superhond-api
     env: node
@@ -21,15 +25,20 @@ services:
         fromDatabase:
           name: superhond-db
           property: connectionString
+      # Zet deze NA publicatie van de static site op de echte URL
       - key: CORS_ORIGIN
-        # update dit na de eerste static deploy naar de echte static site URL
         value: https://superhond-web.onrender.com
+      # Optioneel: seed alleen bij 1e deploy
+      - key: RUN_SEED
+        value: "true"
 
-  - type: static
+  # --- Frontend (Static Site) ---
+  - type: static_site
     name: superhond-web
     rootDir: public
-    buildCommand: ""
+    buildCommand: ""          # geen build nodig, pure static
     staticPublishPath: .
+    autoDeploy: true
     headers:
       - path: /css/*
         name: Cache-Control
