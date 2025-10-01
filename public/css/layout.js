@@ -11,6 +11,44 @@
            + `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     } catch { return ''; }
   };
+  // Superhond layout — topbar + footer
+window.SuperhondUI = {
+  mount(opts = {}) {
+    const version  = opts.version || "v0.19.x";
+    const title    = opts.title   || "Superhond";
+    const icon     = opts.icon    || "🐾";
+    const isHome   = !!opts.home;
+    const backHref = opts.back || "/";
+
+    const rightHtml = opts.right || ""; // bv. ingelogde user + logout
+
+    const top = document.getElementById("topbar");
+    if (top) {
+      top.innerHTML = `
+        <div class="container">
+          ${isHome ? "" : `<a class="btn-back" href="${backHref}">← Terug</a>`}
+          <h1 class="brand">${icon} ${title}</h1>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+            ${rightHtml}
+            <span class="version-badge">${version}</span>
+          </div>
+        </div>
+      `;
+      top.classList.add("topbar");
+    }
+
+    const foot = document.getElementById("footer");
+    if (foot) {
+      const builtAt = new Date().toLocaleString("nl-BE");
+      foot.innerHTML = `
+        <div class="container" style="color:#6b7280;padding:14px 16px;border-top:1px solid var(--border)">
+          © Superhond 2025 — ${version} (static) — ${builtAt}<br>
+          <span class="muted">API offline — static versie gebruikt</span>
+        </div>
+      `;
+    }
+  }
+};
 
   async function getVersion() {
     // 1) API
