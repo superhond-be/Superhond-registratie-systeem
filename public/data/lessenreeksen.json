@@ -1,15 +1,4 @@
-[
-  {
-    "id": 1,
-    "naam": "Puppycursus Reeks",
-    "type": "groep",
-    "thema": "Puppy",
-    "aantalStrippen": 5,
-    "maxDeelnemers": 8,
-    "lesduurMinuten": 60,
-    "geldigheidsduurWeken": 8,
-    "prijsExcl": 120,
-    "status": "actief",
-    "omschrijving": "Basis puppytraining in kleine groep."
-  }
-]
+// reeksen.json
+[{ "id":1, "naam":"Puppy Pack", "lesduurMinuten":60, "maxDeelnemers":8 }]
+// trainers.json [{ "id":1,"voornaam":"Jan","achternaam":"Peeters" }, ...]
+// locaties.json [{ "id":1,"naam":"Retie Terrein","adres":"..." }, ...]
