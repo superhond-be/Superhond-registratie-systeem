@@ -1,14 +1,5 @@
 [
-  {
-    "id": 1,
-    "voornaam": "Tom",
-    "achternaam": "Peeters",
-    "email": "tom@superhond.be"
-  },
-  {
-    "id": 2,
-    "voornaam": "Sara",
-    "achternaam": "Vermeulen",
-    "email": "sara@superhond.be"
-  }
+  { "id": 1, "voornaam": "Sofie", "achternaam": "De Smet" },
+  { "id": 2, "voornaam": "Jan", "achternaam": "Peeters" },
+  { "id": 3, "voornaam": "Paul", "achternaam": "Thijs" }
 ]
