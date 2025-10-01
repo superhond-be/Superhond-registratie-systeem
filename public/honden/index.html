@@ -5,14 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Honden</title>
 
-  <!-- Centrale UI -->
-  <link rel="stylesheet" href="../ui/style.css" />
+  <!-- Centrale UI (standaard mappen) -->
+  <link rel="stylesheet" href="/css/style.css" />
+  <!-- Optioneel, als je die gebruikt -->
+  <link rel="stylesheet" href="/css/superhond.css" />
 
   <!-- Layout (topbar/footer + versie/buildtijd) -->
-  <script src="../js/layout.js" defer></script>
+  <script src="/js/layout.js" defer></script>
 
-  <!-- Pagina-logic -->
-  <script type="module" src="./index.js" defer></script>
+  <!-- Pagina-logic (absoluut pad voorkomt path-issues) -->
+  <script type="module" src="/honden/index.js" defer></script>
 </head>
 <body>
 <header id="topbar" class="topbar"></header>
@@ -20,7 +22,7 @@
 <main>
   <h1>Honden</h1>
 
-  <p><a class="btn" href="/dashboard/index.html">⬅️ Terug naar dashboard</a></p>
+  <p><a class="btn" href="/">⬅️ Terug naar dashboard</a></p>
 
   <!-- Toolbar -->
   <div class="toolbar">
