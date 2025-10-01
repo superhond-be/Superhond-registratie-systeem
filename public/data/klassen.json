@@ -1,22 +1,32 @@
 [
   {
-    "id": "C100",
-    "naam": "Puppy Klas",
-    "type": "groep",
-    "thema": "puppy",
+    "id": 1,
+    "naam": "Puppyklas",
+    "type": "puppy",
+    "thema": "socialisatie",
     "afbeelding": "/img/klassen/puppy.jpg",
-    "beschrijving": "Socialisatie en basis voor pups.",
-    "mailBlue": "MB_LIST_PUPPY",
+    "beschrijving": "Voor pups tot 6 maanden: socialisatie, basiscommando's.",
+    "mailblue_tag": "klas_puppy",
     "status": "actief"
   },
   {
-    "id": "C110",
-    "naam": "Pubers",
-    "type": "groep",
-    "thema": "puber",
-    "afbeelding": "/img/klassen/puber.jpg",
-    "beschrijving": "Impulscontrole en focus.",
-    "mailBlue": "MB_LIST_PUBER",
+    "id": 2,
+    "naam": "Basisgroep",
+    "type": "basis",
+    "thema": "obedience",
+    "afbeelding": "/img/klassen/basis.jpg",
+    "beschrijving": "Voor honden vanaf 6 maanden: volgen, zitten, blijven.",
+    "mailblue_tag": "klas_basis",
     "status": "actief"
+  },
+  {
+    "id": 3,
+    "naam": "Pubers",
+    "type": "puber",
+    "thema": "impulscontrole",
+    "afbeelding": "/img/klassen/puber.jpg",
+    "beschrijving": "Voor jonge honden 6–12 maanden: focus & impulsen.",
+    "mailblue_tag": "klas_puber",
+    "status": "inactief"
   }
 ]
