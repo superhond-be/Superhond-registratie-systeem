@@ -1,45 +1,286 @@
-<div class="toolbar" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-  <button id="btn-add" class="btn primary">+ Les toevoegen</button>
-  <span class="muted" id="total" style="margin-left:.5rem"></span>
+// Superhond — Lessenbeheer (inline edit + agenda-export + reeksgeneratie)
+// Werkt met /js/lessen.store.js (API → /data → LocalStorage)
 
-  <span style="flex:1 1 auto"></span>
+import {
+  loadAll, saveLes, deleteLes,
+  exportJSON, importJSON, lists
+} from "/js/lessen.store.js";
 
-  <button id="btn-export" class="btn">⬇︎ Export JSON</button>
-  <button id="btn-agenda" class="btn">📅 Export agenda.json</button>
+const table      = document.getElementById("tbl-lessen");
+const tbody      = table.querySelector("tbody");
+const btnAdd     = document.getElementById("btn-add");
+const btnExport  = document.getElementById("btn-export");
+const btnAgenda  = document.getElementById("btn-agenda");
+const btnReeksGen= document.getElementById("btn-reeks-gen");
+const fileImport = document.getElementById("file-import");
+const totalEl    = document.getElementById("total");
 
-  <!-- ✨ NIEUW -->
-  <button id="btn-reeks-gen" class="btn">♻️ Genereer uit reeks</button>
+// Dialog UI
+const dlgReeks   = document.getElementById("dlg-reeks");
+const formReeks  = document.getElementById("form-reeks");
+const selReeks   = document.getElementById("sel-reeks");
+const regenStart = document.getElementById("regen-start");
+const regenClear = document.getElementById("regen-clear");
+const regenCancel= document.getElementById("regen-cancel");
+const regenMsg   = document.getElementById("regen-msg");
 
-  <label class="btn">
-    ⬆︎ Import JSON <input type="file" id="file-import" accept="application/json" hidden>
-  </label>
-  <a class="btn" href="/">→ Dashboard</a>
-</div>
+let state = { lessen:[], reeksen:[], locaties:[], trainers:[] };
 
-<!-- ✨ NIEUW: lichtgewicht modal -->
-<dialog id="dlg-reeks">
-  <form id="form-reeks" method="dialog" class="card" style="min-width: min(92vw, 520px)">
-    <h3 style="margin-top:0">Genereer lessen uit reeks</h3>
+const S = v => String(v ?? "");
+const pad2 = n => String(n).padStart(2,"0");
 
-    <div class="row">
-      <label>Reeks</label>
-      <select id="sel-reeks" class="input" required></select>
-    </div>
+function trainerName(t){ return [t?.voornaam, t?.achternaam].filter(Boolean).join(" "); }
+function sortByDate(a,b){ return S(a.datum+a.start).localeCompare(S(b.datum+b.start)); }
 
-    <div class="row">
-      <label>Starttijd (HH:MM)</label>
-      <input id="regen-start" class="input" type="time" value="10:00" required>
-    </div>
+function mapById(arr){ const m = new Map(); (arr||[]).forEach(x=>m.set(String(x.id), x)); return m; }
+let mapLoc, mapTrainer, mapReeks;
 
-    <div class="row">
-      <label><input id="regen-clear" type="checkbox" checked> Bestaande lessen van deze reeks eerst verwijderen</label>
-    </div>
+// ------ tijd/datum helpers ------
+function addDays(dateISO, days){
+  const x = new Date(dateISO); x.setDate(x.getDate()+days); return x.toISOString().slice(0,10);
+}
+function timeAdd(hhmm, minutes){
+  const [h,m] = (hhmm||"10:00").split(":").map(Number);
+  const dt = new Date(2000,0,1,h,m,0,0);
+  dt.setMinutes(dt.getMinutes() + (minutes||0));
+  return `${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`;
+}
 
-    <menu style="display:flex;gap:.5rem;justify-content:flex-end">
-      <button type="submit" class="btn primary">Genereer</button>
-      <button type="button" id="regen-cancel" class="btn">Annuleren</button>
-    </menu>
+// ------ field helpers (camel/snake tolerant) ------
+function getField(obj, ...names){
+  for (const n of names){
+    if (obj && obj[n] != null) return obj[n];
+  }
+  return undefined;
+}
 
-    <p id="regen-msg" class="muted" style="margin:.5rem 0 0"></p>
-  </form>
-</dialog>
+// ------ rij opbouwen ------
+function row(les = {}) {
+  const tr = document.createElement("tr");
+  tr.dataset.id = les.id ?? "";
+
+  tr.innerHTML = `
+    <td>${lists.reeksSelect(state.reeksen, getField(les,"reeksId","reeks_id"), les.naam)}</td>
+    <td>${lists.typeSelect(les.type || "Groep")}</td>
+    <td>${lists.locSelect(state.locaties, getField(les,"locatieId","locatie_id"))}</td>
+    <td>${lists.themaSelect(les.thema || "")}</td>
+    <td>${lists.trainerSelect(state.trainers, getField(les,"trainerId","trainer_id"))}</td>
+    <td><input type="date" value="${S(les.datum)}" class="input"></td>
+    <td><input type="time" value="${S(getField(les,"start","starttijd"))}" class="input"></td>
+    <td><input type="number" min="1" value="${S(getField(les,"capaciteit","max_deelnemers") ?? 8)}" class="input input-nr"></td>
+    <td class="right nowrap">
+      <button class="btn btn-xs" data-act="save" title="Bewaren">💾</button>
+      <button class="btn btn-xs" data-act="del"  title="Verwijderen">🗑️</button>
+    </td>
+    <td class="right nowrap">
+      <button class="btn btn-xs" data-act="regen" title="Genereer voor deze reeks">♻️</button>
+    </td>
+  `;
+  return tr;
+}
+
+// ------ waarden uit 1 rij halen ------
+function collect(tr){
+  const [selReeks, selType, selLoc, selThema, selTrainer, inpDate, inpTime, inpCap] =
+    tr.querySelectorAll("select, input");
+
+  return {
+    id: tr.dataset.id || undefined,
+    reeksId: Number(selReeks.value) || null,
+    naam: lists.textFromReeks(selReeks),          // gekozen reeksnaam
+    type: selType.value || "Groep",
+    locatieId: Number(selLoc.value) || null,
+    thema: selThema.value || "",
+    trainerId: Number(selTrainer.value) || null,
+    datum: inpDate.value,
+    start: inpTime.value,
+    capaciteit: Number(inpCap.value) || 8,
+    status: "actief"
+  };
+}
+
+function render(){
+  tbody.innerHTML = "";
+  state.lessen.sort(sortByDate).forEach(les => tbody.appendChild(row(les)));
+  totalEl.textContent = `${state.lessen.length} lessen`;
+}
+
+// ---- agenda export ----
+function buildAgendaFromLessen(lessen) {
+  return (lessen || []).map(l => {
+    const loc = getField(l,"locatieId","locatie_id") != null ? mapLoc.get(String(getField(l,"locatieId","locatie_id"))) : null;
+    const trn = getField(l,"trainerId","trainer_id") != null ? mapTrainer.get(String(getField(l,"trainerId","trainer_id"))) : null;
+
+    return {
+      id: l.id,
+      type: "les",
+      naam: l.naam || (getField(l,"reeksId","reeks_id") != null
+              ? (mapReeks.get(String(getField(l,"reeksId","reeks_id")))?.naam || "Onbekende reeks")
+              : "Onbekende les"),
+      datum: (l.datum || "1970-01-01") + "T" + (getField(l,"start","starttijd") || "00:00"),
+      locatie: loc?.naam || "",
+      trainer: trn ? trainerName(trn) : ""
+    };
+  });
+}
+
+/* ----------------- Reeks → Lessen generator ----------------- */
+
+function deriveParamsFromReeks(reeks, startHHMM){
+  // tolerant voor camel/snake
+  const params = {
+    id: getField(reeks,"id"),
+    naam: getField(reeks,"naam"),
+    startdatum: getField(reeks,"startdatum"),
+    starttijd: startHHMM || getField(reeks,"starttijd") || "10:00",
+    aantal: Number(getField(reeks,"aantalStrippen","aantal_strippen")) || 1,
+    duur: Number(getField(reeks,"lesduurMinuten","lesduur_minuten")) || 60,
+    max: Number(getField(reeks,"maxDeelnemers","max_deelnemers")) || 8,
+    trainerId: Number(getField(reeks,"trainerId","trainer_id")) || null,
+    locatieId: Number(getField(reeks,"locatieId","locatie_id")) || null
+  };
+  return params;
+}
+
+async function deleteLessonsOfReeks(reeksId){
+  const toDel = (state.lessen||[]).filter(l => String(getField(l,"reeksId","reeks_id")) === String(reeksId));
+  for (const l of toDel) { try { await deleteLes(l.id); } catch {} }
+  state.lessen = state.lessen.filter(l => String(getField(l,"reeksId","reeks_id")) !== String(reeksId));
+}
+
+async function generateLessonsForReeks(reeks, startHHMM, clearBefore = true){
+  const p = deriveParamsFromReeks(reeks, startHHMM);
+  if (!p.startdatum) throw new Error("Reeks heeft geen startdatum.");
+  if (!p.aantal) throw new Error("Aantal lessen is 0.");
+  if (clearBefore) { await deleteLessonsOfReeks(p.id); }
+
+  const created = [];
+  for (let i=0;i<p.aantal;i++){
+    const datum = addDays(p.startdatum, i*7);
+    const start = p.starttijd;
+    const payload = {
+      reeksId: Number(p.id) || p.id,           // LS kan string id hebben
+      naam: p.naam,
+      type: "Groep",
+      locatieId: p.locatieId,
+      thema: "",
+      trainerId: p.trainerId,
+      datum,
+      start,
+      capaciteit: p.max,
+      status: "actief"
+    };
+    const saved = await saveLes(payload);
+    created.push(saved);
+  }
+  // refresh lokale staat
+  const fresh = await loadAll();
+  state.lessen = fresh.lessen || created;
+  render();
+  return created.length;
+}
+
+/* ----------------- Events ----------------- */
+
+// table row actions
+tbody.addEventListener("click", async (e) => {
+  const btn = e.target.closest("button[data-act]");
+  if (!btn) return;
+  const tr = btn.closest("tr");
+  const id = tr.dataset.id;
+
+  if (btn.dataset.act === "save") {
+    const payload = collect(tr);
+    if (!payload.datum || !payload.start) {
+      alert("Datum en starttijd zijn verplicht.");
+      return;
+    }
+    const saved = await saveLes(payload);
+    tr.dataset.id = saved.id;
+  }
+
+  if (btn.dataset.act === "del") {
+    if (!id) { tr.remove(); return; }
+    if (!confirm("Les verwijderen?")) return;
+    await deleteLes(id);
+    tr.remove();
+  }
+
+  if (btn.dataset.act === "regen") {
+    // per-rij genereren: gebruik de geselecteerde reeks in deze rij
+    const sel = tr.querySelector("td select"); // eerste select = reeks
+    const reeksId = sel?.value;
+    if (!reeksId) { alert("Kies eerst een reeks in deze rij."); return; }
+    const reeks = state.reeksen.find(r => String(r.id) === String(reeksId));
+    if (!reeks) { alert("Reeks niet gevonden."); return; }
+
+    const startHHMM = prompt("Starttijd HH:MM?", "10:00") || "10:00";
+    const clear = confirm("Bestaande lessen van deze reeks eerst verwijderen?");
+    try {
+      const n = await generateLessonsForReeks(reeks, startHHMM, clear);
+      alert(`♻️ ${n} lessen gegenereerd voor reeks: ${reeks.naam}`);
+    } catch(e){
+      alert("Fout bij genereren: " + e.message);
+    }
+  }
+});
+
+btnAdd.addEventListener("click", () => {
+  const nieuw = { capaciteit: 8, type:"Groep" };
+  const tr = row(nieuw);
+  tbody.prepend(tr);
+  tr.querySelector("select, input")?.focus();
+});
+
+btnExport.addEventListener("click", () => {
+  exportJSON(state.lessen, "lessen.json");
+});
+
+btnAgenda.addEventListener("click", () => {
+  const agenda = buildAgendaFromLessen(state.lessen);
+  exportJSON(agenda, "agenda.json");
+});
+
+fileImport.addEventListener("change", async () => {
+  const f = fileImport.files[0];
+  if (!f) return;
+  const text = await f.text();
+  const data = JSON.parse(text);
+  state.lessen = await importJSON(data);
+  render();
+});
+
+// ---- dialoog (globale) generator ----
+btnReeksGen.addEventListener("click", () => {
+  // vul reeksen in select
+  selReeks.innerHTML = (state.reeksen||[]).map(r => `<option value="${r.id}">${S(r.naam)||("Reeks "+r.id)}</option>`).join("");
+  regenMsg.textContent = "";
+  dlgReeks.showModal();
+});
+regenCancel.addEventListener("click", ()=> dlgReeks.close());
+
+formReeks.addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const reeksId = selReeks.value;
+  const reeks = state.reeksen.find(r => String(r.id)===String(reeksId));
+  if (!reeks) { regenMsg.textContent = "Reeks niet gevonden."; return; }
+  try {
+    const n = await generateLessonsForReeks(reeks, regenStart.value || "10:00", !!regenClear.checked);
+    regenMsg.textContent = `✅ ${n} lessen gegenereerd voor reeks “${S(reeks.naam)}”.`;
+  } catch (err) {
+    regenMsg.textContent = "⚠️ " + err.message;
+  }
+});
+
+// init
+(async function init(){
+  try {
+    state = await loadAll(); // {lessen, reeksen, locaties, trainers}
+    mapLoc     = mapById(state.locaties);
+    mapTrainer = mapById(state.trainers);
+    mapReeks   = mapById(state.reeksen);
+    render();
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="10" class="error">⚠️ Kon lessen niet laden: ${S(e.message)}</td></tr>`;
+  }
+})();
