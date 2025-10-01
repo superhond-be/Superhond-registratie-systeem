@@ -1,11 +1,4 @@
 [
-  {
-    "id": "les-001",
-    "reeksId": "reeks-01",
-    "trainerId": "tr-01",
-    "locatieId": "loc-01",
-    "datum": "2025-10-02",
-    "starttijd": "19:00",
-    "eindtijd": "20:00"
-  }
+  { "id": 1, "naam": "Puppycursus – les 1", "type": "groep", "locatie": "Terrein A", "trainer": "Tom", "start": "2025-10-05 10:00", "prijs": 25, "credits": 1 },
+  { "id": 2, "naam": "Basiscursus – introductie", "type": "reeks", "locatie": "Terrein B", "trainer": "Sara", "start": "2025-10-12 09:30", "prijs": 30, "credits": 1 }
 ]
