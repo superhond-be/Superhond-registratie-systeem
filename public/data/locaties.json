@@ -1,4 +1,14 @@
 [
-  { "id": 1, "naam": "Retie Terrein" },
-  { "id": 2, "naam": "Dessel Sporthal" }
+  {
+    "id": 1,
+    "naam": "Retie Terrein",
+    "adres": "Hondenplein 1, 2470 Retie",
+    "map_url": "https://maps.google.com/?q=Retie"
+  },
+  {
+    "id": 2,
+    "naam": "Dessel Sporthal",
+    "adres": "Sportlaan 2, 2480 Dessel",
+    "map_url": "https://maps.google.com/?q=Dessel"
+  }
 ]
