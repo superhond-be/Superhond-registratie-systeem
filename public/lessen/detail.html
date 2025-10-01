@@ -4,42 +4,74 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Les detail – Superhond</title>
-  <link rel="stylesheet" href="/ui/style.css">
+
+  <!-- Centrale UI -->
+  <link rel="stylesheet" href="/css/style.css?v=0.19.0">
+  <link rel="stylesheet" href="/css/superhond.css?v=0.19.0">
 </head>
 <body>
+  <!-- Topbar -->
+  <header id="topbar" class="topbar"></header>
+
   <main class="container">
     <h2 class="page-title">Les detail</h2>
-    <div id="les-detail" class="card">Bezig met laden…</div>
-    <p><a href="/" class="btn">← Terug naar dashboard</a></p>
+    <div id="les-detail" class="card">⏳ Bezig met laden…</div>
+    <p><a href="/lessen/" class="btn">← Terug naar lessen</a></p>
   </main>
 
-  <script src="/ui/layout.js"></script>
-  <script>
-    SuperhondUI.mount({ title:'Les detail', icon:'📅', back:'/' });
+  <!-- Footer -->
+  <footer id="footer" class="footer"></footer>
 
-    // Haal ID uit querystring: ?id=...
+  <!-- Layout -->
+  <script src="/js/layout.js?v=0.19.0"></script>
+
+  <script>
+    // Mount topbar/footer
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.SuperhondUI?.mount) {
+        SuperhondUI.mount({ title:'Les detail', icon:'📅', back:'/lessen/' });
+      }
+    });
+
     const params = new URLSearchParams(location.search);
     const id = params.get("id");
 
     async function load() {
+      const target = document.getElementById("les-detail");
       try {
-        const res = await fetch("/data/agenda.json");
-        const data = await res.json();
+        // 1) probeer API, anders val terug op static JSON
+        let data;
+        try {
+          const r = await fetch("/api/lessen?t="+Date.now(), {cache:"no-store"});
+          if (!r.ok) throw new Error("API niet OK");
+          data = await r.json();
+        } catch {
+          const r2 = await fetch("/data/lessen.json?t="+Date.now(), {cache:"no-store"});
+          if (!r2.ok) throw new Error("/data/lessen.json niet bereikbaar");
+          data = await r2.json();
+        }
 
-        const les = data.find(item => item.href.includes(id));
+        if (!Array.isArray(data)) throw new Error("Onverwacht formaat (geen array)");
+
+        const les = data.find(item => String(item.id) === String(id));
         if (!les) {
-          document.getElementById("les-detail").innerHTML = "<p>Les niet gevonden.</p>";
+          target.innerHTML = "<p>⚠️ Les niet gevonden.</p>";
           return;
         }
 
-        document.getElementById("les-detail").innerHTML = `
-          <h3>${les.titel}</h3>
-          <p><strong>Datum:</strong> ${new Date(les.datum).toLocaleString("nl-BE")}</p>
-          <p><strong>Type:</strong> ${les.type}</p>
-          <p>ID: ${id}</p>
+        target.innerHTML = `
+          <h3>${les.naam || les.titel || "(zonder naam)"}</h3>
+          <p><strong>Datum:</strong> ${les.start || les.datum || "—"}</p>
+          <p><strong>Type:</strong> ${les.type || "—"}</p>
+          <p><strong>Locatie:</strong> ${les.locatie || "—"}</p>
+          <p><strong>Trainer:</strong> ${les.trainer || "—"}</p>
+          <p><strong>Prijs:</strong> € ${Number(les.prijs||0).toFixed(2)}</p>
+          <p><strong>Credits:</strong> ${les.credits ?? "—"}</p>
+          <small>ID: ${id}</small>
         `;
       } catch (err) {
-        document.getElementById("les-detail").innerHTML = "<p>Fout bij laden van les.</p>";
+        console.error(err);
+        target.innerHTML = "<p>⚠️ Fout bij laden van les.</p>";
       }
     }
 
