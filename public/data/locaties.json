@@ -1,3 +1,12 @@
 [
-  { "id": "loc-01", "naam": "Terrein Retie" }
+  {
+    "id": 1,
+    "naam": "Terrein A",
+    "adres": "Kinschotseweg 1a, 2470 Retie"
+  },
+  {
+    "id": 2,
+    "naam": "Terrein B",
+    "adres": "Hovenstraat 4, 2470 Retie"
+  }
 ]
