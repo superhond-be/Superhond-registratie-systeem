@@ -1,84 +1,156 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Superhond — Dashboard</title>
 
-  <!-- Centrale UI (LET OP: nu in /css) -->
-  <link rel="stylesheet" href="/css/style.css?v=0.19.0">
-  <!-- Optioneel, als je die gebruikt -->
-  <link rel="stylesheet" href="/css/superhond.css?v=0.19.0">
-
-  <style>
-    .tabs{display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
-    .tab{padding:.4rem .8rem;border:1px solid #d1d5db;border-radius:.5rem;background:#fff;cursor:pointer}
-    .tab.active,
-    .tab[aria-pressed="true"]{background:var(--brand,#f5c20b);font-weight:600}
-    .error{color:#b91c1c;margin:.5rem 0}
-  </style>
+  <link rel="stylesheet" href="/css/style.css?v=0.19.4" />
+  <link rel="stylesheet" href="/css/dashboard.css?v=0.19.4" />
+  <script src="/js/layout.js?v=0.19.4" defer></script>
+  <script src="/js/agenda.js?v=0.19.4" defer></script>
 </head>
 <body>
-
-  <!-- Topbar hook (gele balk) -->
+  <!-- Topbar -->
   <header id="topbar" class="topbar"></header>
 
   <main class="container">
-    <h2 class="page-title">Hoofdmenu</h2>
+    <div class="dash-grid">
+      <!-- Sidebar: Agenda -->
+      <aside class="card sidebar">
+        <h3 class="sidebar-title">Snel naar cursus</h3>
 
-    <div class="tiles">
-      <a class="tile" href="/klanten/"><span>👤</span> Klanten</a>
-      <a class="tile" href="/honden/"><span>🐶</span> Honden</a>
-      <a class="tile" href="/strippenkaarten/"><span>🎫</span> Strippenkaarten</a>
-      <a class="tile" href="/lessen/"><span>📅</span> Lessen</a>
-      <a class="tile" href="/lessenreeks/"><span>📦</span> Reeksen</a>
-      <a class="tile" href="/trainers/"><span>🧑‍🏫</span> Trainers</a>
-      <a class="tile" href="/rapporten/"><span>📈</span> Rapporten</a>
-      <a class="tile" href="/mededelingen/"><span>📢</span> Mededelingen</a>
-      <a class="tile" href="/instellingen/"><span>⚙️</span> Instellingen</a>
-      <a class="tile" href="/over/"><span>ℹ️</span> Over</a>
+        <!-- Tabs -->
+        <div class="tabs" id="agenda-tabs">
+          <button class="tab active" data-tab="week">Deze week</button>
+          <button class="tab" data-tab="alles">Alles</button>
+          <button class="tab" data-tab="mededelingen">Mededelingen</button>
+        </div>
+
+        <!-- Loader/err -->
+        <div id="agenda-loader" class="muted">⏳ Laden…</div>
+        <div id="agenda-error" class="error" style="display:none;"></div>
+
+        <!-- Agenda tabel -->
+        <div class="table-wrap" id="agenda-table-wrap" style="display:none;">
+          <table id="agenda-table" class="table compact">
+            <thead>
+              <tr>
+                <th>Naam</th>
+                <th>Datum</th>
+                <th>Locatie</th>
+              </tr>
+            </thead>
+            <tbody><!-- agenda.js vult --></tbody>
+          </table>
+        </div>
+
+        <a class="btn full" href="/lessen/">Open inschrijving</a>
+      </aside>
+
+      <!-- Main: tegels -->
+      <section class="main">
+        <!-- Publiek -->
+        <div class="section section--public card">
+          <div class="section-header">
+            <h2>Publiek</h2>
+            <span class="section-sub">voor klanten — publiek toegankelijk</span>
+          </div>
+
+          <div class="tiles tiles--public">
+            <a class="tile" href="/inschrijven/">
+              <div class="tile-icon">📝</div>
+              <div class="tile-body">
+                <div class="tile-title">Publieke inschrijving</div>
+                <div class="tile-sub">Schrijf in op klas/sessie (live beschikbaarheid).</div>
+              </div>
+            </a>
+
+            <a class="tile" href="/onboarding/">
+              <div class="tile-icon">🎟️</div>
+              <div class="tile-body">
+                <div class="tile-title">Onboarding na betaling</div>
+                <div class="tile-sub">Activeer toegang / QR-tickets.</div>
+              </div>
+            </a>
+
+            <a class="tile" href="/tools/api-test.html">
+              <div class="tile-icon">🛠️</div>
+              <div class="tile-body">
+                <div class="tile-title">API test</div>
+                <div class="tile-sub">Check backend status.</div>
+              </div>
+            </a>
+
+            <a class="tile" href="/over/">
+              <div class="tile-icon">📘</div>
+              <div class="tile-body">
+                <div class="tile-title">Documentatie</div>
+                <div class="tile-sub">Overzicht Admin • Publiek • API.</div>
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <!-- Admin -->
+        <div class="section section--admin card">
+          <div class="section-header">
+            <h2>Admin</h2>
+            <span class="section-sub">Alleen voor administratie — inloggen vereist</span>
+          </div>
+
+          <div class="tiles tiles--admin">
+            <a class="tile" href="/lessen/">
+              <div class="tile-icon">📅</div>
+              <div class="tile-body">
+                <div class="tile-title">Lessenbeheer</div>
+                <div class="tile-sub">Maak/beheer klassen en sessies.</div>
+              </div>
+            </a>
+
+            <a class="tile" href="/admin/gebruikers/">
+              <div class="tile-icon">👤</div>
+              <div class="tile-body">
+                <div class="tile-title">Admin gebruikers</div>
+                <div class="tile-sub">Beheer admin-accounts.</div>
+              </div>
+            </a>
+
+            <a class="tile" href="/klanten/">
+              <div class="tile-icon">🐶</div>
+              <div class="tile-body">
+                <div class="tile-title">Klanten &amp; Honden</div>
+                <div class="tile-sub">Beheer baasjes en honden.</div>
+              </div>
+            </a>
+
+            <a class="tile" href="/strippenkaarten/">
+              <div class="tile-icon">🎫</div>
+              <div class="tile-body">
+                <div class="tile-title">Strippenkaarten</div>
+                <div class="tile-sub">Beheer beurten/credits.</div>
+              </div>
+            </a>
+
+            <a class="tile" href="/aanvragen/">
+              <div class="tile-icon">📥</div>
+              <div class="tile-body">
+                <div class="tile-title">Aanvragen</div>
+                <div class="tile-sub">Memberships goedkeuren (na betaling).</div>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
     </div>
-
-    <!-- Agenda blok met tabs -->
-    <section class="container" style="margin-top:1.25rem">
-      <h2 class="page-title">Agenda</h2>
-
-      <div class="tabs" id="agenda-tabs">
-        <button class="tab active" data-tab="week">Deze week</button>
-        <button class="tab" data-tab="alles">Alles</button>
-        <button class="tab" data-tab="mededelingen">Mededelingen</button>
-      </div>
-
-      <div id="agenda-loader" class="muted">⏳ Laden…</div>
-      <div id="agenda-error" style="display:none;color:#b91c1c"></div>
-
-      <div class="table-wrap" id="agenda-table-wrap" style="display:none;">
-        <table id="agenda-table">
-          <thead>
-            <tr>
-              <th>Naam</th>
-              <th>Datum</th>
-              <th>Locatie</th>
-            </tr>
-          </thead>
-          <tbody><!-- gevuld door agenda.js --></tbody>
-        </table>
-      </div>
-    </section>
   </main>
 
-  <!-- Footer hook (versie/buildtijd) -->
+  <!-- Footer -->
   <footer id="footer" class="footer"></footer>
 
-  <!-- Scripts (LET OP: nu in /js) -->
-  <script src="/js/layout.js?v=0.19.0" defer></script>
-  <script src="/js/agenda.js?v=0.19.0" defer></script>
   <script>
-    // bouw topbar/footer
     window.addEventListener('DOMContentLoaded', () => {
-      if (window.SuperhondUI?.mount) {
-        SuperhondUI.mount({ title: 'Superhond', icon: '🐾', home: true });
-      }
+      SuperhondUI.mount({ title: 'Superhond — Dashboard', icon: '🐾', version: 'v0.19.4', home: true });
     });
   </script>
 </body>
