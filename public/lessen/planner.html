@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Planner – Superhond</title>
+  <link rel="stylesheet" href="/css/style.css?v=0.19.6" />
+  <link rel="stylesheet" href="/css/dashboard.css?v=0.19.6" />
+  <script src="/js/layout.js?v=0.19.6" defer></script>
+  <script type="module" src="/js/lessen.planner.js?v=0.19.6" defer></script>
+</head>
+<body>
+<header id="topbar" class="topbar"></header>
+
+<main class="container">
+  <h1 class="page-title">Weekplanner</h1>
+
+  <div class="toolbar" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+    <button id="prev" class="btn">← Vorige week</button>
+    <button id="today" class="btn">Vandaag</button>
+    <button id="next" class="btn">Volgende week →</button>
+
+    <span class="muted" id="range" style="margin-left:.5rem"></span>
+
+    <span style="flex:1 1 auto"></span>
+
+    <select id="filter-reeks" class="select"></select>
+    <select id="filter-trainer" class="select"></select>
+    <select id="filter-locatie" class="select"></select>
+    <select id="filter-type" class="select">
+      <option value="">— Type —</option>
+      <option>Groep</option><option>Privé</option><option>Workshop</option><option>Seminar</option>
+    </select>
+
+    <span class="badge" id="count">0 lessen</span>
+  </div>
+
+  <div id="grid" class="card" style="padding:12px"></div>
+</main>
+
+<footer id="footer" class="footer"></footer>
+
+<script>
+  window.addEventListener('DOMContentLoaded',()=>{
+    SuperhondUI.mount({ title:'Superhond — Planner', icon:'📅', back:'/' });
+  });
+</script>
+</body>
+</html>
