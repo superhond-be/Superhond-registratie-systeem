@@ -1,5 +1,30 @@
 [
-  { "id": 101, "type": "les",        "naam": "Puppyles 1",  "datum": "2025-09-30", "locatie": "Terrein A" },
-  { "id": 201, "type": "reeks",      "naam": "Basiscursus", "datum": "2025-10-02", "locatie": "Terrein B" },
-  { "id": 301, "type": "mededeling", "naam": "Geen les op 1/11", "datum": "2025-11-01" }
+  {
+    "id": 1,
+    "type": "les",
+    "naam": "Puppy Pack",
+    "datum": "2025-10-05T10:00:00",
+    "locatie": "Retie Terrein"
+  },
+  {
+    "id": 2,
+    "type": "les",
+    "naam": "Puppy Pack",
+    "datum": "2025-10-12T09:30:00",
+    "locatie": "Dessel Sporthal"
+  },
+  {
+    "id": 3,
+    "type": "les",
+    "naam": "Basisgroep",
+    "datum": "2025-10-19T11:00:00",
+    "locatie": "Retie Terrein"
+  },
+  {
+    "id": "m1",
+    "type": "mededeling",
+    "naam": "Geen les tijdens herfstvakantie",
+    "datum": "2025-10-26T00:00:00",
+    "locatie": ""
+  }
 ]
