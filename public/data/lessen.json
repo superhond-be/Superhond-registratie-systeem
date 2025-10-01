@@ -1,4 +1,22 @@
 [
-  { "id": 1, "naam": "Puppycursus – les 1", "type": "groep", "locatie": "Terrein A", "trainer": "Tom", "start": "2025-10-05 10:00", "prijs": 25, "credits": 1 },
-  { "id": 2, "naam": "Basiscursus – introductie", "type": "reeks", "locatie": "Terrein B", "trainer": "Sara", "start": "2025-10-12 09:30", "prijs": 30, "credits": 1 }
+  {
+    "id": 1,
+    "naam": "Puppycursus – les 1",
+    "type": "groep",
+    "locatie": "Terrein A",
+    "trainer": "Tom",
+    "start": "2025-10-05 10:00",
+    "prijs": 25,
+    "credits": 1
+  },
+  {
+    "id": 2,
+    "naam": "Basiscursus – introductie",
+    "type": "reeks",
+    "locatie": "Terrein B",
+    "trainer": "Sara",
+    "start": "2025-10-12 09:30",
+    "prijs": 30,
+    "credits": 1
+  }
 ]
