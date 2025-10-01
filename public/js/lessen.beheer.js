@@ -1,6 +1,4 @@
-// Superhond — Lessenbeheer (inline edit + agenda-export + reeksgeneratie)
-// Werkt met /js/lessen.store.js (API → /data → LocalStorage)
-
+// Superhond — Lessenbeheer (inline edit + auto agenda export + reeksgeneratie)
 import {
   loadAll, saveLes, deleteLes,
   exportJSON, importJSON, lists
@@ -10,7 +8,6 @@ const table      = document.getElementById("tbl-lessen");
 const tbody      = table.querySelector("tbody");
 const btnAdd     = document.getElementById("btn-add");
 const btnExport  = document.getElementById("btn-export");
-const btnAgenda  = document.getElementById("btn-agenda");
 const btnReeksGen= document.getElementById("btn-reeks-gen");
 const fileImport = document.getElementById("file-import");
 const totalEl    = document.getElementById("total");
@@ -103,9 +100,11 @@ function render(){
   tbody.innerHTML = "";
   state.lessen.sort(sortByDate).forEach(les => tbody.appendChild(row(les)));
   totalEl.textContent = `${state.lessen.length} lessen`;
+  // na render ook agenda auto updaten (zekerheid als data uit LS komt)
+  autoUpdateAgenda();
 }
 
-// ---- agenda export ----
+// ---- agenda builder + auto-export ----
 function buildAgendaFromLessen(lessen) {
   return (lessen || []).map(l => {
     const loc = getField(l,"locatieId","locatie_id") != null ? mapLoc.get(String(getField(l,"locatieId","locatie_id"))) : null;
@@ -124,11 +123,20 @@ function buildAgendaFromLessen(lessen) {
   });
 }
 
+function autoUpdateAgenda(){
+  try{
+    const agenda = buildAgendaFromLessen(state.lessen);
+    // Client-side download van agenda.json (zonder backend write)
+    exportJSON(agenda, "agenda.json");
+  }catch(err){
+    console.error("Auto agenda export mislukte:", err);
+  }
+}
+
 /* ----------------- Reeks → Lessen generator ----------------- */
 
 function deriveParamsFromReeks(reeks, startHHMM){
-  // tolerant voor camel/snake
-  const params = {
+  return {
     id: getField(reeks,"id"),
     naam: getField(reeks,"naam"),
     startdatum: getField(reeks,"startdatum"),
@@ -139,7 +147,6 @@ function deriveParamsFromReeks(reeks, startHHMM){
     trainerId: Number(getField(reeks,"trainerId","trainer_id")) || null,
     locatieId: Number(getField(reeks,"locatieId","locatie_id")) || null
   };
-  return params;
 }
 
 async function deleteLessonsOfReeks(reeksId){
@@ -157,26 +164,27 @@ async function generateLessonsForReeks(reeks, startHHMM, clearBefore = true){
   const created = [];
   for (let i=0;i<p.aantal;i++){
     const datum = addDays(p.startdatum, i*7);
-    const start = p.starttijd;
     const payload = {
-      reeksId: Number(p.id) || p.id,           // LS kan string id hebben
+      reeksId: Number(p.id) || p.id,
       naam: p.naam,
       type: "Groep",
       locatieId: p.locatieId,
       thema: "",
       trainerId: p.trainerId,
       datum,
-      start,
+      start: p.starttijd,
       capaciteit: p.max,
       status: "actief"
     };
     const saved = await saveLes(payload);
     created.push(saved);
   }
-  // refresh lokale staat
+  // refresh & render
   const fresh = await loadAll();
   state.lessen = fresh.lessen || created;
   render();
+  // auto agenda update na genereren
+  autoUpdateAgenda();
   return created.length;
 }
 
@@ -197,13 +205,17 @@ tbody.addEventListener("click", async (e) => {
     }
     const saved = await saveLes(payload);
     tr.dataset.id = saved.id;
+    autoUpdateAgenda(); // ⟵ na opslaan
   }
 
   if (btn.dataset.act === "del") {
-    if (!id) { tr.remove(); return; }
+    if (!id) { tr.remove(); autoUpdateAgenda(); return; }
     if (!confirm("Les verwijderen?")) return;
     await deleteLes(id);
     tr.remove();
+    // sync lokale state
+    state.lessen = state.lessen.filter(x => String(x.id)!==String(id));
+    autoUpdateAgenda(); // ⟵ na verwijderen
   }
 
   if (btn.dataset.act === "regen") {
@@ -234,11 +246,7 @@ btnAdd.addEventListener("click", () => {
 
 btnExport.addEventListener("click", () => {
   exportJSON(state.lessen, "lessen.json");
-});
-
-btnAgenda.addEventListener("click", () => {
-  const agenda = buildAgendaFromLessen(state.lessen);
-  exportJSON(agenda, "agenda.json");
+  // je exporteert lessen handmatig; agenda wordt sowieso auto geüpdatet bij wijzigingen
 });
 
 fileImport.addEventListener("change", async () => {
@@ -248,11 +256,11 @@ fileImport.addEventListener("change", async () => {
   const data = JSON.parse(text);
   state.lessen = await importJSON(data);
   render();
+  autoUpdateAgenda(); // ⟵ na import
 });
 
 // ---- dialoog (globale) generator ----
 btnReeksGen.addEventListener("click", () => {
-  // vul reeksen in select
   selReeks.innerHTML = (state.reeksen||[]).map(r => `<option value="${r.id}">${S(r.naam)||("Reeks "+r.id)}</option>`).join("");
   regenMsg.textContent = "";
   dlgReeks.showModal();
