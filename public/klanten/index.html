@@ -6,83 +6,91 @@
   <title>Klanten</title>
 
   <!-- Centrale UI (standaard mappen) -->
-  <link rel="stylesheet" href="/css/style.css" />
-  <!-- Optioneel, als je die gebruikt -->
-  <link rel="stylesheet" href="/css/superhond.css" />
+  <link rel="stylesheet" href="/css/style.css?v=0.19.3" />
+  <link rel="stylesheet" href="/css/superhond.css?v=0.19.3" />
 
   <!-- Layout (topbar/footer + versie/buildtijd) -->
-  <script src="/js/layout.js" defer></script>
+  <script src="/js/layout.js?v=0.19.3" defer></script>
 
   <!-- Pagina-logic (absoluut pad voorkomt path-issues) -->
   <script type="module" src="/klanten/index.js" defer></script>
 </head>
 <body>
-<header id="topbar" class="topbar"></header>
+  <!-- Topbar -->
+  <header id="topbar" class="topbar"></header>
 
-<main>
-  <h1>Klanten</h1>
+  <main class="container">
+    <h1 class="page-title">Klanten</h1>
 
-  <p><a class="btn" href="/">⬅️ Terug naar dashboard</a></p>
+    <p><a class="btn" href="/">⬅️ Terug naar dashboard</a></p>
 
-  <div class="toolbar">
-    <input id="zoek" type="search" placeholder="Zoek naam of e-mail…" />
-    <button id="btn-nieuw" class="btn primary">+ Nieuwe klant</button>
-  </div>
-
-  <div id="loader">⏳ Laden…</div>
-  <div id="error" style="display:none;"></div>
-
-  <div class="table-wrap" id="wrap" style="display:none;">
-    <table id="tabel">
-      <thead>
-        <tr>
-          <th>Naam</th>
-          <th>Email</th>
-          <th>Telefoon</th>
-          <th>Honden</th>
-          <th class="right"></th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-</main>
-
-<footer id="footer"></footer>
-
-<!-- ─────────────  MODAL (BE/NL adres + iPad-proof knoppen)  ───────────── -->
-<dialog id="modal">
-  <form id="form">
-    <h3 id="modal-title">Klant</h3>
-    <input type="hidden" name="id" />
-
-    <div class="row"><label>Naam</label><input name="naam" placeholder="Tom Janssens" /></div>
-    <div class="row"><label>Voornaam</label><input name="voornaam" /></div>
-    <div class="row"><label>Achternaam</label><input name="achternaam" /></div>
-    <div class="row"><label>E-mail</label><input name="email" type="email" /></div>
-    <div class="row"><label>Telefoon</label><input name="telefoon" /></div>
-
-    <div class="row">
-      <label>Land</label>
-      <select name="land" id="fld-land">
-        <option value="BE">BE</option>
-        <option value="NL">NL</option>
-      </select>
+    <div class="toolbar">
+      <input id="zoek" type="search" class="input" placeholder="Zoek naam of e-mail…" />
+      <button id="btn-nieuw" class="btn primary">+ Nieuwe klant</button>
     </div>
 
-    <!-- Gestructureerd adres -->
-    <div class="row"><label>Straat</label><input name="straat" id="fld-straat" /></div>
-    <div class="row"><label>Nr</label><input name="huisnr" id="fld-huisnr" style="max-width:12ch" /></div>
-    <div class="row"><label>Bus</label><input name="bus" id="fld-bus" style="max-width:10ch" /></div>
-    <div class="row"><label id="lbl-postcode">Postcode</label><input name="postcode" id="fld-postcode" /></div>
-    <div class="row"><label id="lbl-gemeente">Gemeente</label><input name="gemeente" id="fld-gemeente" /></div>
+    <div id="loader" class="muted">⏳ Laden…</div>
+    <div id="error" class="error" style="display:none;"></div>
 
-    <menu>
-      <button type="button" id="btn-cancel">Annuleren</button>
-      <button type="button" id="btn-save" class="btn primary">Bewaren</button>
-    </menu>
-  </form>
-</dialog>
-<!-- ──────────────────────────────────────────────────────────────── -->
+    <div class="table-wrap" id="wrap" style="display:none;">
+      <table id="tabel" class="table">
+        <thead>
+          <tr>
+            <th>Naam</th>
+            <th>Email</th>
+            <th>Telefoon</th>
+            <th>Honden</th>
+            <th class="right"></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer id="footer" class="footer"></footer>
+
+  <!-- MODAL -->
+  <dialog id="modal">
+    <form id="form">
+      <h3 id="modal-title">Klant</h3>
+      <input type="hidden" name="id" />
+
+      <div class="row"><label>Naam</label><input name="naam" placeholder="Tom Janssens" /></div>
+      <div class="row"><label>Voornaam</label><input name="voornaam" /></div>
+      <div class="row"><label>Achternaam</label><input name="achternaam" /></div>
+      <div class="row"><label>E-mail</label><input name="email" type="email" /></div>
+      <div class="row"><label>Telefoon</label><input name="telefoon" /></div>
+
+      <div class="row">
+        <label>Land</label>
+        <select name="land" id="fld-land">
+          <option value="BE">BE</option>
+          <option value="NL">NL</option>
+        </select>
+      </div>
+
+      <div class="row"><label>Straat</label><input name="straat" id="fld-straat" /></div>
+      <div class="row"><label>Nr</label><input name="huisnr" id="fld-huisnr" style="max-width:12ch" /></div>
+      <div class="row"><label>Bus</label><input name="bus" id="fld-bus" style="max-width:10ch" /></div>
+      <div class="row"><label id="lbl-postcode">Postcode</label><input name="postcode" id="fld-postcode" /></div>
+      <div class="row"><label id="lbl-gemeente">Gemeente</label><input name="gemeente" id="fld-gemeente" /></div>
+
+      <menu>
+        <button type="button" id="btn-cancel">Annuleren</button>
+        <button type="button" id="btn-save" class="btn primary">Bewaren</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <!-- Mount topbar/footer -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.SuperhondUI?.mount) {
+        SuperhondUI.mount({ title: 'Klanten', icon: '👤', version: 'v0.19.3', back: '/' });
+      }
+    });
+  </script>
 </body>
 </html>
