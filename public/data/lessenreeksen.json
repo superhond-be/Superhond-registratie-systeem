@@ -1,4 +1,4 @@
-// reeksen.json
-[{ "id":1, "naam":"Puppy Pack", "lesduurMinuten":60, "maxDeelnemers":8 }]
-// trainers.json [{ "id":1,"voornaam":"Jan","achternaam":"Peeters" }, ...]
-// locaties.json [{ "id":1,"naam":"Retie Terrein","adres":"..." }, ...]
+[
+  { "id": 1, "naam": "Puppy Pack", "type": "Groep", "thema": "Start" },
+  { "id": 2, "naam": "Basisgroep", "type": "Groep", "thema": "Vervolg" }
+]
