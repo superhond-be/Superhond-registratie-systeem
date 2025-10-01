@@ -1,48 +1,73 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Hond detail – Superhond</title>
-  <link rel="stylesheet" href="/ui/style.css">
+  <link rel="stylesheet" href="/css/style.css?v=0.19.2" />
+  <link rel="stylesheet" href="/css/superhond.css?v=0.19.2" />
 </head>
 <body>
+  <header id="topbar" class="topbar"></header>
+
   <main class="container">
     <h2 class="page-title">Hond detail</h2>
-    <div id="hond-detail" class="card">Bezig met laden…</div>
-    <p><a href="/" class="btn">← Terug naar dashboard</a></p>
+    <div id="box" class="card">⏳ Bezig met laden…</div>
+    <p><a href="/honden/" class="btn">← Terug naar honden</a></p>
   </main>
 
-  <script src="/ui/layout.js"></script>
+  <footer id="footer" class="footer"></footer>
+  <script src="/js/layout.js?v=0.19.2"></script>
   <script>
-    SuperhondUI.mount({ title:'Hond detail', icon:'🐶', back:'/' });
-
-    const params = new URLSearchParams(location.search);
-    const id = params.get("id");
-
-    async function load() {
-      try {
-        const res = await fetch("/data/honden.json");
-        const honden = await res.json();
-        const hond = honden.find(h => h.id === id);
-
-        if (!hond) {
-          document.getElementById("hond-detail").innerHTML = "<p>Hond niet gevonden.</p>";
-          return;
-        }
-
-        document.getElementById("hond-detail").innerHTML = `
-          <h3>${hond.naam}</h3>
-          <p><strong>Ras:</strong> ${hond.ras || "—"}</p>
-          <p><strong>Chip:</strong> ${hond.chip || "—"}</p>
-          <p><strong>Geboortedatum:</strong> ${hond.geboortedatum || "—"}</p>
-          <p><strong>Eigenaar:</strong> <a href="/klanten/detail.html?id=${hond.eigenaarId}">${hond.eigenaarNaam || hond.eigenaarId}</a></p>
-        `;
-      } catch (err) {
-        document.getElementById("hond-detail").innerHTML = "<p>Fout bij laden van hond.</p>";
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.SuperhondUI?.mount) {
+        SuperhondUI.mount({ title:'Hond detail', icon:'🐶', back:'/honden/' });
       }
+    });
+
+    const S = v => String(v ?? '');
+    const params = new URLSearchParams(location.search);
+    const id = params.get('id');
+    const target = document.getElementById('box');
+    const bust = () => '?t=' + Date.now();
+
+    async function fetchJson(tryUrls) {
+      for (const u of tryUrls) {
+        const r = await fetch(u + bust(), { cache:'no-store' });
+        if (r.ok) return r.json();
+      }
+      throw new Error('Geen data-bron bereikbaar ('+ tryUrls.join(', ') +')');
     }
 
+    async function load(){
+      if (!id) { target.innerHTML = '<p class="error">Geen <code>id</code> opgegeven.</p>'; return; }
+      try {
+        const [honden, klanten] = await Promise.all([
+          fetchJson(['/api/honden',  '/data/honden.json']),
+          fetchJson(['/api/klanten', '/data/klanten.json'])
+        ]);
+
+        const hond = (honden || []).find(h => String(h.id) === String(id));
+        if (!hond) { target.innerHTML = `<p class="error">Hond met id <code>${S(id)}</code> niet gevonden.</p>`; return; }
+
+        const eigenaar = (klanten || []).find(k => String(k.id) === String(hond.eigenaarId ?? hond.klantId ?? hond.ownerId));
+
+        target.innerHTML = `
+          <h3 style="margin-top:0">${S(hond.naam) || '(zonder naam)'}</h3>
+          <ul>
+            <li><strong>Ras:</strong> ${S(hond.ras) || '—'}</li>
+            <li><strong>Geboortedatum:</strong> ${S(hond.geboortedatum) || '—'}</li>
+            <li><strong>Chip:</strong> ${S(hond.chip) || '—'}</li>
+            <li><strong>Eigenaar:</strong>
+              ${eigenaar ? `<a href="/klanten/detail.html?id=${encodeURIComponent(eigenaar.id)}">${S(eigenaar.naam || (eigenaar.voornaam + ' ' + (eigenaar.achternaam||'')))}</a>` : '—'}
+            </li>
+          </ul>
+        `;
+      } catch (e) {
+        console.error(e);
+        target.innerHTML = `<p class="error">⚠️ Kon hondgegevens niet laden. ${S(e.message)}</p>`;
+      }
+    }
     load();
   </script>
 </body>
