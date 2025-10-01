@@ -1,17 +1,41 @@
-// lessen.json (sessies)
 [
   {
-    "id": 101,
+    "id": 1,
     "reeksId": 1,
     "naam": "Puppy Pack",
     "type": "Groep",
     "locatieId": 1,
     "thema": "Start",
-    "trainerId": 2,
-    "datum": "2025-09-20",
+    "trainerId": 1,
+    "datum": "2025-10-05",
     "start": "10:00",
-    "einde": "11:00",
     "capaciteit": 8,
+    "status": "actief"
+  },
+  {
+    "id": 2,
+    "reeksId": 1,
+    "naam": "Puppy Pack",
+    "type": "Groep",
+    "locatieId": 2,
+    "thema": "Start",
+    "trainerId": 2,
+    "datum": "2025-10-12",
+    "start": "09:30",
+    "capaciteit": 8,
+    "status": "actief"
+  },
+  {
+    "id": 3,
+    "reeksId": 2,
+    "naam": "Basisgroep",
+    "type": "Groep",
+    "locatieId": 1,
+    "thema": "Vervolg",
+    "trainerId": 3,
+    "datum": "2025-10-19",
+    "start": "11:00",
+    "capaciteit": 10,
     "status": "actief"
   }
 ]
