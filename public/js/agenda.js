@@ -1,17 +1,28 @@
-// /js/agenda.js — tabs + API→/data fallback, afgestemd op index.html
-(function(){
-  const tabs  = document.querySelectorAll('#agenda-tabs .tab');
-  const tbody = document.querySelector('#agenda-table tbody');
-  const wrap  = document.getElementById('agenda-table-wrap');
-  const errEl = document.getElementById('agenda-error');
+// Agenda — API→/data fallback, duidelijke fouten, tabs
+(function () {
+  const tabs  = document.querySelectorAll("#agenda-tabs .tab");
+  const table = document.getElementById("agenda-table");
+  const tbody = table?.querySelector("tbody");
+  const wrap  = document.getElementById("agenda-table-wrap");
+  const elErr = document.getElementById("agenda-error");
+  const elLoad= document.getElementById("agenda-loader");
+
+  const showError = (msg) => {
+    if (elLoad) elLoad.style.display = "none";
+    if (wrap)   wrap.style.display = "none";
+    if (elErr) { elErr.style.display = "block"; elErr.textContent = "⚠️ " + msg; }
+  };
+
+  if (!table || !tbody || !wrap || !elErr || !elLoad) {
+    return showError("Agenda lay-out ontbreekt (IDs kloppen niet).");
+  }
 
   const bust = `?t=${Date.now()}`;
   let items = [];
 
   const S = v => String(v ?? "");
-  const toDate = d => (d ? new Date(d) : null);
-
-  function sameWeek(d){
+  const toDate = d => d ? new Date(d) : null;
+  const sameWeek = (d) => {
     if (!d) return false;
     const now = new Date();
     const start = new Date(now);
@@ -21,15 +32,14 @@
     const end = new Date(start);
     end.setDate(start.getDate() + 7);
     return d >= start && d < end;
-  }
+  };
 
   function setActive(name){
-    tabs.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tab === name)));
+    tabs.forEach(b => b.classList.toggle("active", b.dataset.tab === name));
   }
 
   function rowHtml(it){
-    const d = S(it.datum || "");
-    const type = S(it.type || "les");
+    const type = it.type || "les";
     let url = "#";
     if (type === "les") url = `/lessen/detail.html?id=${it.id}`;
     else if (type === "reeks") url = `/lessenreeks/detail.html?id=${it.id}`;
@@ -37,76 +47,66 @@
 
     return `
       <tr>
-        <td>${d}</td>
         <td><a href="${url}">${S(it.naam || it.titel || "(zonder titel)")}</a></td>
-        <td>${type}</td>
+        <td>${S(it.datum || "")}</td>
+        <td>${S(it.locatie || "")}</td>
       </tr>`;
   }
 
   function render(kind="week"){
     let list = items.slice();
-
-    if (kind === "week") {
-      list = list.filter(x => sameWeek(toDate(x.datum)));
-    } else if (kind === "mededelingen") {
-      list = list.filter(x => (x.type || "les") === "mededeling");
-    }
-
+    if (kind === "week") list = list.filter(x => sameWeek(toDate(x.datum)));
+    else if (kind === "mededelingen") list = list.filter(x => (x.type || "les") === "mededeling");
     list.sort((a,b) => S(a.datum).localeCompare(S(b.datum)));
 
-    // auto naar "alles" als week leeg is
-    if (kind === "week" && list.length === 0) {
-      setActive("alles");
-      return render("alles");
-    }
+    if (kind === "week" && list.length === 0) { setActive("alles"); return render("alles"); }
 
     tbody.innerHTML = list.length ? list.map(rowHtml).join("")
       : `<tr><td colspan="3"><em>Geen items</em></td></tr>`;
 
-    wrap.hidden = false;
-    errEl.style.display = "none";
+    elLoad.style.display = "none";
+    wrap.style.display = "";
+    elErr.style.display = "none";
+  }
+
+  async function fetchJson(u){
+    const r = await fetch(u + bust, { cache: "no-store" });
+    if (!r.ok) throw new Error(`${u} → HTTP ${r.status}`);
+    return r.json();
   }
 
   async function loadAgenda(){
-    // 1) API
-    try{
-      const r = await fetch('/api/agenda' + bust, { cache:'no-store' });
-      if (!r.ok) throw new Error('API agenda → HTTP ' + r.status);
-      return await r.json();
-    }catch(e){
-      // 2) static demo
-      const r2 = await fetch('/data/agenda.json' + bust, { cache:'no-store' });
-      if (!r2.ok) throw new Error('/data/agenda.json → HTTP ' + r2.status);
-      return await r2.json();
+    const candidates = ["/api/agenda", "/data/agenda.json"];
+    const errors = [];
+    for (const u of candidates) {
+      try { return await fetchJson(u); }
+      catch (e) { errors.push(e.message); }
     }
+    throw new Error(errors.join(" | "));
   }
 
-  // Init
   (async () => {
-    try{
+    try {
       items = await loadAgenda();
-      setActive('week');
-      render('week');
-    }catch(e){
-      wrap.hidden = true;
-      errEl.style.display = 'block';
-      errEl.textContent = '⚠️ Agenda kon niet laden: ' + e.message;
+      if (!Array.isArray(items)) throw new Error("Agenda-data is geen array.");
+      setActive("week");
+      render("week");
+    } catch (e) {
+      showError("Kon agenda niet laden. " + e.message);
+      // Toon lege tabel zodat de lay-out duidelijk is
+      wrap.style.display = "";
+      tbody.innerHTML = `<tr><td colspan="3"><em>Geen agenda zichtbaar</em></td></tr>`;
     }
   })();
 
-  // Tab events
   tabs.forEach(btn => {
-    btn.addEventListener('click', () => {
-      setActive(btn.dataset.tab);
-      render(btn.dataset.tab);
-    });
+    btn.addEventListener("click", () => { setActive(btn.dataset.tab); render(btn.dataset.tab); });
   });
 
-  // Watchdog: als er na 3s geen rijen zijn en geen fout, toon hint
+  // Watchdog: na 3s nog steeds loader? Toon hint.
   setTimeout(() => {
-    if (wrap.hidden && errEl.style.display !== 'block') {
-      errEl.style.display = 'block';
-      errEl.textContent = '⚠️ Geen agenda zichtbaar. Controleer of /data/agenda.json bestaat en correcte datums bevat.';
+    if (elLoad.style.display !== "none") {
+      showError("Geen reactie van agenda. Klopt het pad naar /js/agenda.js en bestaat /data/agenda.json?");
     }
   }, 3000);
 })();
