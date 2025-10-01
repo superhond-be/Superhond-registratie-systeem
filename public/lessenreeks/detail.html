@@ -1,22 +1,27 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Reeks – Superhond</title>
-  <link rel="stylesheet" href="../ui/style.css?v=0.19.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reeksdetail – Superhond</title>
+
+  <!-- Centrale UI (standaard mappen) -->
+  <link rel="stylesheet" href="/css/style.css?v=0.19.0" />
+  <!-- Optioneel, als je die gebruikt -->
+  <link rel="stylesheet" href="/css/superhond.css?v=0.19.0" />
+
   <style>
     .meta{color:#6b7280}
     .grid{display:grid;grid-template-columns:1fr;gap:1rem}
-    @media (min-width: 800px){
-      .grid{grid-template-columns:1.2fr .8fr}
-    }
+    @media (min-width: 800px){ .grid{grid-template-columns:1.2fr .8fr} }
   </style>
 </head>
 <body>
+  <!-- Topbar -->
+  <header id="topbar" class="topbar"></header>
 
   <main class="container">
-    <h2 class="page-title">Reeksdetail</h2>
+    <h1 class="page-title">Reeksdetail</h1>
 
     <div id="reeks-box" class="card">
       <p>Laden…</p>
@@ -48,18 +53,25 @@
       </aside>
     </div>
 
-    <p style="margin-top:1rem"><a href="../index.html">← Terug naar dashboard</a></p>
+    <p style="margin-top:1rem"><a class="btn" href="/lessenreeks/">← Terug naar reeksen</a></p>
   </main>
 
-  <footer class="footer">
-    <small>&copy; 2025 Superhond</small>
-  </footer>
+  <!-- Footer -->
+  <footer id="footer" class="footer"></footer>
 
-  <script src="../ui/layout.js?v=0.19.0"></script>
+  <!-- Scripts -->
+  <script src="/js/layout.js?v=0.19.0"></script>
+
   <script type="module">
-    import { loadAll, indexById, humanDate, timeRange } from "../js/data.js?v=0.19.0";
+    import { loadAll, indexById, humanDate, timeRange } from "/js/data.js?v=0.19.0";
 
-    // Query param helper
+    // UI-mount (topbar/footer)
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.SuperhondUI?.mount) {
+        SuperhondUI.mount({ title:'Reeksdetail', icon:'📦', back:'/lessenreeks/' });
+      }
+    });
+
     const params = new URLSearchParams(location.search);
     const reeksId = params.get("id");
 
@@ -71,8 +83,8 @@
 
     function sortByDateTime(a,b){
       // verwacht: les.datum = "YYYY-MM-DD" of ISO; starttijd "HH:MM"
-      const da = new Date((a.datum?.length<=10 ? a.datum+"T" : a.datum) + (a.starttijd? a.starttijd: "00:00"));
-      const db = new Date((b.datum?.length<=10 ? b.datum+"T" : b.datum) + (b.starttijd? b.starttijd: "00:00"));
+      const da = new Date((a.datum?.length<=10 ? a.datum+"T" : a.datum) + (a.starttijd ? a.starttijd : "00:00"));
+      const db = new Date((b.datum?.length<=10 ? b.datum+"T" : b.datum) + (b.starttijd ? b.starttijd : "00:00"));
       return da - db;
     }
 
@@ -82,60 +94,66 @@
         return;
       }
 
-      const all = await loadAll();
-      const reeksenById  = indexById(all.reeksen);
-      const trainersById = indexById(all.trainers);
-      const locatiesById = indexById(all.locaties);
+      try {
+        const all = await loadAll(); // { reeksen, lessen, trainers, locaties }
 
-      const reeks = reeksenById[reeksId];
-      if (!reeks) {
-        box.innerHTML = `<p class="error">Reeks met id <code>${reeksId}</code> niet gevonden.</p>`;
-        return;
-      }
+        const reeksenById  = indexById(all.reeksen);
+        const trainersById = indexById(all.trainers);
+        const locatiesById = indexById(all.locaties);
 
-      // Header/detail
-      box.innerHTML = `
-        <h3 style="margin-top:0">${reeks.naam || "Onbenoemde reeks"}</h3>
-        <ul>
-          ${reeks.type ? `<li><strong>Type:</strong> ${reeks.type}</li>` : ""}
-          ${reeks.thema ? `<li><strong>Thema:</strong> ${reeks.thema}</li>` : ""}
-          ${typeof reeks.aantalStrippen === "number" ? `<li><strong>Strippen:</strong> ${reeks.aantalStrippen}</li>` : ""}
-          ${typeof reeks.maxDeelnemers === "number" ? `<li><strong>Max deelnemers:</strong> ${reeks.maxDeelnemers}</li>` : ""}
-          ${typeof reeks.lesduurMinuten === "number" ? `<li><strong>Lesduur:</strong> ${reeks.lesduurMinuten} min</li>` : ""}
-          ${reeks.geldigheidsduurWeken ? `<li><strong>Geldigheidsduur:</strong> ${reeks.geldigheidsduurWeken} weken</li>` : ""}
-          ${typeof reeks.prijsExcl === "number" ? `<li><strong>Prijs (excl.):</strong> € ${reeks.prijsExcl.toFixed(2)}</li>` : ""}
-          ${typeof reeks.status === "string" ? `<li><strong>Status:</strong> ${reeks.status}</li>` : ""}
-        </ul>
-      `;
+        const reeks = reeksenById[reeksId];
+        if (!reeks) {
+          box.innerHTML = `<p class="error">Reeks met id <code>${reeksId}</code> niet gevonden.</p>`;
+          return;
+        }
 
-      // Notities/omschrijving
-      notes.textContent = reeks.omschrijving?.trim() || "Geen extra notities.";
+        // Header/detail
+        box.innerHTML = `
+          <h3 style="margin-top:0">${reeks.naam || "Onbenoemde reeks"}</h3>
+          <ul>
+            ${reeks.type ? `<li><strong>Type:</strong> ${reeks.type}</li>` : ""}
+            ${reeks.thema ? `<li><strong>Thema:</strong> ${reeks.thema}</li>` : ""}
+            ${typeof reeks.aantalStrippen === "number" ? `<li><strong>Strippen:</strong> ${reeks.aantalStrippen}</li>` : ""}
+            ${typeof reeks.maxDeelnemers === "number" ? `<li><strong>Max deelnemers:</strong> ${reeks.maxDeelnemers}</li>` : ""}
+            ${typeof reeks.lesduurMinuten === "number" ? `<li><strong>Lesduur:</strong> ${reeks.lesduurMinuten} min</li>` : ""}
+            ${reeks.geldigheidsduurWeken ? `<li><strong>Geldigheidsduur:</strong> ${reeks.geldigheidsduurWeken} weken</li>` : ""}
+            ${typeof reeks.prijsExcl === "number" ? `<li><strong>Prijs (excl.):</strong> € ${reeks.prijsExcl.toFixed(2)}</li>` : ""}
+            ${typeof reeks.status === "string" ? `<li><strong>Status:</strong> ${reeks.status}</li>` : ""}
+          </ul>
+        `;
 
-      // Lessen behorend tot deze reeks
-      const rows = (all.lessen || [])
-        .filter(l => String(l.reeksId) === String(reeksId))
-        .sort(sortByDateTime)
-        .map(l => {
-          const tr  = trainersById[l.trainerId];
-          const loc = locatiesById[l.locatieId];
-          return `
-            <tr>
-              <td>${humanDate(l.datum)}</td>
-              <td>${timeRange(l.starttijd, l.eindtijd)}</td>
-              <td>${tr ? tr.voornaam + " " + tr.achternaam : "—"}</td>
-              <td>${loc ? loc.naam : "—"}</td>
-              <td><a href="../lessen/detail.html?id=${encodeURIComponent(l.id)}">Open</a></td>
-            </tr>
-          `;
-        });
+        // Notities/omschrijving
+        notes.textContent = (reeks.omschrijving || "").trim() || "Geen extra notities.";
 
-      if (rows.length) {
-        tbody.innerHTML = rows.join("");
-        wrap.hidden = false;
-        empty.hidden = true;
-      } else {
-        wrap.hidden = true;
-        empty.hidden = false;
+        // Lessen behorend tot deze reeks
+        const rows = (all.lessen || [])
+          .filter(l => String(l.reeksId) === String(reeksId))
+          .sort(sortByDateTime)
+          .map(l => {
+            const tr  = trainersById[l.trainerId];
+            const loc = locatiesById[l.locatieId];
+            return `
+              <tr>
+                <td>${humanDate(l.datum)}</td>
+                <td>${timeRange(l.starttijd, l.eindtijd)}</td>
+                <td>${tr ? `${tr.voornaam ?? ""} ${tr.achternaam ?? ""}`.trim() : "—"}</td>
+                <td>${loc ? loc.naam : "—"}</td>
+                <td><a class="btn btn-xs" href="/lessen/detail.html?id=${encodeURIComponent(l.id)}">Open</a></td>
+              </tr>
+            `;
+          });
+
+        if (rows.length) {
+          tbody.innerHTML = rows.join("");
+          wrap.hidden = false;
+          empty.hidden = true;
+        } else {
+          wrap.hidden = true;
+          empty.hidden = false;
+        }
+      } catch (e) {
+        console.error(e);
+        box.innerHTML = `<p class="error">Kon reeksen/lessen niet laden.</p>`;
       }
     })();
   </script>
