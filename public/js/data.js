@@ -1,49 +1,54 @@
-// /js/data.js
-const CANDIDATES = (p) => [p, `.${p}`, `..${p}`]; // root & submap fallback
-const bust = () => `cb=${Date.now().toString(36)}`;
+// /js/data.js — helpers om demo-data of API te laden voor reeksen/lessen/trainers/locaties
 
-async function loadJson(path) {
-  let lastErr;
-  for (const u of CANDIDATES(path)) {
+const BUST = () => `?t=${Date.now()}`;
+
+async function fetchJson(candidates) {
+  const errors = [];
+  for (const url of candidates) {
     try {
-      const res = await fetch(`${u}?${bust()}`, { cache: 'no-store' });
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-      return await res.json();
-    } catch (e) { lastErr = e; }
+      const r = await fetch(url + BUST(), { cache: "no-store" });
+      if (!r.ok) throw new Error(`${url} → HTTP ${r.status}`);
+      return await r.json();
+    } catch (e) { errors.push(e.message); }
   }
-  // Bestaat niet? Geef lege array terug (zodat de UI blijft werken).
-  console.warn(`Kon ${path} niet laden:`, lastErr);
+  // Laatste redmiddel: lege lijst
+  console.warn("[data] geen bron bereikbaar:", errors.join(" | "));
   return [];
 }
 
 export async function loadAll() {
-  const [lessen, reeksen, trainers, locaties, mededelingen] = await Promise.all([
-    loadJson('/data/lessen.json'),
-    loadJson('/data/lessenreeksen.json'),
-    loadJson('/data/trainers.json'),
-    loadJson('/data/locaties.json'),
-    loadJson('/data/mededelingen.json'),
+  // 1) probeer API; 2) fallback naar /data/*.json
+  const [reeksen, lessen, trainers, locaties] = await Promise.all([
+    fetchJson(["/api/lessenreeksen", "/data/lessenreeksen.json"]),
+    fetchJson(["/api/lessen",        "/data/lessen.json"]),
+    fetchJson(["/api/trainers",      "/data/trainers.json"]),
+    fetchJson(["/api/locaties",      "/data/locaties.json"]),
   ]);
 
-  return { lessen, reeksen, trainers, locaties, mededelingen };
+  return {
+    reeksen: Array.isArray(reeksen) ? reeksen : [],
+    lessen: Array.isArray(lessen) ? lessen : [],
+    trainers: Array.isArray(trainers) ? trainers : [],
+    locaties: Array.isArray(locaties) ? locaties : []
+  };
 }
 
 export function indexById(arr) {
-  const map = {};
-  for (const x of arr || []) map[String(x.id)] = x;
+  const map = Object.create(null);
+  (arr || []).forEach(x => { if (x && x.id != null) map[String(x.id)] = x; });
   return map;
 }
 
-export function humanDate(isoLike) {
-  if (!isoLike) return '';
-  // Sta zowel "2025-10-02" als volledige ISO toe
-  const d = new Date(isoLike.length <= 10 ? `${isoLike}T00:00:00` : isoLike);
-  if (isNaN(d)) return isoLike;
-  return d.toLocaleDateString('nl-BE', { weekday: 'short', day: '2-digit', month: 'short' });
+export function humanDate(s) {
+  if (!s) return "—";
+  try {
+    const d = new Date(s.length <= 10 ? s + "T00:00:00" : s);
+    return d.toLocaleDateString("nl-BE", { weekday:"short", day:"2-digit", month:"2-digit", year:"numeric" });
+  } catch { return s; }
 }
 
 export function timeRange(start, end) {
-  if (!start && !end) return '';
-  const fmt = (t) => (t?.length === 5 ? t : (t || '')).slice(0,5); // "19:00"
-  return [fmt(start), fmt(end)].filter(Boolean).join('–');
+  const s = start || ""; const e = end || "";
+  if (!s && !e) return "—";
+  return [s, e].filter(Boolean).join("–");
 }
