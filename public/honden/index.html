@@ -6,93 +6,103 @@
   <title>Honden</title>
 
   <!-- Centrale UI (standaard mappen) -->
-  <link rel="stylesheet" href="/css/style.css" />
-  <!-- Optioneel, als je die gebruikt -->
-  <link rel="stylesheet" href="/css/superhond.css" />
+  <link rel="stylesheet" href="/css/style.css?v=0.19.3" />
+  <link rel="stylesheet" href="/css/superhond.css?v=0.19.3" />
 
   <!-- Layout (topbar/footer + versie/buildtijd) -->
-  <script src="/js/layout.js" defer></script>
+  <script src="/js/layout.js?v=0.19.3" defer></script>
 
   <!-- Pagina-logic (absoluut pad voorkomt path-issues) -->
   <script type="module" src="/honden/index.js" defer></script>
 </head>
 <body>
-<header id="topbar" class="topbar"></header>
+  <!-- Topbar -->
+  <header id="topbar" class="topbar"></header>
 
-<main>
-  <h1>Honden</h1>
+  <main class="container">
+    <h1 class="page-title">Honden</h1>
 
-  <p><a class="btn" href="/">⬅️ Terug naar dashboard</a></p>
+    <p><a class="btn" href="/">⬅️ Terug naar dashboard</a></p>
 
-  <!-- Toolbar -->
-  <div class="toolbar">
-    <input id="zoek" type="search" placeholder="Zoek hond of ras…" />
-    <select id="ownerFilter">
-      <option value="">— Filter op eigenaar —</option>
-    </select>
-    <button id="btn-nieuw" class="btn primary">+ Nieuwe hond</button>
-  </div>
-
-  <!-- Loader + fouten -->
-  <div id="loader">⏳ Laden…</div>
-  <div id="error" style="display:none;"></div>
-
-  <!-- Tabel (card wrapper voor nette stijl) -->
-  <div class="table-wrap" id="wrap" style="display:none;">
-    <table id="tabel">
-      <thead>
-        <tr>
-          <th>Naam</th>
-          <th>Ras</th>
-          <th>Geboortedatum</th>
-          <th>Eigenaar</th>
-          <th class="right"></th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </div>
-</main>
-
-<footer id="footer"></footer>
-
-<!-- Modal: iPad/Safari-proof (expliciete knoppen) -->
-<dialog id="modal">
-  <form id="form">
-    <h3 id="modal-title">Hond</h3>
-
-    <input type="hidden" name="id" />
-
-    <div class="row">
-      <label>Naam</label>
-      <input name="naam" required />
+    <!-- Toolbar -->
+    <div class="toolbar" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+      <input id="zoek" class="input" type="search" placeholder="Zoek hond of ras…" />
+      <select id="ownerFilter" class="select">
+        <option value="">— Filter op eigenaar —</option>
+      </select>
+      <button id="btn-nieuw" class="btn primary">+ Nieuwe hond</button>
     </div>
 
-    <div class="row">
-      <label>Ras</label>
-      <input name="ras" />
-    </div>
+    <!-- Loader + fouten -->
+    <div id="loader" class="muted">⏳ Laden…</div>
+    <div id="error" class="error" style="display:none;"></div>
 
-    <div class="row">
-      <label>Geboortedatum</label>
-      <input name="geboortedatum" type="date" />
+    <!-- Tabel -->
+    <div class="table-wrap" id="wrap" style="display:none;">
+      <table id="tabel" class="table">
+        <thead>
+          <tr>
+            <th>Naam</th>
+            <th>Ras</th>
+            <th>Geboortedatum</th>
+            <th>Eigenaar</th>
+            <th class="right"></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </div>
+  </main>
 
-    <div class="row">
-      <label>Chip</label>
-      <input name="chip" />
-    </div>
+  <!-- Footer -->
+  <footer id="footer" class="footer"></footer>
 
-    <div class="row">
-      <label>Eigenaar</label>
-      <select name="eigenaarId" id="sel-eigenaar" required></select>
-    </div>
+  <!-- Modal: iPad/Safari-proof (expliciete knoppen) -->
+  <dialog id="modal">
+    <form id="form">
+      <h3 id="modal-title">Hond</h3>
 
-    <menu>
-      <button type="button" id="btn-cancel">Annuleren</button>
-      <button type="button" id="btn-save" class="btn primary">Bewaren</button>
-    </menu>
-  </form>
-</dialog>
+      <input type="hidden" name="id" />
+
+      <div class="row">
+        <label>Naam</label>
+        <input name="naam" required />
+      </div>
+
+      <div class="row">
+        <label>Ras</label>
+        <input name="ras" />
+      </div>
+
+      <div class="row">
+        <label>Geboortedatum</label>
+        <input name="geboortedatum" type="date" />
+      </div>
+
+      <div class="row">
+        <label>Chip</label>
+        <input name="chip" />
+      </div>
+
+      <div class="row">
+        <label>Eigenaar</label>
+        <select name="eigenaarId" id="sel-eigenaar" required></select>
+      </div>
+
+      <menu>
+        <button type="button" id="btn-cancel">Annuleren</button>
+        <button type="button" id="btn-save" class="btn primary">Bewaren</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <!-- Mount topbar/footer -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.SuperhondUI?.mount) {
+        SuperhondUI.mount({ title: 'Honden', icon: '🐶', version: 'v0.19.3', back: '/' });
+      }
+    });
+  </script>
 </body>
 </html>
