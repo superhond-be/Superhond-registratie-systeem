@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Lessenbeheer – Superhond</title>
 
-  <link rel="stylesheet" href="/css/style.css?v=0.19.7" />
-  <script src="/js/layout.js?v=0.19.7" defer></script>
-  <script type="module" src="/js/lessen.beheer.js?v=0.19.7" defer></script>
+  <link rel="stylesheet" href="/css/style.css?v=0.19.8" />
+  <script src="/js/layout.js?v=0.19.8" defer></script>
+  <script type="module" src="/js/lessen.beheer.js?v=0.19.8" defer></script>
 </head>
 <body>
 <header id="topbar" class="topbar"></header>
@@ -24,6 +24,10 @@
 
       <button id="btn-export" class="btn">⬇︎ Export JSON</button>
       <button id="btn-agenda" class="btn">📅 Export agenda.json</button>
+
+      <!-- NIEUW: globale generator-knop -->
+      <button id="btn-reeks-gen" class="btn">♻️ Genereer uit reeks</button>
+
       <label class="btn">
         ⬆︎ Import JSON <input type="file" id="file-import" accept="application/json" hidden>
       </label>
@@ -44,16 +48,43 @@
           <th>Start</th>
           <th>Cap.</th>
           <th class="right">Acties</th>
-          <th class="right">Genereer</th> <!-- nieuw -->
+          <th class="right">Genereer</th>
         </tr>
       </thead>
       <tbody><!-- gevuld via JS --></tbody>
-      <tbody id="tbody-lessen"></tbody>
     </table>
   </div>
 </main>
 
 <footer id="footer" class="footer"></footer>
+
+<!-- NIEUW: lichtgewicht dialoog voor genereren op basis van een reeks -->
+<dialog id="dlg-reeks">
+  <form id="form-reeks" method="dialog" class="card" style="min-width:min(92vw,520px)">
+    <h3 style="margin-top:0">Genereer lessen uit reeks</h3>
+
+    <div class="row">
+      <label>Reeks</label>
+      <select id="sel-reeks" class="input" required></select>
+    </div>
+
+    <div class="row">
+      <label>Starttijd (HH:MM)</label>
+      <input id="regen-start" class="input" type="time" value="10:00" required>
+    </div>
+
+    <div class="row">
+      <label><input id="regen-clear" type="checkbox" checked> Bestaande lessen van deze reeks eerst verwijderen</label>
+    </div>
+
+    <menu style="display:flex;gap:.5rem;justify-content:flex-end">
+      <button type="submit" class="btn primary">Genereer</button>
+      <button type="button" id="regen-cancel" class="btn">Annuleren</button>
+    </menu>
+
+    <p id="regen-msg" class="muted" style="margin:.5rem 0 0"></p>
+  </form>
+</dialog>
 
 <script>
   window.addEventListener('DOMContentLoaded', ()=>{
