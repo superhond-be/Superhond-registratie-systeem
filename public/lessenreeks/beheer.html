@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lessenpakketten – Superhond</title>
+  <link rel="stylesheet" href="/css/style.css?v=0.19.8" />
+  <script src="/js/layout.js?v=0.19.8" defer></script>
+  <script type="module" src="/pakketten/beheer.js?v=0.19.8" defer></script>
+</head>
+<body>
+<header id="topbar" class="topbar"></header>
+
+<main class="container">
+  <h1 class="page-title">Lessenpakketten</h1>
+
+  <div class="card" style="margin-bottom:.75rem">
+    <div class="toolbar" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+      <button id="btn-add" class="btn primary">+ Pakket</button>
+      <span class="muted" id="total"></span>
+      <span style="flex:1 1 auto"></span>
+      <a class="btn" href="/">→ Dashboard</a>
+    </div>
+  </div>
+
+  <div class="table-wrap card">
+    <table class="table" id="tbl">
+      <thead>
+        <tr>
+          <th>Klas</th>
+          <th>Naam</th>
+          <th>Type</th>
+          <th>Thema</th>
+          <th>Strippen</th>
+          <th>Max</th>
+          <th>Lesduur (min)</th>
+          <th>Geldigheid (wkn)</th>
+          <th>Prijs excl</th>
+          <th>Status</th>
+          <th class="right">Acties</th>
+        </tr>
+      </thead>
+      <tbody><!-- JS --></tbody>
+    </table>
+  </div>
+</main>
+
+<footer id="footer" class="footer"></footer>
+<script>
+  window.addEventListener('DOMContentLoaded', ()=>{
+    SuperhondUI.mount({ title:'Superhond — Pakketten', icon:'🎫', back:'/' });
+  });
+</script>
+</body>
+</html>
