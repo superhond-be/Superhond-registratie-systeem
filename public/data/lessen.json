@@ -1,26 +1,17 @@
+// lessen.json (sessies)
 [
   {
     "id": 101,
     "reeksId": 1,
-    "naam": "Puppycursus – les 1",
-    "datum": "2025-10-08",
-    "starttijd": "10:00",
-    "eindtijd": "11:00",
-    "trainerId": 1,
+    "naam": "Puppy Pack",
+    "type": "Groep",
     "locatieId": 1,
-    "prijs": 25,
-    "credits": 1
-  },
-  {
-    "id": 102,
-    "reeksId": 1,
-    "naam": "Puppycursus – les 2",
-    "datum": "2025-10-15",
-    "starttijd": "10:00",
-    "eindtijd": "11:00",
-    "trainerId": 1,
-    "locatieId": 1,
-    "prijs": 25,
-    "credits": 1
+    "thema": "Start",
+    "trainerId": 2,
+    "datum": "2025-09-20",
+    "start": "10:00",
+    "einde": "11:00",
+    "capaciteit": 8,
+    "status": "actief"
   }
 ]
