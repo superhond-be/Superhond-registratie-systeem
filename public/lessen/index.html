@@ -2,191 +2,45 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lessen – Superhond</title>
-
-  <!-- Centrale UI (standaard mappen) -->
-  <link rel="stylesheet" href="/css/style.css?v=0.19.0" />
-  <!-- Optioneel, als je die gebruikt -->
-  <link rel="stylesheet" href="/css/superhond.css?v=0.19.0" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Superhond — Lessenmodule</title>
+  <link rel="stylesheet" href="/css/style.css?v=0.20.0" />
+  <style>
+    .pilltabs{display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0 1rem}
+    .pilltabs .pill{padding:.45rem .8rem;border:1px solid var(--border,#e5e7eb);border-radius:999px;background:#fff;cursor:pointer}
+    .pill[aria-current="page"]{background:#ffe082;border-color:#ffd54f;font-weight:600}
+    .muted{color:#6b7280}
+  </style>
+  <script src="/js/layout.js" defer></script>
+  <script type="module" src="/js/lessen.tabs.js" defer></script>
 </head>
 <body>
+<header id="topbar" class="topbar"></header>
 
-  <!-- Topbar hook (gele balk) -->
-  <header id="topbar" class="topbar"></header>
+<main class="container">
+  <h1 class="page-title">Lessenmodule</h1>
 
-  <main class="container">
-    <h1 class="page-title">Lessen</h1>
-    <p><a class="btn" href="/">⬅️ Terug naar dashboard</a></p>
+  <!-- tabs -->
+  <nav class="pilltabs" id="tabs">
+    <button class="pill" data-tab="names" aria-current="page">Namen</button>
+    <button class="pill" data-tab="types">Types</button>
+    <button class="pill" data-tab="locations">Locaties</button>
+    <button class="pill" data-tab="themes">Thema’s</button>
+    <button class="pill" data-tab="trainers">Trainers</button>
+    <button class="pill" data-tab="beheer">Beheer</button>
+    <span style="margin-left:auto"></span>
+    <a class="btn" href="/">→ Dashboard</a>
+  </nav>
 
-    <section class="card">
-      <h2 style="margin-top:0">Overzicht</h2>
+  <!-- content host -->
+  <section id="view" class="card"><p class="muted">Laden…</p></section>
+</main>
 
-      <div class="toolbar" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-        <input id="q" class="input" type="search" placeholder="Zoek (naam/locatie/trainer)…" />
-        <select id="loc" class="select">
-          <option value="ALL">Alle locaties</option>
-        </select>
-        <select id="trainer" class="select">
-          <option value="ALL">Alle trainers</option>
-        </select>
-        <span class="badge" id="lessen-count">0 lessen</span>
-      </div>
-
-      <div class="table-wrap" id="tbl-wrap" style="display:none;">
-        <table id="lessen-tbl">
-          <thead>
-            <tr>
-              <th>Naam</th>
-              <th>Type</th>
-              <th>Locatie</th>
-              <th>Trainer</th>
-              <th>Start</th>
-              <th>Prijs</th>
-              <th>Credits</th>
-              <th>Acties</th>
-            </tr>
-          </thead>
-          <tbody id="lessen-tbody"></tbody>
-        </table>
-      </div>
-
-      <div class="muted" id="lessen-loader">⏳ Laden…</div>
-      <p class="error" id="lessen-error" style="display:none;"></p>
-    </section>
-  </main>
-
-  <!-- Footer hook (versie/buildtijd) -->
-  <footer id="footer" class="footer"></footer>
-
-  <!-- Scripts -->
-  <script src="/js/layout.js?v=0.19.0" defer></script>
-
-  <script>
-    // Hulptjes
-    const S = v => String(v ?? '');
-    const euro = v => (v == null || v === '') ? '—' : `€ ${Number(v).toFixed(2)}`;
-    function debounce(fn, ms=300){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
-
-    const tbody  = document.getElementById('lessen-tbody');
-    const wrap   = document.getElementById('tbl-wrap');
-    const count  = document.getElementById('lessen-count');
-    const loader = document.getElementById('lessen-loader');
-    const errorEl= document.getElementById('lessen-error');
-    const qEl    = document.getElementById('q');
-    const locEl  = document.getElementById('loc');
-    const trEl   = document.getElementById('trainer');
-
-    let ALL = []; // volledige lijst
-    let LOCS = []; let TRAINERS = [];
-
-    function uniqueSorted(arr){
-      return [...new Set(arr.filter(Boolean).map(S))].sort((a,b)=>a.localeCompare(b));
-    }
-
-    function fillFilters(){
-      LOCS = uniqueSorted(ALL.map(x => x.locatie));
-      TRAINERS = uniqueSorted(ALL.map(x => x.trainer));
-
-      locEl.innerHTML = `<option value="ALL">Alle locaties</option>` +
-                        LOCS.map(v=>`<option value="${v}">${v}</option>`).join('');
-      trEl.innerHTML  = `<option value="ALL">Alle trainers</option>` +
-                        TRAINERS.map(v=>`<option value="${v}">${v}</option>`).join('');
-    }
-
-    function rowHtml(r){
-      const url = `/lessen/detail.html?id=${encodeURIComponent(r.id)}`;
-      return `
-        <tr>
-          <td><a href="${url}">${S(r.naam)}</a></td>
-          <td>${S(r.type || '—')}</td>
-          <td>${S(r.locatie || '—')}</td>
-          <td>${S(r.trainer || '—')}</td>
-          <td>${S(r.start || r.datum || '—')}</td>
-          <td>${euro(r.prijs)}</td>
-          <td>${S(r.credits ?? '—')}</td>
-          <td class="nowrap">
-            <a class="btn btn-xs" href="${url}" title="Detail">👁️</a>
-          </td>
-        </tr>`;
-    }
-
-    function render(){
-      const q = S(qEl.value).trim().toLowerCase();
-      const loc = locEl.value;
-      const tr  = trEl.value;
-
-      const list = ALL
-        .filter(r => loc === 'ALL' || S(r.locatie) === loc)
-        .filter(r => tr  === 'ALL' || S(r.trainer) === tr)
-        .filter(r => !q || (
-          S(r.naam).toLowerCase().includes(q) ||
-          S(r.locatie).toLowerCase().includes(q) ||
-          S(r.trainer).toLowerCase().includes(q)
-        ))
-        .sort((a,b)=>S(a.naam).localeCompare(S(b.naam)));
-
-      tbody.innerHTML = list.map(rowHtml).join('') || `
-        <tr><td colspan="8"><em>Geen lessen gevonden.</em></td></tr>`;
-      count.textContent = `${list.length} ${list.length===1?'les':'lessen'}`;
-      loader.style.display = 'none';
-      errorEl.style.display = 'none';
-      wrap.style.display = '';
-    }
-
-    async function load(){
-      const bust = '?t=' + Date.now();
-      try{
-        loader.style.display = 'block'; wrap.style.display = 'none'; errorEl.style.display='none';
-
-        // 1) probeer API, 2) val terug op static demo
-        let data;
-        try{
-          const r = await fetch('/api/lessen' + bust, { cache:'no-store' });
-          if (!r.ok) throw new Error('API niet OK');
-          data = await r.json();
-        }catch{
-          const r2 = await fetch('/data/lessen.json' + bust, { cache:'no-store' });
-          if (!r2.ok) throw new Error('/data/lessen.json niet bereikbaar');
-          data = await r2.json();
-        }
-
-        if (!Array.isArray(data)) throw new Error('Onverwacht formaat (geen array).');
-
-        // normaliseer velden lichtjes
-        ALL = data.map(x => ({
-          id: x.id,
-          naam: x.naam ?? x.titel ?? '(zonder naam)',
-          type: x.type ?? x.categorie ?? '',
-          locatie: x.locatie ?? x.location ?? '',
-          trainer: x.trainer ?? x.coach ?? '',
-          start: x.start ?? x.datum ?? '',
-          prijs: x.prijs ?? x.price ?? '',
-          credits: x.credits ?? x.strippen ?? ''
-        }));
-
-        fillFilters();
-        render();
-      }catch(e){
-        console.error(e);
-        loader.style.display='none';
-        errorEl.style.display='block';
-        errorEl.textContent = '⚠️ Fout bij laden van lessen: ' + e.message;
-      }
-    }
-
-    // events
-    qEl.addEventListener('input', debounce(render, 250));
-    locEl.addEventListener('change', render);
-    trEl.addEventListener('change', render);
-
-    // init
-    document.addEventListener('DOMContentLoaded', () => {
-      if (window.SuperhondUI?.mount) {
-        SuperhondUI.mount({ title:'Lessen', icon:'📅', back:'/' });
-      }
-      load();
-    });
-  </script>
+<footer id="footer" class="footer"></footer>
+<script>
+  window.addEventListener('DOMContentLoaded',()=>{
+    SuperhondUI.mount({ title:'Superhond — Lessenmodule', icon:'📅', back:'/' });
+  });
+</script>
 </body>
 </html>
