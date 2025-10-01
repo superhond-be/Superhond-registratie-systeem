@@ -11,6 +11,60 @@
   --primary-ink:#fff;
   --accent:#f4c400; /* Superhond geel */
   --radius:12px;
+  /* Dashboard layout (sidebar + hoofdtegels) */
+:root{
+  --public-accent: #dbeafe;  /* lichtblauw */
+  --public-border: #93c5fd;
+  --admin-accent:  #fee2e2;  /* lichtrood */
+  --admin-border:  #fca5a5;
+}
+
+.dash-grid{
+  display:grid;
+  grid-template-columns: 280px 1fr;
+  gap:16px;
+}
+
+/* Sidebar (agenda) */
+.sidebar-title{ margin:0 0 .5rem; font-weight:700; }
+.tabs{ display:flex; gap:.5rem; flex-wrap:wrap; margin:.5rem 0 1rem; }
+.tab{ padding:.35rem .7rem; border:1px solid var(--border,#e5e7eb); border-radius:999px; background:#fff; cursor:pointer; }
+.tab.active,[aria-pressed="true"].tab{ background:var(--accent,#f4c400); border-color:#f4c400; font-weight:600; }
+.table.compact th,.table.compact td{ padding:.35rem .5rem; }
+
+/* Hoofdsecties */
+.section{ padding:16px; }
+.section-header{ display:flex; align-items:baseline; gap:10px; margin-bottom:10px; }
+.section-header h2{ margin:0; }
+.section-sub{ color:#6b7280; font-size:.95rem; }
+
+/* Sectiestijlen */
+.section--public{ border:1px solid var(--public-border); background: linear-gradient(0deg,#fff, #fff), var(--public-accent); }
+.section--admin{  border:1px solid var(--admin-border);  background: linear-gradient(0deg,#fff, #fff), var(--admin-accent); }
+
+/* Tegels */
+.tiles{
+  display:grid; gap:14px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+.tile{
+  display:flex; gap:12px; align-items:center;
+  padding:14px; border:1px solid var(--border,#e5e7eb);
+  border-radius:12px; background:#fff; text-decoration:none; color:inherit;
+}
+.tile:hover{ border-color:#d1d5db; transform:translateY(-1px); transition:.12s ease; }
+.tile-icon{ font-size:22px; line-height:1; }
+.tile-body{ display:grid; gap:2px; }
+.tile-title{ font-weight:700; }
+.tile-sub{ color:#6b7280; }
+
+/* Buttons */
+.btn.full{ display:block; width:100%; text-align:center; margin-top:12px; }
+
+/* Responsive */
+@media (max-width: 900px){
+  .dash-grid{ grid-template-columns: 1fr; }
+}
 }
 
 * { box-sizing: border-box; }
