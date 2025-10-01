@@ -1,70 +1,35 @@
-// js/layout.js
-(async function initLayout() {
-  // Topbar injectie (optioneel – laat zo als je dit al had)
-  const topbar = document.getElementById("topbar");
-  if (topbar) {
-    topbar.innerHTML = `
-      <div class="topbar-inner">
-        <div class="brand">🐶 Superhond</div>
-        <div class="version-pill" id="version-pill"></div>
-      </div>`;
-  }
+// Superhond layout (topbar + footer) — v0.19.x
+window.SuperhondUI = {
+  mount(opts = {}) {
+    const version = opts.version || "v0.19.x";
+    const appTitle = opts.title || "Superhond";
+    const icon = opts.icon || "🐶";
+    const isHome = !!opts.home;
+    const backHref = opts.back || "/";
 
-  // Version info laden (API → fallback naar static)
-  let info = null;
-  async function loadVersion() {
-    try {
-      const r = await fetch("/api/version", { cache: "no-store" });
-      if (!r.ok) throw new Error("api not ok");
-      info = await r.json();
-      info.apiOnline = true;
-    } catch {
-      const r2 = await fetch("/data/version.json", { cache: "no-store" });
-      info = await r2.json();
-      info.apiOnline = info.apiOnline ?? false;
+    // TOPBAR
+    const top = document.getElementById("topbar");
+    if (top) {
+      top.innerHTML = `
+        <div class="container" style="display:flex;align-items:center;gap:12px;min-height:56px">
+          ${isHome ? "" : `<a class="btn-back" href="${backHref}">← Terug</a>`}
+          <h1 class="brand" style="margin:0;font-size:20px;font-weight:800">${icon} ${appTitle}</h1>
+          <span class="version-badge" style="margin-left:auto">${version}</span>
+        </div>
+      `;
+      top.classList.add("topbar");
     }
-    return info;
-  }
 
-  function formatDate(isoLike) {
-    try {
-      const d = new Date(isoLike);
-      return d.toLocaleString("nl-BE", {
-        year: "numeric", month: "2-digit", day: "2-digit",
-        hour: "2-digit", minute: "2-digit"
-      });
-    } catch {
-      return isoLike; // fallback raw
+    // FOOTER
+    const foot = document.getElementById("footer");
+    if (foot) {
+      const builtAt = new Date().toLocaleString("nl-BE");
+      foot.innerHTML = `
+        <div class="container" style="color:#6b7280;padding:14px 16px;border-top:1px solid #e5e7eb">
+          © Superhond 2025 — ${version} (static) — ${builtAt}<br>
+          <span class="muted">API offline — static versie gebruikt</span>
+        </div>
+      `;
     }
   }
-
-  function renderFooter(info) {
-    const footer = document.getElementById("footer");
-    if (!footer) return;
-
-    const built = formatDate(info.builtAt);
-    const channel = info.channel ? ` (${info.channel})` : "";
-    const status = info.apiOnline
-      ? "API online"
-      : "API offline — static versie gebruikt";
-
-    footer.innerHTML = `
-      <div class="footer-inner">
-        <small>
-          © Superhond 2025 — v${info.version}${channel} — ${built}<br>
-          ${status}
-        </small>
-      </div>`;
-  }
-
-  function renderVersionPill(info) {
-    const pill = document.getElementById("version-pill");
-    if (!pill) return;
-    pill.textContent = `v${info.version}`;
-    pill.title = `Gebouwd: ${formatDate(info.builtAt)} • ${info.apiOnline ? "API online" : "API offline"}`;
-  }
-
-  const v = await loadVersion();
-  renderFooter(v);
-  renderVersionPill(v);
-})();
+};
