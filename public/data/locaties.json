@@ -1,12 +1,4 @@
 [
-  {
-    "id": 1,
-    "naam": "Terrein A",
-    "adres": "Kinschotseweg 1a, 2470 Retie"
-  },
-  {
-    "id": 2,
-    "naam": "Terrein B",
-    "adres": "Hovenstraat 4, 2470 Retie"
-  }
+  { "id": 1, "naam": "Retie Terrein" },
+  { "id": 2, "naam": "Dessel Sporthal" }
 ]
