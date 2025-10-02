@@ -1,7 +1,8 @@
 // /public/klassen/index.js
+// Klassen – laden (data + localStorage), zoeken, acties (bekijken/bewerken/verwijderen)
 (() => {
-  const $ = s => document.querySelector(s);
-  const S = v => String(v ?? '').trim();
+  const $  = s => document.querySelector(s);
+  const S  = v => String(v ?? '').trim();
 
   const els = {
     loader: $('#loader'),
@@ -11,98 +12,169 @@
     zoek:   $('#zoek'),
   };
 
+  // Topbar/footer mount
   document.addEventListener('DOMContentLoaded', () => {
     if (window.SuperhondUI?.mount) {
-      SuperhondUI.mount({ title:'Klassen', icon:'🏷️', back:'../dashboard/' });
+      SuperhondUI.mount({ title:'Klassen', icon:'📚', back:'../dashboard/' });
     }
   });
 
-  // Helpers
+  // --------------- Helpers ---------------
+  async function fetchJson(tryUrls){
+    for (const u of tryUrls){
+      try{
+        const url = u + (u.includes('?') ? '&' : '?') + 't=' + Date.now();
+        const r = await fetch(url, { cache:'no-store' });
+        if (r.ok) return r.json();
+      }catch(_){}
+    }
+    return null;
+  }
+
   function loadDB(){
-    try {
+    try{
       const raw = localStorage.getItem('superhond-db');
       const db  = raw ? JSON.parse(raw) : {};
-      db.classes = Array.isArray(db.classes) ? db.classes : [];
+      db.klassen = Array.isArray(db.klassen) ? db.klassen : [];
       return db;
-    }catch { return { classes: [] }; }
+    }catch{
+      return { klassen: [] };
+    }
   }
   function saveDB(db){
     localStorage.setItem('superhond-db', JSON.stringify(db));
   }
 
-  // Render rij
+  // Normaliseer klassen-records naar uniforme vorm
+  // {id, naam, type, thema, strippen, geldigheid_weken, status}
+  function normalizeKlassen(raw){
+    const arr =
+      Array.isArray(raw)            ? raw :
+      Array.isArray(raw?.klassen)   ? raw.klassen :
+      Array.isArray(raw?.items)     ? raw.items :
+      Array.isArray(raw?.data)      ? raw.data : [];
+
+    return arr.map(k => ({
+      id:                k.id ?? k.klasId ?? k.classId ?? null,
+      naam:              S(k.naam || k.name || ''),
+      type:              S(k.type || k.subnaam || ''),
+      thema:             S(k.thema || k.theme || ''),
+      strippen:          Number(k.strippen ?? k.aantal_strippen ?? k.strips ?? 0) || 0,
+      geldigheid_weken:  Number(k.geldigheid_weken ?? k.geldigheid ?? k.weken ?? 0) || 0,
+      status:            (S(k.status || '').toLowerCase() || 'actief')
+    }));
+  }
+
+  // Merge op id → lokale (bewerkte) klassen overschrijven externe demo
+  function mergeById(localRows = [], extRows = []){
+    const key = x => S(x.id) || S(x.naam);
+    const map = new Map(extRows.map(x => [key(x), x])); // extern eerst
+    for (const loc of localRows) map.set(key(loc), loc); // lokaal overschrijft
+    return [...map.values()];
+  }
+
+  // --------------- Render ---------------
+  let ALL_ROWS = [];
+
+  function statusBadge(s){
+    const t = (s || '').toLowerCase();
+    if (t === 'inactief') return '<span class="badge" style="background:#fee2e2;color:#991b1b">inactief</span>';
+    return '<span class="badge" style="background:#e8f5e9;color:#166534">actief</span>';
+  }
+
   function rowHTML(r){
+    const idEnc = r.id ? encodeURIComponent(r.id) : '';
     return `
-      <tr data-id="${S(r.id)}">
-        <td>${S(r.naam)}</td>
-        <td>${S(r.type)}</td>
-        <td>${S(r.thema)}</td>
+      <tr data-id="${r.id ? String(r.id).replaceAll('"','&quot;') : ''}">
+        <td>${r.id ? `<a href="./detail.html?id=${idEnc}">${escapeHTML(r.naam || '(zonder naam)')}</a>`
+                    : escapeHTML(r.naam || '(zonder naam)')}</td>
+        <td>${escapeHTML(r.type || '—')}</td>
+        <td>${escapeHTML(r.thema || '—')}</td>
         <td>${r.strippen || 0}</td>
-        <td>${r.geldigheidsduur || 0} wkn</td>
-        <td>${S(r.status)}</td>
+        <td>${r.geldigheid_weken || 0} w</td>
+        <td>${statusBadge(r.status)}</td>
         <td style="white-space:nowrap">
-          <a class="btn btn-xs" href="./detail.html?id=${encodeURIComponent(r.id)}">👁️</a>
-          <a class="btn btn-xs" href="./bewerken.html?id=${encodeURIComponent(r.id)}">✏️</a>
-          <button class="btn btn-xs" data-action="del" data-id="${S(r.id)}">🗑️</button>
+          ${r.id ? `
+            <a class="btn btn-xs" href="./detail.html?id=${idEnc}" title="Bekijken">👁️</a>
+            <a class="btn btn-xs" href="./bewerken.html?id=${idEnc}" title="Bewerken">✏️</a>
+            <button class="btn btn-xs" data-action="delete" data-id="${escapeHTML(r.id)}" title="Verwijderen">🗑️</button>
+          ` : ''}
         </td>
       </tr>
     `;
   }
 
-  function renderTable(rows){
-    els.tbody.innerHTML = rows.map(rowHTML).join('') || `<tr><td colspan="7" class="muted">Geen klassen gevonden.</td></tr>`;
-    els.wrap.style.display = '';
+  function escapeHTML(s=''){
+    return String(s)
+      .replaceAll('&','&amp;').replaceAll('<','&lt;')
+      .replaceAll('>','&gt;').replaceAll('"','&quot;')
+      .replaceAll("'",'&#39;');
+  }
+
+  function render(rows){
+    ALL_ROWS = rows.slice();
+    els.tbody.innerHTML = rows.map(rowHTML).join('');
+    els.wrap.style.display = rows.length ? '' : 'none';
   }
 
   function applySearch(all){
-    const q = S(els.zoek.value).toLowerCase();
+    const q = S(els.zoek?.value).toLowerCase();
     if (!q) return all;
     return all.filter(r =>
-      (r.naam||'').toLowerCase().includes(q) ||
-      (r.type||'').toLowerCase().includes(q) ||
-      (r.thema||'').toLowerCase().includes(q)
+      (r.naam || '').toLowerCase().includes(q) ||
+      (r.type || '').toLowerCase().includes(q) ||
+      (r.thema|| '').toLowerCase().includes(q)
     );
   }
 
-  function bindActions(all){
-    els.tbody.addEventListener('click', e => {
-      const btn = e.target.closest('[data-action="del"]');
+  function bindActions(){
+    els.tbody.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="delete"]');
       if (!btn) return;
       const id = btn.getAttribute('data-id');
       if (!id) return;
 
-      if (!confirm('Klas verwijderen?')) return;
+      if (!confirm('Deze klas verwijderen?')) return;
 
       const db = loadDB();
-      db.classes = db.classes.filter(c => String(c.id)!==String(id));
+      db.klassen = db.klassen.filter(k => String(k.id) !== String(id));
       saveDB(db);
 
-      const newRows = all.filter(c => String(c.id)!==String(id));
-      renderTable(applySearch(newRows));
+      const newRows = ALL_ROWS.filter(r => String(r.id) !== String(id));
+      render(applySearch(newRows));
     });
   }
 
+  // --------------- Init ---------------
   async function init(){
-    els.loader.style.display = '';
-    els.error.style.display  = 'none';
-    els.wrap.style.display   = 'none';
-
     try{
-      const db = loadDB();
-      const rows = db.classes.sort((a,b)=>S(a.naam).localeCompare(S(b.naam)));
+      els.loader.style.display = '';
+      els.error.style.display  = 'none';
+      els.wrap.style.display   = 'none';
 
-      renderTable(rows);
+      const [extRaw, db] = await Promise.all([
+        fetchJson(['../data/klassen.json','/data/klassen.json']),
+        Promise.resolve(loadDB())
+      ]);
+
+      const extRows = normalizeKlassen(extRaw);
+      const locRows = normalizeKlassen({ klassen: db.klassen });
+
+      const merged = mergeById(locRows, extRows)
+        .sort((a,b) => String(a.naam).localeCompare(String(b.naam)));
+
+      render(merged);
+
       els.loader.style.display = 'none';
+      els.wrap.style.display   = '';
 
-      els.zoek.addEventListener('input', () => {
-        renderTable(applySearch(rows));
-      });
-
-      bindActions(rows);
+      els.zoek?.addEventListener('input', () => render(applySearch(merged)));
+      bindActions();
     }catch(e){
+      console.error(e);
       els.loader.style.display = 'none';
-      els.error.textContent = '⚠️ Fout bij laden klassen: '+(e.message||e);
-      els.error.style.display = '';
+      els.error.style.display  = '';
+      els.error.textContent    = '⚠️ Kon klassen niet laden. ' + (e.message || e);
     }
   }
 
