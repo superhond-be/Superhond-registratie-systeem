@@ -1,35 +1,64 @@
-// Superhond layout (topbar + footer) — v0.19.x
-window.SuperhondUI = {
-  mount(opts = {}) {
-    const version = opts.version || "v0.19.x";
-    const appTitle = opts.title || "Superhond";
-    const icon = opts.icon || "🐶";
-    const isHome = !!opts.home;
-    const backHref = opts.back || "/";
+// Superhond layout (topbar/footer) – canonical home → /dashboard/
+(() => {
+  const HOME = '/dashboard/';
 
-    // TOPBAR
-    const top = document.getElementById("topbar");
+  function el(tag, attrs = {}, children = []) {
+    const n = document.createElement(tag);
+    Object.entries(attrs).forEach(([k, v]) => {
+      if (k === 'class') n.className = v;
+      else if (k === 'text') n.textContent = v;
+      else n.setAttribute(k, v);
+    });
+    (Array.isArray(children) ? children : [children]).filter(Boolean).forEach(c => n.appendChild(c));
+    return n;
+  }
+
+  function mount(opts = {}) {
+    const title = opts.title || 'Superhond';
+    const icon  = opts.icon  || '🐾';
+    const back  = opts.back  || HOME;
+
+    // Topbar
+    const top = document.getElementById('topbar');
     if (top) {
-      top.innerHTML = `
-        <div class="container" style="display:flex;align-items:center;gap:12px;min-height:56px">
-          ${isHome ? "" : `<a class="btn-back" href="${backHref}">← Terug</a>`}
-          <h1 class="brand" style="margin:0;font-size:20px;font-weight:800">${icon} ${appTitle}</h1>
-          <span class="version-badge" style="margin-left:auto">${version}</span>
-        </div>
-      `;
-      top.classList.add("topbar");
+      top.innerHTML = '';
+      const wrap = el('div', { class: 'container' });
+
+      // Terugknop (alleen tonen als we niet op HOME zitten of expliciet gevraagd)
+      if (back) {
+        wrap.appendChild(
+          el('a', { href: back, class: 'btn btn-back' }, el('span', { text: '← Terug' }))
+        );
+      }
+
+      // Brand (link altijd naar HOME)
+      wrap.appendChild(
+        el('a', { href: HOME, class: 'brand' }, el('span', { text: `${icon} Superhond` }))
+      );
+
+      // Versiebadge rechts
+      const badge = el('span', { class: 'badge-version', text: window.__APP_VERSION__ || 'v0.19.x' });
+      wrap.appendChild(badge);
+
+      top.appendChild(wrap);
     }
 
-    // FOOTER
-    const foot = document.getElementById("footer");
+    // Footer
+    const foot = document.getElementById('footer');
     if (foot) {
-      const builtAt = new Date().toLocaleString("nl-BE");
-      foot.innerHTML = `
-        <div class="container" style="color:#6b7280;padding:14px 16px;border-top:1px solid #e5e7eb">
-          © Superhond 2025 — ${version} (static) — ${builtAt}<br>
-          <span class="muted">API offline — static versie gebruikt</span>
-        </div>
-      `;
+      const now = new Date();
+      const ts  = now.toISOString().replace('T', ' ').slice(0, 19);
+      foot.innerHTML = '';
+      foot.appendChild(
+        el('div', { class: 'container' },
+          el('small', {
+            text: `© Superhond 2025 — v0.19.x (static) — ${ts}\nAPI offline — static versie gebruikt`
+          })
+        )
+      );
     }
   }
-};
+
+  // Expose
+  window.SuperhondUI = { mount };
+})();
