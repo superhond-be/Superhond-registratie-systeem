@@ -1,4 +1,4 @@
-// Agenda – robuuste loader + tabs + filtering
+// Agenda – robuuste loader + tabs + filtering (kalenderweek)
 (function () {
   const TABS = document.querySelectorAll('#agenda-tabs .tab');
   const loader = document.getElementById('agenda-loader');
@@ -63,13 +63,21 @@
     return `${date}, ${t1}`;
   }
 
+  // Kalenderweek: maandag 00:00 t/m zondag 23:59
   function isThisWeek(startISO) {
     const s = toDate(startISO);
     if (!s) return false;
+
     const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const end = new Date(start); end.setDate(end.getDate() + 7);
-    return s >= start && s < end;
+    // 0=zo,1=ma,... → we willen maandag als start
+    const day = (now.getDay() + 6) % 7;       // ma=0 ... zo=6
+    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    weekStart.setDate(weekStart.getDate() - day); // terug naar maandag 00:00
+
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);       // volgende maandag (exclusief)
+
+    return s >= weekStart && s < weekEnd;
   }
 
   function rowForLesson(item) {
