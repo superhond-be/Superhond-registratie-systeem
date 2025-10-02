@@ -9,7 +9,9 @@
       else if (k === 'text') n.textContent = v;
       else n.setAttribute(k, v);
     });
-    (Array.isArray(children) ? children : [children]).filter(Boolean).forEach(c => n.appendChild(c));
+    (Array.isArray(children) ? children : [children])
+      .filter(Boolean)
+      .forEach(c => n.appendChild(c));
     return n;
   }
 
@@ -18,14 +20,24 @@
     const icon  = opts.icon  || '🐾';
     const back  = opts.back  || HOME;
 
+    // 👉 Accentkleur bepalen
+    const isDashboard = location.pathname.replace(/\/+$/, '') === HOME.replace(/\/+$/, '');
+    if (!isDashboard) {
+      // subpagina = blauw
+      document.body.classList.add('subpage');
+    } else {
+      // dashboard = geel (zekerheidshalve)
+      document.body.classList.remove('subpage');
+    }
+
     // Topbar
     const top = document.getElementById('topbar');
     if (top) {
       top.innerHTML = '';
       const wrap = el('div', { class: 'container' });
 
-      // Terugknop (alleen tonen als we niet op HOME zitten of expliciet gevraagd)
-      if (back) {
+      // Terugknop (alleen tonen als back niet leeg is en niet HOME)
+      if (back && !isDashboard) {
         wrap.appendChild(
           el('a', { href: back, class: 'btn btn-back' }, el('span', { text: '← Terug' }))
         );
@@ -33,11 +45,14 @@
 
       // Brand (link altijd naar HOME)
       wrap.appendChild(
-        el('a', { href: HOME, class: 'brand' }, el('span', { text: `${icon} Superhond` }))
+        el('a', { href: HOME, class: 'brand' }, el('span', { text: `${icon} ${title}` }))
       );
 
       // Versiebadge rechts
-      const badge = el('span', { class: 'badge-version', text: window.__APP_VERSION__ || 'v0.19.x' });
+      const badge = el('span', {
+        class: 'badge-version',
+        text: window.__APP_VERSION__ || 'v0.19.x'
+      });
       wrap.appendChild(badge);
 
       top.appendChild(wrap);
