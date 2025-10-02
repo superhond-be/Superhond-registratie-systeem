@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Klassen – Superhond</title>
+
+  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+  <script src="../js/layout.js?v=0.20.0" defer></script>
+  <script type="module" src="./index.js?v=0.20.0" defer></script>
+</head>
+<body class="subpage">
+<header id="topbar" class="topbar"></header>
+
+<main class="container">
+  <h1 class="page-title">Klassen</h1>
+
+  <div class="toolbar">
+    <input id="zoek" type="search" placeholder="Zoek klas…" />
+    <a class="btn" href="./nieuw.html">➕ Nieuwe klas</a>
+  </div>
+
+  <div id="loader">⏳ Laden…</div>
+  <div id="error" style="display:none"></div>
+
+  <div class="table-wrap" id="wrap" style="display:none;">
+    <table class="table" id="tabel">
+      <thead>
+        <tr>
+          <th>Naam</th>
+          <th>Type</th>
+          <th>Thema</th>
+          <th>Strippen</th>
+          <th>Geldigheid</th>
+          <th>Status</th>
+          <th>Acties</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</main>
+
+<footer id="footer" class="footer"></footer>
+</body>
+</html>
