@@ -7,6 +7,9 @@
 
   <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+
+  <script src="../js/layout.js?v=0.20.0" defer></script>
+  <script type="module" src="./bewerken.js?v=0.20.0" defer></script>
 </head>
 <body class="subpage">
 <header id="topbar" class="topbar"></header>
@@ -15,59 +18,78 @@
   <h1 class="page-title">Lessenreeks bewerken</h1>
 
   <div id="loader" class="loader">⏳ Laden…</div>
-  <div id="error" class="error" style="display:none"></div>
+  <div id="error" class="error" style="display:none;"></div>
 
-  <form id="formReeks" class="card" style="display:none">
+  <form id="formReeks" class="card" style="display:none;">
+    <input type="hidden" id="seriesId"/>
+
     <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
       <label>Pakket-naam
-        <input class="input" id="pakNaam" type="text" required />
+        <input class="input" id="pakNaam" type="text" placeholder="Puppy Voorjaar 2026" required />
       </label>
       <label>Reeks-naam
-        <input class="input" id="reeksNaam" type="text" required />
+        <input class="input" id="reeksNaam" type="text" placeholder="Maandag 18u" required />
       </label>
       <label>Thema
-        <input class="input" id="thema" type="text" />
+        <input class="input" id="thema" type="text" placeholder="Puppy / Agility / ..." />
       </label>
       <label>Prijs (€)
-        <input class="input input-nr" id="prijs" type="number" min="0" step="1" />
+        <input class="input input-nr" id="prijs" type="number" min="0" step="1" placeholder="0" />
       </label>
+
       <label>Start-datum
         <input class="input" id="startDatum" type="date" required />
       </label>
       <label>Starttijd
-        <input class="input" id="startTijd" type="time" required />
-      </label>
-      <label>Aantal lessen
-        <input class="input input-nr" id="aantal" type="number" min="1" required />
+        <input class="input" id="startTijd" type="time" value="18:00" required />
       </label>
       <label>Duur (min.)
-        <input class="input input-nr" id="duur" type="number" min="5" step="5" required />
+        <input class="input input-nr" id="duur" type="number" min="5" step="5" value="60" required />
       </label>
-      <label>Interval (dagen)
-        <input class="input input-nr" id="interval" type="number" min="1" step="1" />
+      <label>Interval
+        <select class="select" id="interval">
+          <option value="7">Wekelijks (7 dagen)</option>
+          <option value="14">Tweewekelijks (14 dagen)</option>
+        </select>
       </label>
+
       <label>Trainers (komma-gescheiden)
-        <input class="input" id="trainers" type="text" />
+        <input class="input" id="trainers" type="text" placeholder="Sam, Kim" />
       </label>
       <label>Locatie-naam
-        <input class="input" id="locNaam" type="text" />
+        <input class="input" id="locNaam" type="text" placeholder="Superhond Club" />
       </label>
       <label>Google Maps (URL)
-        <input class="input" id="locMaps" type="url" />
+        <input class="input" id="locMaps" type="url" placeholder="https://maps.google.com/?q=..." />
+      </label>
+
+      <label>Status
+        <select class="select" id="status">
+          <option value="true">Actief</option>
+          <option value="false">Niet actief</option>
+        </select>
       </label>
     </div>
 
+    <fieldset style="margin-top:12px;border:1px solid var(--border);border-radius:8px;padding:10px">
+      <legend>Geplande lessen</legend>
+      <label style="display:flex;gap:8px;align-items:center;margin:.3rem 0">
+        <input type="checkbox" id="regenLessen">
+        <span>Lessen opnieuw genereren op basis van startdatum/tijd, duur, interval en aantal lessen (OVERSCHRIJFT bestaande lessen van deze reeks).</span>
+      </label>
+      <label>Aantal lessen
+        <input class="input input-nr" id="aantal" type="number" min="1" value="5" />
+      </label>
+    </fieldset>
+
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" type="submit">Opslaan</button>
-      <button class="btn" id="btnSaveRegen" type="button">Opslaan + her-genereer lessen</button>
-      <a class="btn" href="./">Annuleren</a>
+      <a class="btn" href="./detail.html" id="btnCancel">Annuleren</a>
+      <button class="btn" type="button" id="btnDelete" style="margin-left:auto">Reeks verwijderen</button>
     </div>
   </form>
 </main>
 
 <footer id="footer" class="footer"></footer>
-
-<script src="../js/layout.js?v=0.20.0" defer></script>
-<script type="module" src="./bewerken.js?v=0.20.0" defer></script>
 </body>
 </html>
