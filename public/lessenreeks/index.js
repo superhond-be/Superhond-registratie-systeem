@@ -1,5 +1,4 @@
-// /public/lessenreeks/index.js
-// Lessenreeksen: laad /data/lessenreeksen.json + merge met localStorage, zoek & acties
+// Lessenreeksen – snelle fetch met timeout, normaliseren, merge met localStorage, zoeken
 (() => {
   const $  = s => document.querySelector(s);
   const S  = v => String(v ?? '').trim();
@@ -12,35 +11,33 @@
     zoek:   $('#zoek'),
   };
 
-  // Mount topbar/footer (optioneel; geen layout=ok)
+  // Topbar/footer
   document.addEventListener('DOMContentLoaded', () => {
     if (window.SuperhondUI?.mount) {
       SuperhondUI.mount({ title: 'Lessenreeksen', icon: '📦', back: '../dashboard/' });
     }
   });
 
-  // ---------- Helpers ----------
-  const bust = () => '?t=' + Date.now();
-  function euro(n){
-    if (n == null || isNaN(n)) return '—';
-    return new Intl.NumberFormat('nl-BE', { style:'currency', currency:'EUR' })
-      .format(Number(n));
+  // ---- snelle fetch + fallback met timeout ----
+  const TIMEOUT_MS = 1500;
+  function fetchWithTimeout(url, ms = TIMEOUT_MS, opts = {}) {
+    return Promise.race([
+      fetch(url, opts),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+    ]);
   }
-  function escapeHTML(s=''){
-    return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;')
-      .replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
-  }
-
-  async function fetchJson(tryUrls) {
+  async function fetchJsonFast(tryUrls) {
     for (const u of tryUrls) {
       try {
-        const r = await fetch(u + bust(), { cache:'no-store' });
+        const url = u + (u.includes('?') ? '' : '?t=') + Date.now();
+        const r = await fetchWithTimeout(url, TIMEOUT_MS, { cache: 'no-store' });
         if (r.ok) return r.json();
-      } catch(_) {}
+      } catch (_) {}
     }
     return null;
   }
 
+  // ---- storage helpers ----
   function loadDB() {
     try {
       const raw = localStorage.getItem('superhond-db');
@@ -54,7 +51,7 @@
   }
   function saveDB(db){ localStorage.setItem('superhond-db', JSON.stringify(db)); }
 
-  // Normaliseer willekeurige vormen naar uniforme {id,name,thema,count,price}
+  // ---- normalisatie naar {id, name, thema, count, price} ----
   function normalizeSeries(raw) {
     if (!raw) return [];
     const arr =
@@ -71,7 +68,6 @@
       const ser  = r.seriesName  ?? r.reeks   ?? r.serie ?? '';
       const name = S([pkg, ser].filter(Boolean).join(' — ')) || S(r.naam || r.name || '');
       const thema= r.theme ?? r.thema ?? '';
-      // aantal lessen: expliciet veld, of lengte embedded lessen[]
       const cnt  = Number(
                     r.count ?? r.aantal ?? r.lessonsCount ??
                     (Array.isArray(r.lessen) ? r.lessen.length :
@@ -83,20 +79,27 @@
     return rows;
   }
 
-  // Extern wint bij gelijke id, anders alles samen
+  // extern wint bij gelijke id
   function mergeById(primary = [], secondary = []) {
     const map = new Map(secondary.map(x => [String(x.id ?? Math.random()), x]));
     for (const p of primary) map.set(String(p.id ?? Math.random()), p);
     return Array.from(map.values());
   }
 
-  // ---------- Render ----------
+  // ---- render ----
   let ALL_ROWS = [];
 
+  function euro(n){
+    if (n == null || isNaN(n)) return '—';
+    return new Intl.NumberFormat('nl-BE',{style:'currency',currency:'EUR'}).format(Number(n));
+  }
+  function escapeHTML(s=''){
+    return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;')
+      .replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+  }
+
   function rowHTML(r) {
-    // Acties alleen als er een id is (anders geen detail/bewerken)
     const view = r.id ? `<a class="btn btn-xs" href="./detail.html?id=${encodeURIComponent(r.id)}">Bekijken</a>` : '';
-    const edit = r.id ? `<a class="btn btn-xs" href="./bewerken.html?id=${encodeURIComponent(r.id)}">Bewerken</a>` : '';
     const del  = r.id ? `<button class="btn btn-xs" data-action="delete" data-id="${escapeHTML(r.id)}">Verwijderen</button>` : '';
     return `
       <tr data-id="${escapeHTML(r.id || '')}">
@@ -104,7 +107,7 @@
         <td>${escapeHTML(r.thema || '—')}</td>
         <td>${r.count || 0}</td>
         <td>${(r.price || r.price === 0) ? euro(r.price) : '—'}</td>
-        <td style="white-space:nowrap;display:flex;gap:.35rem;flex-wrap:wrap">${view}${edit}${del}</td>
+        <td style="white-space:nowrap;display:flex;gap:.35rem;flex-wrap:wrap">${view}${del}</td>
       </tr>
     `;
   }
@@ -113,6 +116,7 @@
     ALL_ROWS = rows.slice();
     els.tbody.innerHTML = rows.map(rowHTML).join('');
     els.wrap.style.display = rows.length ? '' : 'none';
+    els.loader.style.display = 'none';
   }
 
   function applySearch(allRows) {
@@ -125,13 +129,11 @@
   }
 
   function bindActions() {
-    // Delete: verwijder reeks + gekoppelde lessen
     els.tbody.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action="delete"]');
       if (!btn) return;
       const id = btn.getAttribute('data-id');
       if (!id) return;
-
       if (!confirm('Deze lessenreeks en alle gekoppelde lessen verwijderen?')) return;
 
       const db = loadDB();
@@ -139,43 +141,34 @@
       db.lessons = db.lessons.filter(l => String(l.seriesId) !== String(id));
       saveDB(db);
 
-      // UI updaten
       const newRows = ALL_ROWS.filter(r => String(r.id) !== String(id));
       renderTable(applySearch(newRows));
     });
   }
 
-  // ---------- Init ----------
+  // ---- init ----
   async function init() {
     try {
       els.loader.style.display = '';
       els.error.style.display  = 'none';
       els.wrap.style.display   = 'none';
 
-      // 1) extern (JSON demo)
-      const ext = await fetchJson([
-        '../data/lessenreeksen.json', // relatieve demo
-        '/data/lessenreeksen.json'    // absolute fallback
+      const ext = await fetchJsonFast([
+        '../data/lessenreeksen.json',
+        '/data/lessenreeksen.json'
       ]);
       const extRows = normalizeSeries(ext);
 
-      // 2) lokaal (localStorage)
       const db = loadDB();
       const locRows = normalizeSeries({ series: db.series });
 
-      // 3) merge + sort
       const all = mergeById(extRows, locRows)
         .sort((a,b) => String(a.name).localeCompare(String(b.name)));
 
       renderTable(all);
-      els.loader.style.display = 'none';
-      els.wrap.style.display   = '';
-
-      els.zoek?.addEventListener('input', () => {
-        renderTable(applySearch(all));
-      });
-
+      els.zoek?.addEventListener('input', () => renderTable(applySearch(all)));
       bindActions();
+
     } catch (e) {
       console.error(e);
       els.loader.style.display = 'none';
