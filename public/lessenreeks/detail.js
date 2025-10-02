@@ -1,130 +1,156 @@
-// /public/lessenreeks/detail.js
-// Detailpagina: haal reeks uit localStorage én /data/lessenreeksen.json (fallback)
+// Detail van een lessenreeks (strippenpakket)
 (() => {
-  const S = v => String(v ?? '');
   const $ = s => document.querySelector(s);
+  const S = v => String(v ?? '').trim();
+  const D2 = ['zo','ma','di','wo','do','vr','za'];
 
   document.addEventListener('DOMContentLoaded', () => {
     if (window.SuperhondUI?.mount) {
-      SuperhondUI.mount({ title: 'Lessenreeks', icon: '📦', back: './' });
+      SuperhondUI.mount({ title:'Lessenreeks – Detail', icon:'📦', back:'./' });
     }
   });
 
-  const params = new URLSearchParams(location.search);
-  const id = params.get('id');
-  const box = $('#detail');
-  const tbody = $('#lessonsBody');
-
-  // ---- helpers ----
-  function loadDB() {
-    try {
+  function bust(){ return '?t=' + Date.now(); }
+  async function fetchJson(tryUrls){
+    for (const u of tryUrls){
+      try{
+        const r = await fetch(u + (u.includes('?')?'':'?t=') + Date.now(), { cache:'no-store' });
+        if (r.ok) return r.json();
+      }catch(_){}
+    }
+    return null;
+  }
+  function loadDB(){
+    try{
       const raw = localStorage.getItem('superhond-db');
       const db  = raw ? JSON.parse(raw) : {};
       db.series  = Array.isArray(db.series)  ? db.series  : [];
       db.lessons = Array.isArray(db.lessons) ? db.lessons : [];
       return db;
-    } catch {
+    }catch{
       return { series:[], lessons:[] };
     }
+  }
+  function normalizeSeries(raw){
+    if (!raw) return [];
+    const arr =
+      Array.isArray(raw)        ? raw :
+      Array.isArray(raw.items)  ? raw.items :
+      Array.isArray(raw.data)   ? raw.data :
+      Array.isArray(raw.reeksen)? raw.reeksen :
+      Array.isArray(raw.series) ? raw.series : [];
+    return arr.map(r => ({
+      id: r.id ?? r.reeksId ?? r.seriesId ?? null,
+      name: S([r.packageName ?? r.pakket ?? r.pkg ?? r.naam ?? r.name ?? '',
+               r.seriesName  ?? r.reeks   ?? r.serie ?? '']
+               .filter(Boolean).join(' — ')) || S(r.naam || r.name || ''),
+      thema: r.thema ?? r.theme ?? '',
+      strippen: Number(r.strippen ?? r.strips ?? r.aantal ?? r.count ?? 0) || 0,
+      geldigheid_weken: Number(r.geldigheid_weken ?? r.weken ?? 0) || 0,
+      max_deelnemers: Number(r.max_deelnemers ?? r.max ?? 0) || 0,
+      lesduur_min: Number(r.lesduur_min ?? r.duur ?? 0) || 0,
+      startISO: r.startISO ?? (r.startDatum ? r.startDatum + 'T00:00' : null) ?? r.start,
+      endISO:   r.endISO   ?? (r.eindDatum  ? r.eindDatum  + 'T23:59' : null) ?? r.end,
+      locatie:  r.locatie || r.location || null,
+      trainers: Array.isArray(r.trainers) ? r.trainers : [],
+      prijs_excl: Number(r.prijs_excl ?? r.prijs ?? r.price ?? 0),
+      status: S(r.status || 'actief')
+    }));
+  }
+  function fmtDOW(dateISO){
+    if (!dateISO) return '—';
+    const d = new Date(String(dateISO).replace(' ','T'));
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yyyy = d.getFullYear();
+    return `${D2[d.getDay()]} ${dd}/${mm}/${yyyy}`;
   }
   function euro(n){
     if (n == null || isNaN(n)) return '—';
     return new Intl.NumberFormat('nl-BE',{style:'currency',currency:'EUR'}).format(Number(n));
   }
-  function fmtDateRange(sISO, eISO) {
-    const s = sISO ? new Date(sISO) : null;
-    const e = eISO ? new Date(eISO) : null;
-    if (!s) return '—';
-    const d2 = n => String(n).padStart(2,'0');
-    const date = `${d2(s.getDate())}/${d2(s.getMonth()+1)}/${s.getFullYear()}`;
-    const t1   = `${d2(s.getHours())}:${d2(s.getMinutes())}`;
-    const t2   = e ? `${d2(e.getHours())}:${d2(e.getMinutes())}` : '';
-    return e ? `${date}, ${t1} — ${t2}` : `${date}, ${t1}`;
-  }
-  function rowLesson(l){
-    const locName = l.location?.name || '—';
-    const locUrl  = l.location?.mapsUrl;
-    const trainers = Array.isArray(l.trainers) ? l.trainers : [];
-    return `
-      <tr>
-        <td>${S(l.title || 'Les')}</td>
-        <td>${fmtDateRange(l.startISO, l.endISO)}</td>
-        <td>${locUrl ? `<a href="${locUrl}" target="_blank" rel="noopener">${S(locName)}</a>` : S(locName)}</td>
-        <td>${trainers.length ? trainers.map(S).map(t=>`<span class="badge">${t}</span>`).join(' ') : '—'}</td>
-      </tr>
-    `;
-  }
-
-  // normaliseer JSON → {id,name,thema,count,price}
-  function normalizeSeries(raw){
-    if (!raw) return [];
-    const arr =
-      Array.isArray(raw) ? raw :
-      Array.isArray(raw?.reeksen) ? raw.reeksen :
-      Array.isArray(raw?.series) ? raw.series :
-      Array.isArray(raw?.items) ? raw.items :
-      Array.isArray(raw?.data) ? raw.data : [];
-    return arr.map(r => {
-      const id   = r.id ?? r.reeksId ?? r.seriesId ?? null;
-      const pkg  = r.packageName ?? r.pakket ?? r.pkg ?? r.naam ?? r.name ?? '';
-      const ser  = r.seriesName  ?? r.reeks   ?? r.serie ?? '';
-      const name = [pkg, ser].filter(Boolean).join(' — ') || (r.naam || r.name || '');
-      const thema= r.theme ?? r.thema ?? '';
-      const cnt  = Number(r.count ?? r.aantal ?? r.lessonsCount ?? (Array.isArray(r.lessen)?r.lessen.length:0)) || 0;
-      const price= Number(r.price ?? r.prijs ?? r.prijs_excl ?? 0);
-      return { id, name, thema, count: cnt, price };
-    });
-  }
-
-  async function fetchJson(tryUrls){
-    for (const u of tryUrls) {
-      try {
-        const url = u + (u.includes('?')?'':'?t=') + Date.now();
-        const r = await fetch(url, { cache:'no-store' });
-        if (r.ok) return r.json();
-      } catch(_) {}
-    }
-    return null;
-  }
-
-  function render(series, lessons){
-    box.innerHTML = `
-      <h2 style="margin-top:0">${S(series.name)}</h2>
-      <ul>
-        <li><strong>Thema:</strong> ${S(series.thema || '—')}</li>
-        <li><strong>Aantal lessen:</strong> ${Number(series.count || lessons.length) || 0}</li>
-        <li><strong>Prijs:</strong> ${series.price != null ? euro(series.price) : '—'}</li>
-      </ul>
-    `;
-    tbody.innerHTML = lessons.map(rowLesson).join('') || `<tr><td colspan="4" class="muted">Geen lessen gekoppeld.</td></tr>`;
+  function escapeHTML(s=''){
+    return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;')
+      .replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
   }
 
   async function init(){
-    if (!id) { box.textContent = 'Geen id opgegeven.'; return; }
+    const params = new URLSearchParams(location.search);
+    const id = params.get('id');
 
-    const db = loadDB();
-    // 1) Probeer localStorage
-    let series = db.series.find(r => String(r.id) === String(id));
+    const info = $('#info');
+    const msg  = $('#msg');
+    const body = $('#lessenBody');
 
-    // 2) Fallback: demo JSON
-    if (!series) {
-      const ext = await fetchJson(['../data/lessenreeksen.json', '/data/lessenreeksen.json']);
-      const extRows = normalizeSeries(ext);
-      series = extRows.find(r => String(r.id) === String(id));
-    }
+    // data laden
+    const [ext, db] = await Promise.all([
+      fetchJson(['../data/lessenreeksen.json','/data/lessenreeksen.json']),
+      Promise.resolve(loadDB())
+    ]);
 
-    if (!series) {
-      box.innerHTML = `<p class="error">Reeks met id <code>${S(id)}</code> niet gevonden.</p>`;
-      tbody.innerHTML = '';
+    const all = [
+      ...normalizeSeries(ext),
+      ...normalizeSeries({ series: db.series })
+    ];
+
+    const rec = all.find(r => String(r.id) === String(id));
+
+    if (!rec){
+      msg.style.display = '';
+      msg.className = 'card error';
+      msg.textContent = `Reeks met id ${id} niet gevonden.`;
+      info.innerHTML = '';
       return;
     }
 
-    // lessen uit localStorage koppelen (demo JSON bevat geen losse lessen)
-    const lessons = db.lessons
-      .filter(l => String(l.seriesId) === String(id))
-      .sort((a,b) => String(a.startISO).localeCompare(String(b.startISO)));
+    msg.style.display = 'none';
 
-    render(series, lessons);
+    // detailblok
+    info.innerHTML = `
+      <h2 style="margin-top:0">${escapeHTML(rec.name)}</h2>
+      <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">
+        <div><strong>Thema:</strong> ${escapeHTML(rec.thema || '—')}</div>
+        <div><strong>Aantal strippen:</strong> ${rec.strippen || 0}</div>
+        <div><strong>Geldigheidsduur:</strong> ${rec.geldigheid_weken || 0} weken</div>
+        <div><strong>Max. deelnemers/les:</strong> ${rec.max_deelnemers || '—'}</div>
+        <div><strong>Lesduur:</strong> ${rec.lesduur_min || '—'} min</div>
+        <div><strong>Start:</strong> ${fmtDOW(rec.startISO)}</div>
+        <div><strong>Einde:</strong> ${fmtDOW(rec.endISO)}</div>
+        <div><strong>Status:</strong> ${escapeHTML(rec.status)}</div>
+        <div><strong>Prijs (excl.):</strong> ${euro(rec.prijs_excl)}</div>
+        <div><strong>Locatie:</strong>
+          ${
+            rec.locatie?.mapsUrl
+              ? `<a href="${escapeHTML(rec.locatie.mapsUrl)}" target="_blank" rel="noopener">${escapeHTML(rec.locatie.name || rec.locatie.naam || 'Locatie')}</a>`
+              : escapeHTML(rec.locatie?.name || rec.locatie?.naam || '—')
+          }
+        </div>
+        <div><strong>Trainers:</strong>
+          ${
+            (rec.trainers || []).length
+              ? rec.trainers.map(t => `<span class="badge">${escapeHTML(String(t))}</span>`).join(' ')
+              : '—'
+          }
+        </div>
+      </div>
+    `;
+
+    // gekoppelde lessen uit localStorage (optioneel)
+    const lessons = (db.lessons || []).filter(l => String(l.seriesId) === String(id));
+    body.innerHTML = lessons.length
+      ? lessons.map(l => `
+          <tr>
+            <td>${escapeHTML(l.title || l.name || 'Les')}</td>
+            <td>${fmtDOW(l.startISO || l.start)}</td>
+            <td>${escapeHTML(l.location?.name || l.locatie || '—')}</td>
+            <td>${
+              Array.isArray(l.trainers) && l.trainers.length
+                ? l.trainers.map(t => `<span class="badge">${escapeHTML(String(t))}</span>`).join(' ')
+                : '—'
+            }</td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="4" class="muted">Geen gekoppelde lessen.</td></tr>`;
   }
 
   document.addEventListener('DOMContentLoaded', init);
