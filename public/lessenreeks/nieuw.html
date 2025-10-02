@@ -3,8 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Nieuwe lessenreeks – Superhond</title>
-
+  <title>Nieuw strippenpakket – Superhond</title>
   <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
 </head>
@@ -12,67 +11,71 @@
 <header id="topbar" class="topbar"></header>
 
 <main class="container">
-  <h1 class="page-title">Nieuwe lessenreeks</h1>
+  <h1 class="page-title">Nieuw strippenpakket</h1>
 
   <form id="formReeks" class="card">
     <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
       <label>Pakket-naam
         <input class="input" id="pakNaam" type="text" placeholder="Puppy Voorjaar 2026" required />
       </label>
-      <label>Reeks-naam
-        <input class="input" id="reeksNaam" type="text" placeholder="Maandag 18u" required />
+      <label>Reeks-naam (sub)
+        <input class="input" id="reeksNaam" type="text" placeholder="Maandag 18u" />
       </label>
       <label>Thema
         <input class="input" id="thema" type="text" placeholder="Puppy / Agility / ..." />
       </label>
-      <label>Prijs (€)
-        <input class="input input-nr" id="prijs" type="number" min="0" step="1" placeholder="0" />
+
+      <label>Aantal strippen
+        <input class="input input-nr" id="strippen" type="number" min="1" value="10" required />
       </label>
+      <label>Geldigheidsduur (weken)
+        <input class="input input-nr" id="geldigheidWeken" type="number" min="1" value="10" />
+      </label>
+      <label>Max. deelnemers (per les)
+        <input class="input input-nr" id="maxDeelnemers" type="number" min="1" value="10" />
+      </label>
+      <label>Lesduur (min.)
+        <input class="input input-nr" id="lesduur" type="number" min="5" step="5" value="60" />
+      </label>
+
+      <!-- Datums: GEEN berekening — enkel dag-afkorting tonen -->
       <label>Start-datum
         <input class="input" id="startDatum" type="date" required />
+        <small class="muted" id="startDOW">—</small>
       </label>
-      <label>Starttijd
-        <input class="input" id="startTijd" type="time" value="18:00" required />
+      <label>Eind-datum
+        <input class="input" id="eindDatum" type="date" required />
+        <small class="muted" id="eindDOW">—</small>
       </label>
-      <label>Aantal lessen
-        <input class="input input-nr" id="aantal" type="number" min="1" value="5" required />
+
+      <label>Locatie
+        <select class="select" id="locatieId"></select>
       </label>
-      <label>Duur (min.)
-        <input class="input input-nr" id="duur" type="number" min="5" step="5" value="60" required />
+      <label>Trainers (meervoud)
+        <select class="select" id="trainerIds" multiple size="4"></select>
       </label>
-      <label>Interval
-        <select class="select" id="interval">
-          <option value="7">Wekelijks (7 dagen)</option>
-          <option value="14">Tweewekelijks (14 dagen)</option>
+
+      <label>Prijs (excl. btw)
+        <input class="input input-nr" id="prijs" type="number" min="0" step="0.01" placeholder="0" />
+      </label>
+      <label>Status
+        <select class="select" id="status">
+          <option value="actief">Actief</option>
+          <option value="inactief">Niet actief</option>
         </select>
-      </label>
-      <label>Trainers (komma-gescheiden)
-        <input class="input" id="trainers" type="text" placeholder="Sam, Kim" />
-      </label>
-      <label>Locatie-naam
-        <input class="input" id="locNaam" type="text" placeholder="Superhond Club" />
-      </label>
-      <label>Google Maps (URL)
-        <input class="input" id="locMaps" type="url" placeholder="https://maps.google.com/?q=..." />
       </label>
     </div>
 
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" type="button" id="btnPreview">Preview</button>
-      <button class="btn" type="submit">Genereer & Opslaan</button>
+      <button class="btn" type="submit">Opslaan</button>
       <a class="btn" href="./">Annuleren</a>
     </div>
-
-    <details id="previewWrap" class="card" style="margin-top:12px">
-      <summary><strong>Preview gegenereerde lessen</strong></summary>
-      <ol id="previewList" style="margin-top:8px"></ol>
-    </details>
   </form>
 </main>
 
 <footer id="footer" class="footer"></footer>
 
-<script src="../js/layout.js?v=0.20.0"></script>
-<script type="module" src="./nieuw.js?v=0.20.0"></script>
+<script src="../js/layout.js?v=0.20.0" defer></script>
+<script type="module" src="./nieuw.js?v=0.20.0" defer></script>
 </body>
 </html>
