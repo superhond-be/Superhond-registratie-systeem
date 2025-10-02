@@ -1,18 +1,29 @@
 [
   {
-    "id": 1,
+    "id": 1001,
     "type": "les",
-    "naam": "Puppy Start",
-    "datum": "2025-10-08T10:00",
+    "naam": "Puppy Pakket — Start (les 1)",
+    "datum": "2025-10-15T10:00",
+    "eindtijd": "11:00",
+    "locatie": "Retie Terrein",
+    "trainer": "Sofie Vermeulen, Paul Janssens",
+    "mapsUrl": "https://www.google.com/maps/search/?api=1&query=Retie%20Terrein"
+  },
+  {
+    "id": 1002,
+    "type": "les",
+    "naam": "Puppy Pakket — Start (les 2)",
+    "datum": "2025-10-22T10:00",
+    "eindtijd": "11:00",
     "locatie": "Retie Terrein",
     "trainer": "Sofie Vermeulen"
   },
   {
-    "id": 2,
-    "type": "les",
-    "naam": "Basisgroep Gevorderd",
-    "datum": "2025-10-04T11:00",
-    "locatie": "Dessel Park",
-    "trainer": "Paul Janssens"
+    "id": 2001,
+    "type": "mededeling",
+    "naam": "Herinnering: Meebrengen vaccinatieboekje",
+    "datum": "2025-10-14T18:00",
+    "locatie": "—",
+    "trainer": ""
   }
 ]
