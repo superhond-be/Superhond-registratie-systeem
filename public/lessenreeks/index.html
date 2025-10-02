@@ -3,10 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lessenreeksen – Superhond</title>
+  <title>Lessenreeksen (strippenpakketten)</title>
 
   <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+  <script src="../js/layout.js?v=0.20.0" defer></script>
+  <script type="module" src="./index.js?v=0.20.0" defer></script>
 </head>
 <body class="subpage">
 <header id="topbar" class="topbar"></header>
@@ -14,13 +16,13 @@
 <main class="container">
   <h1 class="page-title">Lessenreeksen</h1>
 
-  <div class="card" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+  <div class="card" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
     <input id="zoek" class="input" type="search" placeholder="Zoek reeks…" />
-    <a class="btn" href="./nieuw.html">+ Nieuwe reeks</a>
+    <a class="btn" href="./nieuw.html">+ Nieuw strippenpakket</a>
   </div>
 
   <div id="loader" class="loader">⏳ Laden…</div>
-  <div id="error" class="error" style="display:none"></div>
+  <div id="error" class="error" style="display:none;"></div>
 
   <div class="table-wrap" id="wrap" style="display:none;">
     <table id="tabel" class="table">
@@ -28,9 +30,9 @@
         <tr>
           <th>Naam</th>
           <th>Thema</th>
-          <th>Aantal lessen</th>
+          <th>Aantal strippen</th>
           <th>Prijs</th>
-          <th style="width:1%">Acties</th>
+          <th>Acties</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -39,8 +41,5 @@
 </main>
 
 <footer id="footer" class="footer"></footer>
-
-<script src="../js/layout.js?v=0.20.0"></script>
-<script type="module" src="./index.js?v=0.20.0"></script>
 </body>
 </html>
