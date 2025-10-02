@@ -42,7 +42,16 @@
       <a class="tile" href="../klanten/"><span>👤</span> Klanten</a>
       <a class="tile" href="../honden/"><span>🐶</span> Honden</a>
       <a class="tile" href="../strippenkaarten/"><span>🎫</span> Strippenkaarten</a>
-      <a class="tile" href="../lessen/"><span>📅</span> Lessen</a>
+
+      <!-- LESSONS (met teller: aantal lessen deze week) -->
+      <a class="tile badged" href="../lessen/">
+        <span>📅</span>
+        <div class="tile-body">
+          <span class="tile-title">Lessen</span>
+          <span class="tile-sub" id="lessen-week-count">—</span>
+        </div>
+        <span class="badge-dot" id="lessen-week-badge">0</span>
+      </a>
 
       <!-- Lessenreeksen met badge + subtitel -->
       <a class="tile badged" href="../lessenreeks/">
@@ -160,7 +169,6 @@
 
       const ext = await fetchJson(['../data/lessenreeksen.json','/data/lessenreeksen.json']);
       const extRows = normalizeSeries(ext);
-
       const locRows = normalizeSeries({ series: loadDB().series });
 
       const all = uniqueById(extRows, locRows);
@@ -185,8 +193,113 @@
   })();
   </script>
 
+  <!-- Dynamische teller & badge voor Lessen (aantal deze week, ma–zo) -->
   <script>
-    // Topbar mount
+  (function(){
+    const S = v => String(v ?? '').trim();
+
+    async function fetchJson(tryUrls){
+      for (const u of tryUrls){
+        try{
+          const url = u + (u.includes('?') ? '&' : '?') + 't=' + Date.now();
+          const r = await fetch(url, { cache:'no-store' });
+          if (r.ok) return r.json();
+        }catch(_){}
+      }
+      return null;
+    }
+
+    function loadLocalLessons(){
+      try{
+        const raw = localStorage.getItem('superhond-db');
+        const db  = raw ? JSON.parse(raw) : {};
+        const lessons = Array.isArray(db.lessons) ? db.lessons : [];
+        return lessons.map(l => ({
+          id: S(l.id),
+          title: S(l.title || l.name || 'Les'),
+          startISO: S(l.startISO || l.start),
+          endISO:   S(l.endISO   || l.end)
+        })).filter(x => x.startISO);
+      }catch{ return []; }
+    }
+
+    function normalizeAgendaLessons(raw){
+      if (!raw) return [];
+      const arr =
+        Array.isArray(raw)       ? raw :
+        Array.isArray(raw.items) ? raw.items :
+        Array.isArray(raw.data)  ? raw.data : null;
+
+      if (arr){
+        return arr
+          .filter(x => (S(x.type||x.kind).toLowerCase() !== 'mededeling'))
+          .map(x => ({
+            id: S(x.id || ''),
+            title: S(x.title || x.name || 'Les'),
+            startISO: S(x.startISO || x.start || x.startDate || x.begin || ''),
+            endISO:   S(x.endISO   || x.end   || x.endDate   || x.einde || '')
+          })).filter(x => x.startISO);
+      }
+
+      const lessons = Array.isArray(raw?.lessons) ? raw.lessons : [];
+      return lessons.map(x => ({
+        id: S(x.id || ''),
+        title: S(x.title || x.name || 'Les'),
+        startISO: S(x.startISO || x.start || ''),
+        endISO:   S(x.endISO   || x.end   || '')
+      })).filter(x => x.startISO);
+    }
+
+    function mergeLessons(ext=[], loc=[]){
+      const key = x => S(x.id) || (S(x.startISO)+'|'+S(x.title));
+      const map = new Map();
+      for (const e of ext) map.set(key(e), e);
+      for (const l of loc) if (!map.has(key(l))) map.set(key(l), l);
+      return [...map.values()];
+    }
+
+    // Kalenderweek: maandag 00:00 → volgende maandag (excl.)
+    function isThisWeek(startISO){
+      if (!startISO) return false;
+      const s = new Date(String(startISO).replace(' ','T'));
+      if (isNaN(s)) return false;
+
+      const now = new Date();
+      const day = (now.getDay() + 6) % 7; // ma=0..zo=6
+      const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      weekStart.setDate(weekStart.getDate() - day);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      return s >= weekStart && s < weekEnd;
+    }
+
+    async function updateLessenWeekTile(){
+      const sub   = document.getElementById('lessen-week-count');
+      const badge = document.getElementById('lessen-week-badge');
+      if (!sub && !badge) return;
+
+      const extRaw = await fetchJson(['../api/agenda','/api/agenda','../data/agenda.json','/data/agenda.json']);
+      const extLessons = normalizeAgendaLessons(extRaw);
+      const locLessons = loadLocalLessons();
+
+      const all = mergeLessons(extLessons, locLessons);
+      const thisWeek = all.filter(x => isThisWeek(x.startISO)).length;
+
+      if (sub)   sub.textContent   = `${thisWeek} deze week`;
+      if (badge) badge.textContent = String(thisWeek);
+
+      if (badge){
+        if (thisWeek === 0){ badge.style.background = '#fee2e2'; badge.style.color = '#b91c1c'; }
+        else { badge.style.background = ''; badge.style.color = ''; }
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', updateLessenWeekTile);
+  })();
+  </script>
+
+  <!-- Topbar mount -->
+  <script>
     window.addEventListener('DOMContentLoaded', () => {
       if (window.SuperhondUI?.mount) {
         SuperhondUI.mount({
