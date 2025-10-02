@@ -3,12 +3,36 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lessenreeksen (strippenpakketten)</title>
+  <title>Lessenreeksen – Superhond</title>
 
+  <!-- Centrale UI -->
   <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
-  <script src="../js/layout.js?v=0.20.0" defer></script>
-  <script type="module" src="./index.js?v=0.20.0" defer></script>
+
+  <style>
+    /* Kleine icon-only knoppen in Superhond proef-stijl */
+    .icon-actions { display:flex; gap:.35rem; align-items:center; }
+    .icon-btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      width:30px; height:30px; border:1px solid #d1d5db; border-radius:8px;
+      background:#fff; cursor:pointer; text-decoration:none; color:#111827;
+    }
+    .icon-btn:hover{ background:#f8fafc; }
+    .icon{
+      width:18px; height:18px; display:inline-block; line-height:1; text-align:center;
+      font-style:normal;
+    }
+    .icon-view::before{ content:"👁️"; }
+    .icon-edit::before{ content:"✏️"; }
+    .icon-del::before{ content:"🗑️"; }
+
+    .table th:nth-child(1), .table td:nth-child(1){ width:34%; }
+    .table th:nth-child(2), .table td:nth-child(2){ width:16%; }
+    .table th:nth-child(3), .table td:nth-child(3){ width:14%; }
+    .table th:nth-child(4), .table td:nth-child(4){ width:14%; }
+    .table th:nth-child(5), .table td:nth-child(5){ width:12%; text-align:right; }
+    .table th:nth-child(6), .table td:nth-child(6){ width:10%; white-space:nowrap; }
+  </style>
 </head>
 <body class="subpage">
 <header id="topbar" class="topbar"></header>
@@ -16,9 +40,9 @@
 <main class="container">
   <h1 class="page-title">Lessenreeksen</h1>
 
-  <div class="card" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-    <input id="zoek" class="input" type="search" placeholder="Zoek reeks…" />
-    <a class="btn" href="./nieuw.html">+ Nieuw strippenpakket</a>
+  <div class="card" style="margin-bottom:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+    <input id="zoek" class="input" type="search" placeholder="Zoek reeks…">
+    <a class="btn" href="./nieuw.html">➕ Nieuwe reeks</a>
   </div>
 
   <div id="loader" class="loader">⏳ Laden…</div>
@@ -30,16 +54,23 @@
         <tr>
           <th>Naam</th>
           <th>Thema</th>
-          <th>Aantal strippen</th>
+          <th>Tijd</th>
+          <th>Aantal lessen</th>
           <th>Prijs</th>
           <th>Acties</th>
         </tr>
       </thead>
-      <tbody></tbody>
+      <tbody><!-- gevuld door index.js --></tbody>
     </table>
+    <p class="muted" style="margin:.5rem 0 0">
+      Tip: zet <code>../data/lessenreeksen.json</code> of werk in <code>localStorage</code> via <em>Nieuwe reeks</em>.
+    </p>
   </div>
 </main>
 
 <footer id="footer" class="footer"></footer>
+
+<script src="../js/layout.js?v=0.20.0" defer></script>
+<script type="module" src="./index.js?v=0.20.0" defer></script>
 </body>
 </html>
