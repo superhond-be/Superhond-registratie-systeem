@@ -1,37 +1,39 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Lessenreeks – Detail</title>
-
-  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Lessenreeks detail</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="../js/layout.js" defer></script>
+  <script type="module" src="./detail.js" defer></script>
 </head>
-<body class="subpage">
-<header id="topbar" class="topbar"></header>
+<body>
+  <header id="topbar"></header>
 
-<main class="container">
-  <h1 class="page-title">Lessenreeks – Detail</h1>
+  <main class="container">
+    <h1 id="reeksTitel">Lessenreeks</h1>
 
-  <div id="loader" class="loader">⏳ Laden…</div>
-  <div id="error" class="error" style="display:none"></div>
+    <div id="loader">⏳ Laden…</div>
+    <div id="error" class="error" style="display:none;"></div>
 
-  <article id="box" class="card" style="display:none"></article>
+    <section id="detail" class="card" style="display:none;">
+      <ul>
+        <li><strong>Naam:</strong> <span id="naam"></span></li>
+        <li><strong>Type:</strong> <span id="type"></span></li>
+        <li><strong>Thema:</strong> <span id="thema"></span></li>
+        <li><strong>Aantal lessen:</strong> <span id="aantal"></span></li>
+        <li><strong>Prijs:</strong> <span id="prijs"></span></li>
+        <li><strong>Status:</strong> <span id="status"></span></li>
+      </ul>
 
-  <section id="actions" class="card" style="display:none; margin-top:12px">
-    <div style="display:flex; gap:8px; flex-wrap:wrap">
-      <button id="btnRegen" class="btn">Her-genereer lessen & opslaan</button>
-      <button id="btnExportReeksen" class="btn">Export reeksen.json</button>
-      <button id="btnExportLessen" class="btn">Export lessen.json</button>
-      <a href="./" class="btn">← Terug naar overzicht</a>
-    </div>
-  </section>
-</main>
+      <h3>Lessen</h3>
+      <ul id="lessenLijst"></ul>
+    </section>
 
-<footer id="footer" class="footer"></footer>
+    <p><a href="./index.html" class="btn">← Terug naar overzicht</a></p>
+  </main>
 
-<script src="../js/layout.js?v=0.20.0" defer></script>
-<script type="module" src="./detail.js?v=0.20.0" defer></script>
+  <footer id="footer"></footer>
 </body>
 </html>
