@@ -2,17 +2,18 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="refresh" content="0; url=/dashboard/">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Superhond ➜ Dashboard</title>
+  <meta http-equiv="refresh" content="0; url=./dashboard/">
   <script>
-    // Fallback: werkt ook als /dashboard/ geen absolute root is
+    // extra veilig: relative redirect, geen leading slash
     (function(){
-      var target = location.pathname.replace(/\/index\.html?$/,'') + '/dashboard/';
-      location.replace(target);
+      var base = location.pathname.replace(/\/index\.html?$/,'');
+      location.replace(base + (base.endsWith('/')?'':'/') + 'dashboard/');
     })();
   </script>
 </head>
 <body>
-  <p>Doorsturen naar <a href="/dashboard/">/dashboard/</a>…</p>
+  <p>Doorsturen naar <a href="./dashboard/">dashboard</a>…</p>
 </body>
 </html>
