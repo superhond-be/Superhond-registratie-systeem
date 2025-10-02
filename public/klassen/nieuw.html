@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Nieuwe klas – Superhond</title>
+
+  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+  <script src="../js/layout.js?v=0.20.0" defer></script>
+  <script type="module" src="./nieuw.js?v=0.20.0" defer></script>
+</head>
+<body class="subpage">
+<header id="topbar" class="topbar"></header>
+
+<main class="container">
+  <h1 class="page-title">Nieuwe klas</h1>
+
+  <form id="formKlas" class="card" autocomplete="off">
+    <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+
+      <label>Naam (hoofdnaam)
+        <input class="input" id="naam" type="text" placeholder="bv. Puppy" required />
+      </label>
+
+      <label>Type (subnaam)
+        <input class="input" id="type" type="text" placeholder="bv. Groep A" />
+      </label>
+
+      <label>Thema
+        <input class="input" id="thema" type="text" placeholder="bv. Basis / Agility" />
+      </label>
+
+      <label>Aantal strippen (voor klant)
+        <input class="input input-nr" id="strippen" type="number" min="0" step="1" value="10" required />
+      </label>
+
+      <label>Geldigheidsduur (weken)
+        <input class="input input-nr" id="geldigheid" type="number" min="0" step="1" value="10" required />
+      </label>
+
+      <label>Afbeelding (URL)
+        <input class="input" id="afbeelding" type="url" placeholder="https://..." />
+      </label>
+
+      <label>MailBlue (lijst/slug/id)
+        <input class="input" id="mailblue" type="text" placeholder="optioneel" />
+      </label>
+
+      <label>Status
+        <select class="select" id="status">
+          <option value="actief" selected>Actief</option>
+          <option value="inactief">Niet actief</option>
+        </select>
+      </label>
+
+      <label style="grid-column:1/-1">Beschrijving
+        <textarea class="input" id="beschrijving" rows="4" placeholder="Korte beschrijving..."></textarea>
+      </label>
+    </div>
+
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" type="submit">Opslaan</button>
+      <a class="btn" href="./">Annuleren</a>
+    </div>
+  </form>
+</main>
+
+<footer id="footer" class="footer"></footer>
+</body>
+</html>
