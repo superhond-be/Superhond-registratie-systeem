@@ -1,27 +1,40 @@
-// Agenda – externe agenda + localStorage-lessen, tabs & filtering (kalenderweek)
+// Agenda – snelle timeouts + fallback, externe agenda + localStorage-lessen,
+// tabs & filtering (kalenderweek ma–zo)
 (function () {
-  const TABS = document.querySelectorAll('#agenda-tabs .tab');
-  const loader = document.getElementById('agenda-loader');
+  // ---- UI refs ----
+  const TABS     = document.querySelectorAll('#agenda-tabs .tab');
+  const loader   = document.getElementById('agenda-loader');
   const errorBox = document.getElementById('agenda-error');
-  const tableWrap = document.getElementById('agenda-table-wrap');
-  const tbody = document.querySelector('#agenda-table tbody');
+  const tableWrap= document.getElementById('agenda-table-wrap');
+  const tbody    = document.querySelector('#agenda-table tbody');
 
+  // ---- helpers ----
   const S = v => String(v ?? '');
-  const bust = () => '?t=' + Date.now();
+  const TIMEOUT_MS = 1500; // geef elke bron max. 1.5s (pas aan indien gewenst)
+
+  function fetchWithTimeout(url, ms = TIMEOUT_MS, opts = {}) {
+    return Promise.race([
+      fetch(url, opts),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+    ]);
+  }
 
   async function fetchJson(tryUrls) {
     for (const u of tryUrls) {
       try {
-        const r = await fetch(u + (u.includes('?')?'':'?t=') + Date.now(), { cache: 'no-store' });
+        const bust = u.includes('?') ? '' : '?t=';
+        const r = await fetchWithTimeout(u + bust + Date.now(), TIMEOUT_MS, { cache: 'no-store' });
         if (r.ok) return r.json();
-      } catch (_){}
+      } catch (_) { /* negeer en probeer volgende bron */ }
     }
-    return null;
+    return null; // caller mag hiermee omgaan
   }
 
-  // ---- Normalisatie externe agenda ----
-  function normalizeAgenda(raw){
-    // Verwacht: {lessons:[], notices:[]} of array gemengd of {items:[]}
+  // ---- normalisatie externe agenda ----
+  function normalizeAgenda(raw) {
+    if (!raw) return { lessons: [], notices: [] };
+
+    // { items: [...] } of array gemengd
     const arr =
       Array.isArray(raw)            ? raw :
       Array.isArray(raw?.items)     ? raw.items :
@@ -37,15 +50,17 @@
       }
       return { lessons, notices };
     }
+
+    // { lessons: [], notices: [] }
     return {
       lessons: Array.isArray(raw?.lessons) ? raw.lessons : [],
       notices: Array.isArray(raw?.notices) ? raw.notices : []
     };
   }
 
-  // ---- LocalStorage: haal lessen op en normaliseer naar agenda-lessen ----
-  function loadLocalLessons(){
-    try{
+  // ---- localStorage-lessen ophalen en normaliseren ----
+  function loadLocalLessons() {
+    try {
       const raw = localStorage.getItem('superhond-db');
       const db  = raw ? JSON.parse(raw) : {};
       const lessons = Array.isArray(db?.lessons) ? db.lessons : [];
@@ -57,25 +72,25 @@
         startISO:S(l.startISO || l.start),
         endISO:  S(l.endISO   || l.end),
         location: (l.location && typeof l.location === 'object')
-                    ? { name:S(l.location.name), mapsUrl:S(l.location.mapsUrl) || null }
-                    : { name:S(l.locatie || ''), mapsUrl:S(l.mapsUrl || '') || null },
+                    ? { name: S(l.location.name), mapsUrl: S(l.location.mapsUrl) || null }
+                    : { name: S(l.locatie || ''), mapsUrl: S(l.mapsUrl || '') || null },
         trainers: Array.isArray(l.trainers) ? l.trainers.slice() : []
       })).filter(x => x.startISO); // alleen geldige items
-    }catch{
+    } catch {
       return [];
     }
   }
 
-  // ---- Merge: externe (primair) + lokaal (secundair), dedupe op id of start+title ----
-  function mergeLessons(ext = [], loc = []){
-    const key = x => S(x.id) || (S(x.startISO)+'|'+S(x.title));
+  // ---- merge: externe (primair) + lokaal (secundair), dedupe op id of start+title ----
+  function mergeLessons(ext = [], loc = []) {
+    const key = x => S(x.id) || (S(x.startISO) + '|' + S(x.title));
     const map = new Map();
     for (const e of ext) map.set(key(e), e);
     for (const l of loc) if (!map.has(key(l))) map.set(key(l), l);
     return Array.from(map.values());
   }
 
-  // ---- Helpers ----
+  // ---- datum/tijd helpers ----
   function toDate(x) { return x ? new Date(String(x).replace(' ', 'T')) : null; }
 
   function fmtDateRange(startISO, endISO) {
@@ -96,7 +111,7 @@
     const s = toDate(startISO);
     if (!s) return false;
     const now = new Date();
-    const day = (now.getDay() + 6) % 7;          // ma=0 ... zo=6
+    const day = (now.getDay() + 6) % 7;           // ma=0 ... zo=6
     const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     weekStart.setDate(weekStart.getDate() - day); // maandag 00:00
     const weekEnd = new Date(weekStart);
@@ -104,7 +119,7 @@
     return s >= weekStart && s < weekEnd;
   }
 
-  // ---- Rendering ----
+  // ---- rendering ----
   function rowForLesson(item) {
     const title = S(item.title || item.name || 'Les');
     const href  = item.id ? `../lessen/detail.html?id=${encodeURIComponent(item.id)}` : '#';
@@ -138,12 +153,12 @@
   function render(scope, data) {
     let rows = '';
     if (scope === 'mededelingen') {
-      rows = data.notices
+      rows = (data.notices || [])
         .slice()
         .sort((a,b) => S(b.dateISO||b.date||b.datum).localeCompare(S(a.dateISO||a.date||a.datum)))
         .map(rowForNotice).join('');
     } else {
-      const source = data.lessons
+      const source = (data.lessons || [])
         .slice()
         .sort((a,b) => S(a.startISO||a.start).localeCompare(S(b.startISO||b.start)));
       const filtered = (scope === 'week')
@@ -158,21 +173,26 @@
     tableWrap.style.display = 'block';
   }
 
-  // ---- Init ----
+  // ---- init ----
   async function init() {
     try {
       loader.textContent = '⏳ Data laden…';
       tableWrap.style.display = 'none';
       errorBox.style.display = 'none';
 
-      // 1) Externe agenda
-      const extRaw = await fetchJson(['../api/agenda','/api/agenda','../data/agenda.json','/data/agenda.json']);
+      // 1) Externe agenda – tijdens DEV: lokaal eerst voor snelheid
+      const extRaw = await fetchJson([
+        '../data/agenda.json',
+        '/data/agenda.json',
+        '../api/agenda',
+        '/api/agenda'
+      ]);
       const ext = normalizeAgenda(extRaw);
 
       // 2) Lokale lessen
       const localLessons = loadLocalLessons();
 
-      // 3) Merge & cache
+      // 3) Merge
       const merged = {
         lessons: mergeLessons(ext.lessons, localLessons),
         notices: ext.notices || []
@@ -181,7 +201,7 @@
       // 4) Start met 'alles'
       render('alles', merged);
 
-      // 5) Tab events
+      // 5) Tabs
       TABS.forEach(btn => {
         btn.addEventListener('click', () => {
           TABS.forEach(b => b.classList.remove('active'));
