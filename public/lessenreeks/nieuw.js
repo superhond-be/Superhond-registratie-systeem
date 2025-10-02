@@ -1,140 +1,135 @@
-// Nieuwe lessenreeks – generator + save naar localStorage
+// Nieuw strippenpakket (GEEN auto-lessen; einddatum niet berekenen)
 (() => {
   const $ = s => document.querySelector(s);
   const S = v => String(v ?? '').trim();
 
   document.addEventListener('DOMContentLoaded', () => {
     if (window.SuperhondUI?.mount) {
-      SuperhondUI.mount({ title: 'Nieuwe lessenreeks', icon: '🧩', back: './' });
+      SuperhondUI.mount({ title:'Strippenpakket', icon:'📦', back:'./' });
     }
   });
 
-  const el = {
-    form: $('#formReeks'),
-    previewWrap: $('#previewWrap'),
-    previewList: $('#previewList'),
-    btnPreview:  $('#btnPreview'),
-    pakNaam:     $('#pakNaam'),
-    reeksNaam:   $('#reeksNaam'),
-    thema:       $('#thema'),
-    prijs:       $('#prijs'),
-    startDatum:  $('#startDatum'),
-    startTijd:   $('#startTijd'),
-    aantal:      $('#aantal'),
-    duur:        $('#duur'),
-    interval:    $('#interval'),
-    trainers:    $('#trainers'),
-    locNaam:     $('#locNaam'),
-    locMaps:     $('#locMaps'),
-  };
-
-  function loadDB() {
+  // ---- storage helpers ----
+  function loadDB(){
     try {
       const raw = localStorage.getItem('superhond-db');
       const db  = raw ? JSON.parse(raw) : {};
       db.series  = Array.isArray(db.series)  ? db.series  : [];
       db.lessons = Array.isArray(db.lessons) ? db.lessons : [];
       return db;
-    } catch {
-      return { series:[], lessons:[] };
-    }
+    } catch { return { series:[], lessons:[] }; }
   }
   function saveDB(db){ localStorage.setItem('superhond-db', JSON.stringify(db)); }
 
-  function toISO(date, time) {
-    const [h, m] = String(time).split(':').map(Number);
-    const d = new Date(date); d.setHours(h||0, m||0, 0, 0);
-    d.setSeconds(0,0);
-    return d.toISOString().slice(0,16); // yyyy-MM-ddTHH:mm
-  }
-  function addMinutes(iso, mins) {
-    const d = new Date(iso);
-    d.setMinutes(d.getMinutes() + Number(mins||0));
-    return d.toISOString().slice(0,16);
-  }
-
-  function makeSeriesAndLessons() {
-    const pkg   = S(el.pakNaam.value);
-    const serie = S(el.reeksNaam.value);
-    const name  = [pkg, serie].filter(Boolean).join(' — ');
-    const thema = S(el.thema.value);
-    const price = el.prijs.value ? Number(el.prijs.value) : null;
-
-    const startDate = S(el.startDatum.value);
-    const startTime = S(el.startTijd.value);
-    const n   = Math.max(1, Number(el.aantal.value||1));
-    const dur = Math.max(5, Number(el.duur.value||60));
-    const step= Number(el.interval.value||7);
-
-    const trainers = S(el.trainers.value).split(',').map(s=>s.trim()).filter(Boolean);
-    const locName  = S(el.locNaam.value);
-    const locMaps  = S(el.locMaps.value);
-
-    const seriesId = 'reeks-' + Math.random().toString(36).slice(2,8);
-
-    const lessons = [];
-    for (let i=0;i<n;i++){
-      const startISO = toISO(startDate, startTime);
-      const d = new Date(startISO);
-      d.setDate(d.getDate() + i*step);
-      const start = d.toISOString().slice(0,16);
-      const end   = addMinutes(start, dur);
-
-      lessons.push({
-        id: 'les-' + seriesId + '-' + String(i+1).padStart(2,'0'),
-        seriesId,
-        title: `${name} — les ${i+1}`,
-        startISO: start,
-        endISO: end,
-        location: {
-          name: locName || '',
-          mapsUrl: locMaps || null
-        },
-        trainers
-      });
+  async function fetchJson(tryUrls){
+    for (const u of tryUrls){
+      try {
+        const r = await fetch(u + (u.includes('?')?'':'?t=') + Date.now(), { cache:'no-store' });
+        if (r.ok) return r.json();
+      }catch(_){}
     }
+    return null;
+  }
 
-    const series = {
-      id: seriesId,
-      name,
-      thema,
-      count: n,
-      price
+  const D2 = ['zo','ma','di','wo','do','vr','za'];
+  function dow2(dateStr){
+    if (!dateStr) return '—';
+    const d = new Date(dateStr + 'T00:00');
+    return D2[d.getDay()];
+  }
+
+  async function populateRefs(){
+    const [trainers, locaties] = await Promise.all([
+      fetchJson(['../data/trainers.json','/data/trainers.json']) || [],
+      fetchJson(['../data/locaties.json','/data/locaties.json']) || []
+    ]);
+
+    const tSel = $('#trainerIds');
+    tSel.innerHTML = '';
+    (Array.isArray(trainers) ? trainers : trainers?.items || []).forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id ?? t.code ?? S(t.naam || t.name);
+      opt.textContent = t.naam || t.name || ('Trainer ' + (opt.value||''));
+      tSel.appendChild(opt);
+    });
+
+    const lSel = $('#locatieId');
+    lSel.innerHTML = '';
+    (Array.isArray(locaties) ? locaties : locaties?.items || []).forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.id ?? l.code ?? S(l.naam || l.name);
+      opt.textContent = l.naam || l.name || ('Locatie ' + (opt.value||''));
+      opt.dataset.maps = l.mapsUrl || l.maps || '';
+      lSel.appendChild(opt);
+    });
+  }
+
+  function bindDowBadges(){
+    const s = $('#startDatum'), e = $('#eindDatum');
+    const sDOW = $('#startDOW'), eDOW = $('#eindDOW');
+    const upd = () => {
+      sDOW.textContent = s.value ? dow2(s.value) : '—';
+      eDOW.textContent = e.value ? dow2(e.value) : '—';
     };
-
-    return { series, lessons };
+    s.addEventListener('input', upd);
+    e.addEventListener('input', upd);
+    upd();
   }
 
-  function fmt(li){
-    const d2 = n => String(n).padStart(2,'0');
-    const s  = new Date(li.startISO);
-    const e  = new Date(li.endISO);
-    const date = `${d2(s.getDate())}/${d2(s.getMonth()+1)}/${s.getFullYear()}`;
-    const t1 = `${d2(s.getHours())}:${d2(s.getMinutes())}`;
-    const t2 = `${d2(e.getHours())}:${d2(e.getMinutes())}`;
-    return `${date} — ${t1} → ${t2} · ${li.title}`;
+  function bindSubmit(){
+    $('#formReeks').addEventListener('submit', (ev) => {
+      ev.preventDefault();
+
+      const pkg  = S($('#pakNaam').value);
+      const ser  = S($('#reeksNaam').value);
+      const name = [pkg, ser].filter(Boolean).join(' — ') || pkg;
+
+      const startISO = $('#startDatum').value ? $('#startDatum').value + 'T00:00' : null;
+      const endISO   = $('#eindDatum').value  ? $('#eindDatum').value  + 'T23:59' : null;
+
+      const locSel   = $('#locatieId');
+      const locOpt   = locSel.options[locSel.selectedIndex];
+      const locatie  = {
+        id:   S(locSel.value || ''),
+        name: S(locOpt?.textContent || ''),
+        mapsUrl: S(locOpt?.dataset.maps || '')
+      };
+
+      const trainerOptions = Array.from($('#trainerIds').selectedOptions);
+      const trainerIds   = trainerOptions.map(o => S(o.value));
+      const trainerNamen = trainerOptions.map(o => S(o.textContent));
+
+      const record = {
+        id: 'reeks-' + Math.random().toString(36).slice(2, 8),
+        name,
+        thema: S($('#thema').value),
+        // belangrijk: strippen i.p.v. "aantal lessen"
+        strippen: Number($('#strippen').value || 0),
+        geldigheid_weken: Number($('#geldigheidWeken').value || 0),
+        max_deelnemers: Number($('#maxDeelnemers').value || 0),
+        lesduur_min: Number($('#lesduur').value || 0),
+        startISO,          // alleen weergegeven met DOW, geen auto-berekening
+        endISO,            // ingevuld door gebruiker
+        locatie,
+        trainers: trainerNamen,      // voor weergave
+        trainerIds,                  // voor logica
+        prijs_excl: Number($('#prijs').value || 0),
+        status: S($('#status').value || 'actief'),
+        type: 'strippenpakket'
+      };
+
+      const db = loadDB();
+      db.series.push(record);
+      saveDB(db);
+
+      // naar overzicht
+      location.href = './';
+    });
   }
 
-  function renderPreview(list){
-    el.previewList.innerHTML = list.map(li => `<li>${fmt(li)}</li>`).join('');
-    el.previewWrap.open = true;
-  }
-
-  el.btnPreview?.addEventListener('click', () => {
-    const { lessons } = makeSeriesAndLessons();
-    renderPreview(lessons);
-  });
-
-  el.form?.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const { series, lessons } = makeSeriesAndLessons();
-
-    const db = loadDB();
-    db.series.push(series);
-    db.lessons.push(...lessons);
-    saveDB(db);
-
-    alert('Reeks en lessen opgeslagen.');
-    location.href = `./detail.html?id=${encodeURIComponent(series.id)}`;
+  document.addEventListener('DOMContentLoaded', async () => {
+    await populateRefs();
+    bindDowBadges();
+    bindSubmit();
   });
 })();
