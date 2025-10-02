@@ -4,13 +4,15 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Mededeling – Detail</title>
-  <link rel="stylesheet" href="/assets/css/app.css"/>
+  <!-- RELATIEF naar assets -->
+  <link rel="stylesheet" href="../assets/css/app.css"/>
 </head>
 <body>
 <header class="topbar">
   <h1>Mededeling – Detail</h1>
   <nav class="breadcrumbs">
-    <a href="/dashboard/">← Terug naar dashboard</a>
+    <!-- RELATIEVE link terug naar dashboard -->
+    <a href="../dashboard/">← Terug naar dashboard</a>
   </nav>
 </header>
 
@@ -19,23 +21,33 @@
 </main>
 
 <script type="module">
-  import {loadDB} from '/assets/js/storage.js';
+  // RELATIEVE import
+  import { loadDB } from '../assets/js/storage.js';
 
   function qs(k){ return new URL(location.href).searchParams.get(k); }
-  function escapeHTML(s=''){return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');}
+  function escapeHTML(s=''){
+    return String(s)
+      .replaceAll('&','&amp;')
+      .replaceAll('<','&lt;')
+      .replaceAll('>','&gt;')
+      .replaceAll('"','&quot;')
+      .replaceAll("'",'&#39;');
+  }
 
   const id = qs('id');
   const el = document.getElementById('detail');
   const db = loadDB();
   const n = db.notices.find(x=>x.id===id);
+
   if(!n){
-    el.innerHTML = `<p class="muted">Mededeling niet gevonden.</p>`;
+    el.innerHTML = `<p class="muted">Mededeling niet gevonden.</p>
+                    <p><a class="accent" href="../dashboard/">Terug</a></p>`;
   }else{
     el.innerHTML = `
       <h2>${escapeHTML(n.title)}</h2>
       <p class="muted">${n.dateISO}</p>
       <p>${escapeHTML(n.message)}</p>
-      <p><a class="accent" href="/dashboard/">Terug</a></p>
+      <p><a class="accent" href="../dashboard/">Terug</a></p>
     `;
   }
 </script>
