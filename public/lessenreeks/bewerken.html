@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lessenreeks bewerken – Superhond</title>
+
+  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+</head>
+<body class="subpage">
+<header id="topbar" class="topbar"></header>
+
+<main class="container">
+  <h1 class="page-title">Lessenreeks bewerken</h1>
+
+  <div id="loader" class="loader">⏳ Laden…</div>
+  <div id="error" class="error" style="display:none"></div>
+
+  <form id="formReeks" class="card" style="display:none">
+    <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+      <label>Pakket-naam
+        <input class="input" id="pakNaam" type="text" required />
+      </label>
+      <label>Reeks-naam
+        <input class="input" id="reeksNaam" type="text" required />
+      </label>
+      <label>Thema
+        <input class="input" id="thema" type="text" />
+      </label>
+      <label>Prijs (€)
+        <input class="input input-nr" id="prijs" type="number" min="0" step="1" />
+      </label>
+      <label>Start-datum
+        <input class="input" id="startDatum" type="date" required />
+      </label>
+      <label>Starttijd
+        <input class="input" id="startTijd" type="time" required />
+      </label>
+      <label>Aantal lessen
+        <input class="input input-nr" id="aantal" type="number" min="1" required />
+      </label>
+      <label>Duur (min.)
+        <input class="input input-nr" id="duur" type="number" min="5" step="5" required />
+      </label>
+      <label>Interval (dagen)
+        <input class="input input-nr" id="interval" type="number" min="1" step="1" />
+      </label>
+      <label>Trainers (komma-gescheiden)
+        <input class="input" id="trainers" type="text" />
+      </label>
+      <label>Locatie-naam
+        <input class="input" id="locNaam" type="text" />
+      </label>
+      <label>Google Maps (URL)
+        <input class="input" id="locMaps" type="url" />
+      </label>
+    </div>
+
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" type="submit">Opslaan</button>
+      <button class="btn" id="btnSaveRegen" type="button">Opslaan + her-genereer lessen</button>
+      <a class="btn" href="./">Annuleren</a>
+    </div>
+  </form>
+</main>
+
+<footer id="footer" class="footer"></footer>
+
+<script src="../js/layout.js?v=0.20.0" defer></script>
+<script type="module" src="./bewerken.js?v=0.20.0" defer></script>
+</body>
+</html>
