@@ -1,57 +1,51 @@
-[
-  {
-    "id": 301,
-    "reeks_id": 201,
-    "datum": "2025-10-05",
-    "start": "10:00",
-    "einde": "11:00",
-    "trainer_id": 1,
-    "locatie_id": 1,
-    "specificatie": "PUP-NAJ-01",
-    "status": "actief"
-  },
-  {
-    "id": 302,
-    "reeks_id": 201,
-    "datum": "2025-10-12",
-    "start": "10:00",
-    "einde": "11:00",
-    "trainer_id": 2,
-    "locatie_id": 1,
-    "specificatie": "PUP-NAJ-02",
-    "status": "actief"
-  },
-  {
-    "id": 303,
-    "reeks_id": 202,
-    "datum": "2025-10-12",
-    "start": "09:30",
-    "einde": "10:30",
-    "trainer_id": 3,
-    "locatie_id": 2,
-    "specificatie": "BAS-HER-01",
-    "status": "actief"
-  },
-  {
-    "id": 304,
-    "reeks_id": 202,
-    "datum": "2025-10-19",
-    "start": "11:00",
-    "einde": "12:00",
-    "trainer_id": 1,
-    "locatie_id": 1,
-    "specificatie": "BAS-HER-02",
-    "status": "actief"
-  },
-  {
-    "id": 305,
-    "reeks_id": 201,
-    "datum": "2025-10-19",
-    "start": "10:00",
-    "einde": "11:00",
-    "trainer_id": 2,
-    "locatie_id": 1,
-    "specificatie": "PUP-NAJ-03",
-    "status": "actief"
-  }
-]
+{
+  "klassen": [
+    { "id": 1, "naam": "Puppy Pakket", "type": "Start", "thema": "Socialisatie", "status": "actief" },
+    { "id": 2, "naam": "Basisgroep", "type": "Gevorderd", "thema": "Gehoorzaamheid", "status": "actief" }
+  ],
+  "types": [
+    { "id": 1, "naam": "Start" },
+    { "id": 2, "naam": "Gevorderd" }
+  ],
+  "locaties": [
+    { "id": 1, "naam": "Retie Terrein", "adres": "Kloosterstraat, Retie", "maps": "https://maps.google.com/?q=Retie+Terrein" },
+    { "id": 2, "naam": "Dessel Park", "adres": "Stationsstraat, Dessel", "maps": "https://maps.google.com/?q=Dessel+Park" }
+  ],
+  "themas": [
+    { "id": 1, "naam": "Socialisatie" },
+    { "id": 2, "naam": "Gehoorzaamheid" }
+  ],
+  "trainers": [
+    { "id": 1, "voornaam": "Sofie", "achternaam": "Vermeulen" },
+    { "id": 2, "voornaam": "Paul", "achternaam": "Janssens" },
+    { "id": 3, "voornaam": "Nancy", "achternaam": "Peeters" }
+  ],
+  "lessen": [
+    {
+      "id": 1,
+      "reeksId": 1,
+      "naam": "Puppy Start",
+      "type": "Start",
+      "locatieId": 1,
+      "thema": "Socialisatie",
+      "trainerId": 1,
+      "datum": "2025-10-08",
+      "start": "10:00",
+      "capaciteit": 8,
+      "status": "actief"
+    },
+    {
+      "id": 2,
+      "reeksId": 2,
+      "naam": "Basisgroep Gevorderd",
+      "type": "Gevorderd",
+      "locatieId": 2,
+      "thema": "Gehoorzaamheid",
+      "trainerId": 2,
+      "datum": "2025-10-04",
+      "start": "11:00",
+      "capaciteit": 10,
+      "status": "actief"
+    }
+  ]
+}
