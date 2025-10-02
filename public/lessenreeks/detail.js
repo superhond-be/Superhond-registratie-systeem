@@ -1,10 +1,11 @@
-// /lessenreeks/detail.js
-// Lessenreeks detail met inline bewerken van lessen + interval verschuiven + blokgenerator
+<!-- Plaats NIET in HTML. Dit is de volledige JS voor /public/lessenreeks/detail.js -->
+<script>
+/* Lessenreeks – detail: kopblok + bewerkbare/verw. lessen + “Nieuwe les” */
 (() => {
-  const $  = s => document.querySelector(s);
-  const $$ = s => Array.from(document.querySelectorAll(s));
-  const S  = v => String(v ?? '').trim();
+  const $ = s => document.querySelector(s);
+  const S = v => String(v ?? '').trim();
   const D2 = ['zo','ma','di','wo','do','vr','za'];
+  const pad2 = n => String(n).padStart(2,'0');
 
   document.addEventListener('DOMContentLoaded', () => {
     if (window.SuperhondUI?.mount) {
@@ -12,7 +13,13 @@
     }
   });
 
-  // ---------- Storage ----------
+  function bust(u){ return u + (u.includes('?')?'&':'?') + 't=' + Date.now(); }
+  async function fetchJson(tryUrls){
+    for (const u of tryUrls){
+      try{ const r = await fetch(bust(u), { cache:'no-store' }); if (r.ok) return r.json(); }catch(_){}
+    }
+    return null;
+  }
   function loadDB(){
     try{
       const raw = localStorage.getItem('superhond-db');
@@ -20,411 +27,242 @@
       db.series  = Array.isArray(db.series)  ? db.series  : [];
       db.lessons = Array.isArray(db.lessons) ? db.lessons : [];
       return db;
-    }catch{
-      return { series:[], lessons:[] };
-    }
+    }catch{ return { series:[], lessons:[] }; }
   }
   function saveDB(db){ localStorage.setItem('superhond-db', JSON.stringify(db)); }
 
-  // ---------- (optioneel) extern ----------
-  async function fetchJson(tryUrls){
-    for (const u of tryUrls){
-      try{
-        const url = u + (u.includes('?') ? '&' : '?') + 't=' + Date.now();
-        const r = await fetch(url, { cache:'no-store' });
-        if (r.ok) return r.json();
-      }catch(_){}
-    }
-    return null;
-  }
-
-  function normalizeSeries(raw){
+  function normalizeKlassen(raw){
     if (!raw) return [];
-    const arr =
-      Array.isArray(raw)        ? raw :
-      Array.isArray(raw.items)  ? raw.items :
-      Array.isArray(raw.data)   ? raw.data :
-      Array.isArray(raw.reeksen)? raw.reeksen :
-      Array.isArray(raw.series) ? raw.series : [];
-    return arr.map(r => ({
-      id: r.id ?? r.reeksId ?? r.seriesId ?? null,
-      name: S([r.packageName ?? r.pakket ?? r.pkg ?? r.naam ?? r.name ?? '',
-               r.seriesName  ?? r.reeks   ?? r.serie ?? '']
-               .filter(Boolean).join(' — ')) || S(r.naam || r.name || ''),
-      thema: r.thema ?? r.theme ?? '',
-      strippen: Number(r.strippen ?? r.strips ?? r.aantal ?? r.count ?? 0) || 0,
-      geldigheid_weken: Number(r.geldigheid_weken ?? r.weken ?? 0) || 0,
-      max_deelnemers: Number(r.max_deelnemers ?? r.max ?? 0) || 0,
-      lesduur_min: Number(r.lesduur_min ?? r.duur ?? 0) || 0,
-      startISO: r.startISO ?? (r.startDatum ? r.startDatum + 'T00:00' : null) ?? r.start,
-      endISO:   r.endISO   ?? (r.eindDatum  ? r.eindDatum  + 'T23:59' : null) ?? r.end,
-      locatie:  r.locatie || r.location || null,
-      trainers: Array.isArray(r.trainers) ? r.trainers : [],
-      prijs_excl: Number(r.prijs_excl ?? r.prijs ?? r.price ?? 0),
-      status: S(r.status || 'actief')
+    const arr = Array.isArray(raw.klassen) ? raw.klassen :
+                Array.isArray(raw.items)   ? raw.items   :
+                Array.isArray(raw.data)    ? raw.data    :
+                Array.isArray(raw)         ? raw         : [];
+    return arr.map(k => ({
+      id:k.id, naam:S(k.naam||k.name||''), thema:S(k.thema||k.theme||''),
+      strippen:Number(k.aantalStrippen ?? k.strippen ?? 0)||0,
+      geldigheid_weken:Number(k.geldigheidsduur_weken ?? k.weken ?? 0)||0,
+      prijs_excl:Number(k.prijs_excl ?? k.price ?? 0)||0,
+      lesduur_min:Number(k.lesduur_min ?? k.duur ?? 0)||0,
+      status:S(k.status||'actief')
     }));
   }
 
-  // ---------- Date helpers ----------
-  const pad2 = n => String(n).padStart(2,'0');
-  function fmtDOW(dateISO){
-    if (!dateISO) return '—';
+  function normalizeReeksen(raw){
+    if (!raw) return [];
+    const arr = Array.isArray(raw.lessenreeksen) ? raw.lessenreeksen :
+                Array.isArray(raw.reeksen)       ? raw.reeksen       :
+                Array.isArray(raw.items)         ? raw.items         :
+                Array.isArray(raw.data)          ? raw.data          :
+                Array.isArray(raw)               ? raw               : [];
+    return arr.map(r => ({
+      id:S(r.id ?? r.reeksId ?? r.seriesId ?? ''),
+      klasId:S(r.klasId ?? r.classId ?? ''),
+      naam:S(r.naam || r.name || ''),
+      thema:S(r.thema || r.theme || ''),
+      datum:S(r.datum || r.startDatum || ''),
+      begintijd:S(r.begintijd || r.startTime || ''),
+      eindtijd:S(r.eindtijd  || r.endTime   || ''),
+      maxDeelnemers:Number(r.maxDeelnemers ?? r.max ?? 0)||0,
+      locatie:(r.locatie && typeof r.locatie==='object')
+        ? { naam:S(r.locatie.naam || r.locatie.name || ''), mapsUrl:S(r.locatie.mapsUrl || '')||null }
+        : { naam:S(r.locatie || r.location || ''), mapsUrl:null },
+      trainers:Array.isArray(r.trainers)? r.trainers.map(S):[],
+      status:S(r.status || 'actief')
+    }));
+  }
+
+  function normalizeLessons(arr){
+    if (!Array.isArray(arr)) return [];
+    return arr.map(l => ({
+      id:S(l.id),
+      seriesId:S(l.seriesId || l.reeksId || ''),
+      klasId:S(l.klasId || ''),
+      titel:S(l.titel || l.title || l.name || 'Les'),
+      startISO:S(l.startISO || l.start || ''),
+      endISO:S(l.endISO || l.end || ''),
+      locatie:(l.locatie && typeof l.locatie==='object')
+        ? { naam:S(l.locatie.naam || l.locatie.name || ''), mapsUrl:S(l.locatie.mapsUrl || '')||null }
+        : { naam:S(l.locatie || ''), mapsUrl:null },
+      trainers:Array.isArray(l.trainers)? l.trainers.map(S):[],
+      status:S(l.status || 'actief')
+    }));
+  }
+
+  const euro = n => (n == null || isNaN(n)) ? '—' :
+    new Intl.NumberFormat('nl-BE',{style:'currency',currency:'EUR'}).format(Number(n));
+
+  function fmtDateTimeRange(startISO,endISO){
+    if (!startISO) return '—';
+    const s = new Date(String(startISO).replace(' ','T'));
+    const e = endISO ? new Date(String(endISO).replace(' ','T')) : null;
+    const d = `${D2[s.getDay()]} ${pad2(s.getDate())}/${pad2(s.getMonth()+1)}/${s.getFullYear()}`;
+    const t1 = `${pad2(s.getHours())}:${pad2(s.getMinutes())}`;
+    if (e){ const t2 = `${pad2(e.getHours())}:${pad2(e.getMinutes())}`; return `${d} ${t1} — ${t2}`; }
+    return `${d} ${t1}`;
+  }
+  function addMinutes(dateISO, minutes){
     const d = new Date(String(dateISO).replace(' ','T'));
-    return `${D2[d.getDay()]} ${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${d.getFullYear()}`;
-  }
-  function joinISO(dateStr, timeStr){ return dateStr && timeStr ? `${dateStr}T${timeStr}:00` : null; }
-  function addMinutes(iso, minutes){ if (!iso) return null; const d = new Date(iso); d.setMinutes(d.getMinutes() + (Number(minutes)||0)); return d.toISOString(); }
-  function toDateInputValue(iso){ if (!iso) return ''; const d=new Date(iso); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
-  function toTimeInputValue(iso){ if (!iso) return ''; const d=new Date(iso); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
-  function minutesBetween(a,b){ if(!a||!b) return null; return Math.round((new Date(b)-new Date(a))/60000); }
-
-  // ---------- Render ----------
-  function escapeHTML(s=''){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;'); }
-  function euro(n){ if (n==null || isNaN(n)) return '—'; return new Intl.NumberFormat('nl-BE',{style:'currency',currency:'EUR'}).format(Number(n)); }
-
-  function rowViewHTML(l){
-    const startDate = fmtDOW(l.startISO);
-    const startTime = l.startISO ? l.startISO.slice(11,16) : '—';
-    const endTime   = l.endISO   ? l.endISO.slice(11,16)   : '—';
-    const trainers  = Array.isArray(l.trainers)&&l.trainers.length
-      ? l.trainers.map(t=>`<span class="badge">${escapeHTML(String(t))}</span>`).join(' ')
-      : '—';
-    return `
-      <tr data-id="${escapeHTML(l.id)}" data-mode="view">
-        <td>${escapeHTML(l.title || l.name || 'Les')}</td>
-        <td>${startDate}</td>
-        <td>${startTime}</td>
-        <td>${endTime}</td>
-        <td>${escapeHTML(l.location?.name || l.locatie || '—')}</td>
-        <td>${trainers}</td>
-        <td style="white-space:nowrap;display:flex;gap:.35rem;flex-wrap:wrap">
-          <button class="btn btn-xs" data-action="shift" title="Verschuif vanaf deze les">🔁</button>
-          <button class="btn btn-xs" data-action="edit"  title="Bewerk">✏️</button>
-          <button class="btn btn-xs" data-action="delete" title="Verwijder">🗑</button>
-        </td>
-      </tr>
-    `;
+    d.setMinutes(d.getMinutes() + Number(minutes||0));
+    return d.toISOString().slice(0,16) + ':00';
   }
 
-  function rowEditHTML(l, fallbackDuurMin = 60){
-    const dateVal = toDateInputValue(l.startISO);
-    const startVal= toTimeInputValue(l.startISO);
-    const duurVal = String(Number(l.duur_min || fallbackDuurMin));
-    const endVal  = toTimeInputValue(l.endISO);
-    const locName = l.location?.name || l.locatie || '';
-    const locMaps = l.location?.mapsUrl || l.mapsUrl || '';
-    const trStr   = Array.isArray(l.trainers) ? l.trainers.join(', ') : '';
-    const title   = l.title || l.name || 'Les';
-    return `
-      <tr data-id="${escapeHTML(l.id)}" data-mode="edit">
-        <td><input class="input" data-f="title" type="text" value="${escapeHTML(title)}" /></td>
-        <td><input class="input" data-f="date"  type="date" value="${escapeHTML(dateVal)}" /></td>
-        <td><input class="input" data-f="start" type="time" value="${escapeHTML(startVal)}" /></td>
-        <td>
-          <div style="display:flex;gap:6px;align-items:center">
-            <input class="input input-nr" data-f="duur" type="number" min="5" step="5" value="${escapeHTML(duurVal)}" title="Duur (minuten)"/>
-            <span class="muted">=</span>
-            <input class="input" data-f="end" type="time" value="${escapeHTML(endVal)}" title="Einde (kan overschreven worden)"/>
-          </div>
-        </td>
-        <td>
-          <input class="input" data-f="locName" type="text" placeholder="Locatie" value="${escapeHTML(locName)}" />
-          <input class="input" style="margin-top:4px" data-f="locMaps" type="url" placeholder="https://maps.google.com/?q=..." value="${escapeHTML(locMaps)}" />
-        </td>
-        <td><input class="input" data-f="trainers" type="text" placeholder="vb. Paul, Sophie" value="${escapeHTML(trStr)}" /></td>
-        <td style="white-space:nowrap;display:flex;gap:.35rem;flex-wrap:wrap">
-          <button class="btn btn-xs" data-action="save">✔️</button>
-          <button class="btn btn-xs" data-action="cancel">✖</button>
-        </td>
-      </tr>
-    `;
-  }
-
-  function renderLessons(seriesId, db, tbody, fallbackDuurMin){
-    const lessons = (db.lessons || [])
-      .filter(l => String(l.seriesId) === String(seriesId))
-      .sort((a,b) => S(a.startISO).localeCompare(S(b.startISO)));
-
-    if (!lessons.length){
-      tbody.innerHTML = `<tr><td colspan="7" class="muted">Geen gekoppelde lessen.</td></tr>`;
-      return;
-    }
-    tbody.innerHTML = lessons.map(l => rowViewHTML(l)).join('');
-  }
-
-  // ---------- Row actions ----------
-  function findLesson(db, id){
-    return (db.lessons || []).find(l => String(l.id) === String(id));
-  }
-  function enterEditRow(tr, l, fallbackDuurMin){ tr.outerHTML = rowEditHTML(l, fallbackDuurMin); }
-  function backToViewRow(tr, l){ tr.outerHTML = rowViewHTML(l); }
-
-  function parseEditRowValues(tr, defaultDuurMin){
-    const g = sel => tr.querySelector(sel);
-    const title   = S(g('[data-f="title"]')?.value);
-    const dateStr = S(g('[data-f="date"]')?.value);
-    const start   = S(g('[data-f="start"]')?.value);
-    const endIn   = S(g('[data-f="end"]')?.value);
-    let   duurMin = Number(g('[data-f="duur"]')?.value || defaultDuurMin) || defaultDuurMin;
-    const locName = S(g('[data-f="locName"]')?.value);
-    const locMaps = S(g('[data-f="locMaps"]')?.value);
-    const trStr   = S(g('[data-f="trainers"]')?.value);
-    const trainers= trStr ? trStr.split(',').map(s=>S(s)).filter(Boolean) : [];
-
-    const startISO = joinISO(dateStr, start);
-    let   endISO   = endIn ? joinISO(dateStr, endIn) : null;
-    if (!endISO && startISO) endISO = addMinutes(startISO, duurMin);
-    if (startISO && endISO && new Date(endISO) <= new Date(startISO)) endISO = addMinutes(startISO, duurMin);
-    const calc = minutesBetween(startISO, endISO);
-    if (calc != null) duurMin = calc;
-
-    return {
-      title, startISO, endISO, duur_min: duurMin,
-      location: locName || locMaps ? { name: locName, mapsUrl: locMaps || null } : null,
-      trainers
-    };
-  }
-
-  function addLesson(seriesId, db, tbody, fallbackDuurMin){
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}-${pad2(now.getMonth()+1)}-${pad2(now.getDate())}`;
-    const startISO = joinISO(dateStr, '09:00');
-    const endISO   = addMinutes(startISO, fallbackDuurMin);
-    const newLesson = {
-      id: 'les-' + Date.now(),
-      seriesId,
-      title: 'Nieuwe les',
-      startISO,
-      endISO,
-      duur_min: fallbackDuurMin,
-      location: null,
-      trainers: []
-    };
-    db.lessons.push(newLesson);
-    saveDB(db);
-    renderLessons(seriesId, db, tbody, fallbackDuurMin);
-    const tr = tbody.querySelector(`tr[data-id="${CSS.escape(newLesson.id)}"]`);
-    if (tr) enterEditRow(tr, newLesson, fallbackDuurMin);
-  }
-
-  function shiftFrom(seriesId, db, startLessonId, days, tbody, fallbackDuurMin){
-    const d = Number(days);
-    if (!Number.isFinite(d) || d === 0) return;
-    const list = (db.lessons || [])
-      .filter(l => String(l.seriesId) === String(seriesId))
-      .sort((a,b) => S(a.startISO).localeCompare(S(b.startISO)));
-    const idx = list.findIndex(l => String(l.id) === String(startLessonId));
-    if (idx < 0) return;
-    const msShift = d * 86400000;
-    for (let i = idx; i < list.length; i++){
-      const l = list[i];
-      if (l.startISO) l.startISO = new Date(new Date(l.startISO).getTime() + msShift).toISOString();
-      if (l.endISO)   l.endISO   = new Date(new Date(l.endISO).getTime()   + msShift).toISOString();
-    }
-    saveDB(db);
-    renderLessons(seriesId, db, tbody, fallbackDuurMin);
-  }
-
-  // ---------- Blok-generator ----------
-  function addBlock(seriesId, db, opts){
-    const {
-      startDate, startTime, aantal, duurMin, intervalDays,
-      trainers, locName, locMaps, defaultTitle = 'Les'
-    } = opts;
-
-    const lessons = [];
-    for (let i=0;i<aantal;i++){
-      const date = new Date(startDate);
-      date.setDate(date.getDate() + (i*intervalDays));
-      const ds = `${date.getFullYear()}-${pad2(date.getMonth()+1)}-${pad2(date.getDate())}`;
-      const startISO = joinISO(ds, startTime);
-      const endISO   = addMinutes(startISO, duurMin);
-
-      lessons.push({
-        id: 'les-' + Date.now() + '-' + i,
-        seriesId,
-        title: defaultTitle,
-        startISO,
-        endISO,
-        duur_min: duurMin,
-        location: (locName || locMaps) ? { name: locName, mapsUrl: locMaps || null } : null,
-        trainers: trainers ? trainers.split(',').map(s=>S(s)).filter(Boolean) : []
-      });
-    }
-    db.lessons.push(...lessons);
-    saveDB(db);
-  }
-
-  // ---------- Init ----------
   async function init(){
     const params = new URLSearchParams(location.search);
-    const seriesId = params.get('id');
+    const id = params.get('id');
 
-    const info    = $('#info');
-    const msg     = $('#msg');
-    const body    = $('#lessenBody');
-    const btnAdd  = $('#btnAdd');
+    const info = $('#info');
+    const msg  = $('#msg');
+    const body = $('#lessenBody');
 
-    // blok form
-    const fBlok   = $('#blok-form');
-    const fSD     = $('#blkStartDate');
-    const fST     = $('#blkStartTime');
-    const fA      = $('#blkAant');
-    const fDuur   = $('#blkDuur');
-    const fInt    = $('#blkInterval');
-    const fTr     = $('#blkTrainers');
-    const fLN     = $('#blkLocName');
-    const fLM     = $('#blkLocMaps');
-
-    const [ext, db] = await Promise.all([
-      fetchJson(['../data/lessenreeksen.json','/data/lessenreeksen.json']),
-      Promise.resolve(loadDB())
+    const [klasJSON, reeksJSON] = await Promise.all([
+      fetchJson(['../data/klassen.json','/data/klassen.json']),
+      fetchJson(['../data/lessenreeksen.json','/data/lessenreeksen.json'])
     ]);
+    const KLASSEN = normalizeKlassen(klasJSON);
+    const REEKSEN = normalizeReeksen(reeksJSON);
 
-    const all = [
-      ...normalizeSeries(ext),
-      ...normalizeSeries({ series: db.series })
-    ];
-    const rec = all.find(r => String(r.id) === String(seriesId));
+    const db = loadDB();
+    const lessons = normalizeLessons(db.lessons);
 
-    if (!rec){
+    const reeks = REEKSEN.find(r => String(r.id) === String(id));
+    if (!reeks){
       msg.style.display = '';
       msg.className = 'card error';
-      msg.textContent = `Reeks met id ${seriesId} niet gevonden.`;
+      msg.textContent = `Reeks met id ${id} niet gevonden.`;
       info.innerHTML = '';
       return;
     }
-    msg.style.display = 'none';
+    const klas = KLASSEN.find(k => String(k.id) === String(reeks.klasId)) || null;
 
+    // Kopblok
     info.innerHTML = `
-      <h2 style="margin-top:0">${escapeHTML(rec.name)}</h2>
+      <h2 style="margin-top:0">${S(reeks.naam)}</h2>
       <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">
-        <div><strong>Thema:</strong> ${escapeHTML(rec.thema || '—')}</div>
-        <div><strong>Aantal strippen:</strong> ${rec.strippen || 0}</div>
-        <div><strong>Geldigheidsduur:</strong> ${rec.geldigheid_weken || 0} weken</div>
-        <div><strong>Max. deelnemers/les:</strong> ${rec.max_deelnemers || '—'}</div>
-        <div><strong>Lesduur (default):</strong> ${rec.lesduur_min || '—'} min</div>
-        <div><strong>Start:</strong> ${fmtDOW(rec.startISO)}</div>
-        <div><strong>Einde:</strong> ${fmtDOW(rec.endISO)}</div>
-        <div><strong>Status:</strong> ${escapeHTML(rec.status)}</div>
-        <div><strong>Prijs (excl.):</strong> ${euro(rec.prijs_excl)}</div>
+        <div><strong>Thema:</strong> ${S(reeks.thema || klas?.thema || '—')}</div>
+        <div><strong>Aantal strippen (klas):</strong> ${klas?.strippen ?? '—'}</div>
+        <div><strong>Geldigheid (klas):</strong> ${klas?.geldigheid_weken ?? '—'} weken</div>
+        <div><strong>Prijs (excl.):</strong> ${klas ? euro(klas.prijs_excl) : '—'}</div>
+        <div><strong>Start (reeks):</strong> ${S(reeks.datum || '—')} ${reeks.begintijd ? `— ${reeks.begintijd}`:''}</div>
+        <div><strong>Einde (reeks):</strong> ${S(reeks.datum || '—')} ${reeks.eindtijd ? `— ${reeks.eindtijd}`:''}</div>
+        <div><strong>Max. deelnemers/les:</strong> ${reeks.maxDeelnemers || '—'}</div>
+        <div><strong>Status:</strong> ${S(reeks.status)}</div>
         <div><strong>Locatie:</strong>
           ${
-            rec.locatie?.mapsUrl
-              ? `<a href="${escapeHTML(rec.locatie.mapsUrl)}" target="_blank" rel="noopener">${escapeHTML(rec.locatie.name || rec.locatie.naam || 'Locatie')}</a>`
-              : escapeHTML(rec.locatie?.name || rec.locatie?.naam || '—')
+            reeks.locatie?.mapsUrl
+              ? `<a href="${S(reeks.locatie.mapsUrl)}" target="_blank" rel="noopener">${S(reeks.locatie.naam || 'Locatie')}</a>`
+              : S(reeks.locatie?.naam || '—')
           }
         </div>
         <div><strong>Trainers:</strong>
-          ${
-            (rec.trainers || []).length
-              ? rec.trainers.map(t => `<span class="badge">${escapeHTML(String(t))}</span>`).join(' ')
-              : '—'
-          }
+          ${(reeks.trainers||[]).length ? reeks.trainers.map(t=>`<span class="badge">${S(t)}</span>`).join(' ') : '—'}
         </div>
       </div>
     `;
 
-    const fallbackDuurMin = rec.lesduur_min || 60;
+    // Lessen in deze reeks
+    const myLessons = lessons
+      .filter(l => String(l.seriesId) === String(reeks.id))
+      .sort((a,b) => S(a.startISO).localeCompare(S(b.startISO)));
 
-    // render bestaande lessen
-    renderLessons(seriesId, db, body, fallbackDuurMin);
+    body.innerHTML = myLessons.length
+      ? myLessons.map(l => `
+          <tr data-id="${l.id}">
+            <td>${S(l.titel)}</td>
+            <td>${fmtDateTimeRange(l.startISO,l.endISO)}</td>
+            <td>${l.locatie?.mapsUrl ? `<a href="${S(l.locatie.mapsUrl)}" target="_blank" rel="noopener">${S(l.locatie.naam||'Locatie')}</a>` : S(l.locatie?.naam || '—')}</td>
+            <td>${(l.trainers||[]).length ? l.trainers.map(t=>`<span class="badge">${S(t)}</span>`).join(' ') : '—'}</td>
+            <td style="white-space:nowrap">
+              <button class="icon-btn" data-act="view" title="Bekijken"><i class="icon icon-view"></i></button>
+              <button class="icon-btn" data-act="edit" title="Bewerken"><i class="icon icon-edit"></i></button>
+              <button class="icon-btn" data-act="del"  title="Verwijderen"><i class="icon icon-del"></i></button>
+            </td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="5" class="muted">Geen gekoppelde lessen.</td></tr>`;
 
-    // + Les toevoegen (los)
-    btnAdd?.addEventListener('click', () => addLesson(seriesId, db, body, fallbackDuurMin));
-
-    // Blok-generator submit
-    fBlok?.addEventListener('submit', (e) => {
-      e.preventDefault();
-      if (!fSD.value || !fST.value) return;
-
-      addBlock(seriesId, db, {
-        startDate: new Date(fSD.value),
-        startTime: fST.value,
-        aantal: Number(fA.value || 1),
-        duurMin: Number(fDuur.value || fallbackDuurMin),
-        intervalDays: Number(fInt.value || 7),
-        trainers: S(fTr.value),
-        locName: S(fLN.value),
-        locMaps: S(fLM.value),
-        defaultTitle: rec.name || 'Les'
-      });
-
-      renderLessons(seriesId, db, body, fallbackDuurMin);
-    });
-
-    // Acties in de tabel (delegation)
+    // Acties op lessen (simpel: edit = tijd + trainers + locatie inline prompt)
     body.addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-action]');
-      if (!btn) return;
-      const tr = btn.closest('tr');
-      const lid = tr?.dataset.id;
-      const l = findLesson(db, lid);
-      if (!l) return;
+      const row = e.target.closest('tr[data-id]');
+      if (!row) return;
+      const id = row.getAttribute('data-id');
+      const actBtn = e.target.closest('button[data-act]');
+      if (!actBtn) return;
+      const act = actBtn.getAttribute('data-act');
 
-      const action = btn.dataset.action;
-      const mode = tr.dataset.mode || 'view';
+      const db2 = loadDB();
+      const idx = db2.lessons.findIndex(x => String(x.id) === String(id));
+      if (idx < 0) return;
 
-      if (action === 'delete'){
+      if (act === 'del') {
         if (!confirm('Les verwijderen?')) return;
-        db.lessons = db.lessons.filter(x => String(x.id) !== String(lid));
-        saveDB(db);
-        renderLessons(seriesId, db, body, fallbackDuurMin);
+        db2.lessons.splice(idx,1);
+        saveDB(db2);
+        row.remove();
         return;
       }
 
-      if (action === 'edit' && mode === 'view'){
-        enterEditRow(tr, l, fallbackDuurMin);
+      if (act === 'edit') {
+        const rec = db2.lessons[idx];
+        const start = prompt('Start (YYYY-MM-DDTHH:mm)', rec.startISO || '');
+        if (!start) return;
+        let end = rec.endISO;
+        const defaultEnd = klas?.lesduur_min ? addMinutes(start, klas.lesduur_min) : (rec.endISO || '');
+        end = prompt('Eind (YYYY-MM-DDTHH:mm)', defaultEnd) || defaultEnd;
+
+        const loc = prompt('Locatie-naam', (rec.locatie?.naam || reeks.locatie?.naam || '')) || '';
+        const maps= prompt('Google Maps URL (optioneel)', (rec.locatie?.mapsUrl || reeks.locatie?.mapsUrl || '')) || '';
+        const trs = prompt('Trainers (komma-gescheiden)', (rec.trainers||reeks.trainers||[]).join(', ')) || '';
+
+        rec.startISO = start;
+        rec.endISO   = end;
+        rec.locatie  = { naam: loc, mapsUrl: maps || null };
+        rec.trainers = trs.split(',').map(s=>S(s)).filter(Boolean);
+
+        db2.lessons[idx] = rec;
+        saveDB(db2);
+        location.reload();
         return;
       }
 
-      if (action === 'cancel'){
-        backToViewRow(tr, l);
-        return;
-      }
-
-      if (action === 'save'){
-        const newVals = parseEditRowValues(tr, fallbackDuurMin);
-        l.title     = newVals.title || l.title || 'Les';
-        l.startISO  = newVals.startISO || l.startISO;
-        l.endISO    = newVals.endISO   || l.endISO;
-        l.duur_min  = newVals.duur_min;
-        l.location  = newVals.location;
-        l.trainers  = newVals.trainers;
-        saveDB(db);
-        backToViewRow(tr, l);
-        return;
-      }
-
-      if (action === 'shift'){
-        const daysStr = prompt('Aantal dagen verschuiven (positief = vooruit, negatief = terug):', '7');
-        if (daysStr == null) return;
-        const days = Number(daysStr);
-        if (!Number.isFinite(days) || days === 0){
-          alert('Geef een geldig getal (≠ 0) op.');
-          return;
-        }
-        if (!confirm(`Alle lessen vanaf deze les met ${days > 0 ? '+' : ''}${days} dag(en) verschuiven?`)) return;
-        shiftFrom(seriesId, db, lid, days, body, fallbackDuurMin);
-        return;
+      if (act === 'view') {
+        alert('Hier kan later een detailvenster of navigatie naar /lessen/detail.html komen.');
       }
     });
 
-    // Auto-update eindtijd in edit-rij
-    body.addEventListener('input', (e) => {
-      const tr = e.target.closest('tr[data-mode="edit"]');
-      if (!tr) return;
-      const date  = S(tr.querySelector('[data-f="date"]')?.value);
-      const start = S(tr.querySelector('[data-f="start"]')?.value);
-      const duur  = Number(S(tr.querySelector('[data-f="duur"]')?.value || '0')) || 0;
-      const endEl = tr.querySelector('[data-f="end"]');
-      if (date && start && duur > 0 && endEl){
-        const startISO = joinISO(date, start);
-        const endISO   = addMinutes(startISO, duur);
-        endEl.value = toTimeInputValue(endISO);
-      }
+    // + Nieuwe les
+    const addBtn = document.createElement('p');
+    addBtn.innerHTML = `<button class="btn" id="btnAdd">+ Nieuwe les</button>`;
+    info.insertAdjacentElement('afterend', addBtn.firstChild);
+    $('#btnAdd').addEventListener('click', () => {
+      const db3 = loadDB();
+      const idNew = 'les-' + Math.random().toString(36).slice(2,8);
+      const date = prompt('Datum (YYYY-MM-DD)', reeks.datum || '') || reeks.datum || '';
+      const startT = prompt('Starttijd (HH:mm)', reeks.begintijd || '09:00') || '09:00';
+      const startISO = `${date}T${startT}`;
+      const endISO = reeks.eindtijd
+        ? `${date}T${reeks.eindtijd}`
+        : (klas?.lesduur_min ? addMinutes(startISO, klas.lesduur_min) : `${date}T${startT}`);
+
+      const loc = prompt('Locatie-naam', reeks.locatie?.naam || '') || (reeks.locatie?.naam || '');
+      const maps= prompt('Google Maps URL (optioneel)', reeks.locatie?.mapsUrl || '') || '';
+      const trs = prompt('Trainers (komma-gescheiden)', (reeks.trainers||[]).join(', ')) || '';
+
+      const rec = {
+        id: idNew,
+        seriesId: reeks.id,
+        klasId: reeks.klasId,
+        titel: reeks.naam || 'Les',
+        startISO, endISO,
+        locatie: { naam: loc, mapsUrl: maps || null },
+        trainers: trs.split(',').map(s=>S(s)).filter(Boolean),
+        status: 'actief'
+      };
+      db3.lessons.push(rec);
+      saveDB(db3);
+      location.reload();
     });
   }
 
   document.addEventListener('DOMContentLoaded', init);
 })();
+</script>
