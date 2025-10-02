@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
   <!-- optioneel: eigen thema -->
   <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
-<body class="dashboard-page">
+
   <style>
     /* kleine UI-hulpen voor dit scherm */
     .tabs{display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
@@ -19,7 +19,7 @@
     .error{color:#b91c1c}
   </style>
 </head>
-<body>
+<body class="dashboard-page">
   <!-- Gele topbar (Superhond lay-out) -->
   <header id="topbar" class="topbar"></header>
 
@@ -32,7 +32,8 @@
       <a class="tile" href="../honden/"><span>🐶</span> Honden</a>
       <a class="tile" href="../strippenkaarten/"><span>🎫</span> Strippenkaarten</a>
       <a class="tile" href="../lessen/"><span>📅</span> Lessen</a>
-      <a class="tile" href="../reeksen/"><span>📦</span> Lessenreeksen</a>
+      <!-- ⬇️ aangepast naar /lessenreeks/ -->
+      <a class="tile" href="../lessenreeks/"><span>📦</span> Lessenreeks</a>
       <a class="tile" href="../trainers/"><span>🧑‍🏫</span> Trainers</a>
       <a class="tile" href="../rapporten/"><span>📈</span> Rapporten</a>
       <a class="tile" href="../mededeling/"><span>📢</span> Mededelingen</a>
@@ -83,13 +84,11 @@
   <script src="../js/agenda.js?v=0.20.0" defer></script>
   <script>
     window.addEventListener('DOMContentLoaded', () => {
-      // Mount gele balk + versie info (layout.js levert SuperhondUI.mount)
       if (window.SuperhondUI?.mount) {
         SuperhondUI.mount({
           title: 'Superhond',
           icon: '🐾',
           home: true // toont geen terugknop
-          // optioneel: layout.js kan zelf /api/version of /data/version.json lezen
         });
       }
     });
