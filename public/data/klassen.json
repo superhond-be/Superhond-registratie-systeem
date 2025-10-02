@@ -1,28 +1,6 @@
 {
   "klassen": [
-    {
-      "id": "klas-001",
-      "naam": "PuppyPack",
-      "type": "Puppy",
-      "thema": "Basis",
-      "strippen": 10,
-      "geldigheid_weken": 12,
-      "afbeelding": "puppy.jpg",
-      "beschrijving": "Basispakket voor jonge honden",
-      "mailblue": "puppy@superhond.be",
-      "status": "actief"
-    },
-    {
-      "id": "klas-002",
-      "naam": "Agility Start",
-      "type": "Agility",
-      "thema": "Sport",
-      "strippen": 8,
-      "geldigheid_weken": 10,
-      "afbeelding": "agility.jpg",
-      "beschrijving": "Introductie agility voor beginners",
-      "mailblue": "agility@superhond.be",
-      "status": "actief"
-    }
+    { "id":"K-001","naam":"Puppy","type":"Basis","thema":"Opvoeding","strippen":10,"geldigheid_weken":12,"status":"actief" },
+    { "id":"K-002","naam":"Agility","type":"Sport","thema":"Behendigheid","strippen":8,"geldigheid_weken":10,"status":"inactief" }
   ]
 }
