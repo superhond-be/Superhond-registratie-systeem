@@ -1,1 +1,94 @@
 
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Superhond — Dashboard</title>
+
+  <!-- Centrale UI -->
+  <link rel="stylesheet" href="/css/style.css?v=0.20.0" />
+  <style>
+    /* kleine UI-hulpen voor dit scherm */
+    .tabs{display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
+    .tab{padding:.4rem .8rem;border:1px solid #e5e7eb;border-radius:.5rem;background:#fff;cursor:pointer}
+    .tab.active{background:var(--accent,#f4c400);font-weight:600}
+    .muted{color:#6b7280}
+    .error{color:#b91c1c}
+  </style>
+</head>
+<body>
+  <!-- Gele topbar (Superhond lay-out) -->
+  <header id="topbar" class="topbar"></header>
+
+  <main class="container">
+    <h1 class="page-title">Hoofdmenu</h1>
+
+    <!-- Tegels -->
+    <div class="tiles">
+      <a class="tile" href="/klanten/"><span>👤</span> Klanten</a>
+      <a class="tile" href="/honden/"><span>🐶</span> Honden</a>
+      <a class="tile" href="/strippenkaarten/"><span>🎫</span> Strippenkaarten</a>
+      <a class="tile" href="/lessen/"><span>📅</span> Lessen</a>
+      <a class="tile" href="/lessenreeks/"><span>📦</span> Lessenreeksen</a>
+      <a class="tile" href="/trainers/"><span>🧑‍🏫</span> Trainers</a>
+      <a class="tile" href="/rapporten/"><span>📈</span> Rapporten</a>
+      <a class="tile" href="/mededelingen/"><span>📢</span> Mededelingen</a>
+      <a class="tile" href="/instellingen/"><span>⚙️</span> Instellingen</a>
+      <a class="tile" href="/over/"><span>ℹ️</span> Over</a>
+
+      <!-- ✅ NIEUWE TEGEL: Lessenbeheer (admin) -->
+      <a class="tile" href="/beheer/lessen.html"><span>⚙️</span> Lessenbeheer</a>
+    </div>
+
+    <!-- Agenda blok met tabs -->
+    <section class="card" style="margin-top:1rem">
+      <h2 style="margin:0 0 .5rem">Agenda</h2>
+
+      <div class="tabs" id="agenda-tabs">
+        <button class="tab active" data-tab="week">Deze week</button>
+        <button class="tab" data-tab="alles">Alles</button>
+        <button class="tab" data-tab="mededelingen">Mededelingen</button>
+      </div>
+
+      <div id="agenda-loader" class="muted">⏳ Laden…</div>
+      <div id="agenda-error" class="error" style="display:none"></div>
+
+      <div class="table-wrap" id="agenda-table-wrap" style="display:none;">
+        <table id="agenda-table" class="table">
+          <thead>
+            <tr>
+              <th>Naam</th>
+              <th>Datum</th>
+              <th>Locatie</th>
+              <th>Trainer(s)</th>
+            </tr>
+          </thead>
+          <tbody><!-- gevuld door /js/agenda.js --></tbody>
+        </table>
+      </div>
+      <p class="muted" style="margin:.5rem 0 0">Tip: plaats <code>/data/agenda.json</code> of activeer <code>/api/agenda</code>.</p>
+    </section>
+  </main>
+
+  <!-- Footer met versie/buildtijd -->
+  <footer id="footer" class="footer"></footer>
+
+  <!-- Scripts -->
+  <script src="/js/layout.js?v=0.20.0" defer></script>
+  <script src="/js/agenda.js?v=0.20.0" defer></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      // Mount gele balk + versie info (zorg dat layout.js SuperhondUI.mount exporteert)
+      if (window.SuperhondUI?.mount) {
+        SuperhondUI.mount({
+          title: 'Superhond',
+          icon: '🐾',
+          home: true, // toont geen terugknop
+          // optioneel: versie/build kan in layout.js uit /api/version of meta komen
+        });
+      }
+    });
+  </script>
+</body>
+</html>
