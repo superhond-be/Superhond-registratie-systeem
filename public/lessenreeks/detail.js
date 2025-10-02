@@ -2,10 +2,7 @@
 const S = v => String(v ?? '');
 const id = new URLSearchParams(location.search).get('id');
 
-function euro(n){
-  if (n==null || isNaN(n)) return '—';
-  return new Intl.NumberFormat('nl-BE',{style:'currency',currency:'EUR'}).format(Number(n));
-}
+function euro(n){ return (n==null || isNaN(n)) ? '—' : new Intl.NumberFormat('nl-BE',{style:'currency',currency:'EUR'}).format(Number(n)); }
 
 async function fetchJson(candidates){
   for (const u of candidates){
@@ -16,7 +13,6 @@ async function fetchJson(candidates){
   }
   return null;
 }
-
 function loadDB(){
   try{
     const raw = localStorage.getItem('superhond-db');
@@ -24,9 +20,7 @@ function loadDB(){
     db.series  = Array.isArray(db.series)  ? db.series  : [];
     db.lessons = Array.isArray(db.lessons) ? db.lessons : [];
     return db;
-  }catch{
-    return { series:[], lessons:[] };
-  }
+  }catch{ return { series:[], lessons:[] }; }
 }
 
 // normaliseer reeksen → array
@@ -39,36 +33,30 @@ function normalizeSeries(raw){
   if (Array.isArray(raw.data))    return raw.data;
   return [];
 }
-
-// normaliseer lessenlijst voor rendering
+// normaliseer lessen voor render
 function normalizeLessons(reeks, dbLessons){
-  // 1) ingebedde lessen op de reeks
   let out = [];
-  if (Array.isArray(reeks.lessen))  out = reeks.lessen.slice();
-  else if (Array.isArray(reeks.lessons)) out = reeks.lessons.slice();
-
-  // 2) + lessen uit localStorage gekoppeld via seriesId
+  if (Array.isArray(reeks.lessen))  out = out.concat(reeks.lessen);
+  if (Array.isArray(reeks.lessons)) out = out.concat(reeks.lessons);
   const sid = S(reeks.id);
   if (sid && Array.isArray(dbLessons) && dbLessons.length){
     out = out.concat(dbLessons.filter(l => S(l.seriesId) === sid));
   }
-  // dedupe op id + sorteren op datum/tijd
+  // dedupe + sort
   const seen = new Map();
   for (const l of out){
-    const key = S(l.id) || (S(l.dateISO||l.datum||'') + ' ' + S(l.startISO||l.start||l.starttijd||''));
+    const key = S(l.id) || `${S(l.dateISO||l.datum||'')} ${S(l.startISO||l.start||l.starttijd||'')}`;
     seen.set(key, l);
   }
   return Array.from(seen.values()).sort((a,b) =>
     S(a.dateISO||a.datum||a.startISO||'').localeCompare(S(b.dateISO||b.datum||b.startISO||''))
   );
 }
-
 function fmtTimeRange(l){
-  const start = S(l.start || l.starttijd || (l.startISO ? l.startISO.slice(11,16) : ''));
-  const end   = S(l.eind  || l.eindtijd  || (l.endISO   ? l.endISO.slice(11,16)   : ''));
-  return start && end ? `${start}–${end}` : (start || '—');
+  const s = S(l.start || l.starttijd || (l.startISO ? l.startISO.slice(11,16) : ''));
+  const e = S(l.eind  || l.eindtijd  || (l.endISO   ? l.endISO.slice(11,16)   : ''));
+  return s && e ? `${s}–${e}` : (s || '—');
 }
-
 function fmtDate(l){
   return S(l.datum || l.date || l.dateISO || (l.startISO ? l.startISO.slice(0,10) : '—'));
 }
@@ -79,30 +67,68 @@ function mountLayout(){
   }
 }
 
+function download(filename, content, mime='application/json'){
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// iCal export (basis): één VEVENT per les
+function buildICS(naam, lessons){
+  const dtstamp = new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+Z$/,'Z');
+  const esc = s => S(s).replace(/([,;])/g,'\\$1').replace(/\n/g,'\\n');
+  const toDT = iso => S(iso).replace(/[-:]/g,'').replace(/\.\d+Z?$/,'');
+  const lines = [
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Superhond//Lessenreeks//NL'
+  ];
+  for (const l of lessons){
+    const uid = S(l.id || (S(l.seriesId)+'-'+fmtDate(l)+'-'+fmtTimeRange(l)));
+    const start = S(l.startISO || l.start);
+    const end   = S(l.endISO   || l.end);
+    const title = naam || 'Les';
+    const loc   = l.location?.name ? esc(l.location.name) : '';
+    const url   = l.location?.mapsUrl ? `\nURL:${esc(l.location.mapsUrl)}` : '';
+    lines.push(
+      'BEGIN:VEVENT',
+      `UID:${esc(uid)}@superhond.local`,
+      `DTSTAMP:${dtstamp}`,
+      start ? `DTSTART:${toDT(start)}` : '',
+      end   ? `DTEND:${toDT(end)}`     : '',
+      `SUMMARY:${esc(title)} – Les ${S(l.nummer ?? '')}`.trim(),
+      loc ? `LOCATION:${loc}` : '',
+      `DESCRIPTION:${esc((Array.isArray(l.trainers)?'Trainers: '+l.trainers.join(', '):''))}${url}`,
+      'END:VEVENT'
+    );
+  }
+  lines.push('END:VCALENDAR');
+  return lines.filter(Boolean).join('\r\n');
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   mountLayout();
 
   const loader   = document.getElementById('loader');
   const errorBox = document.getElementById('error');
   const section  = document.getElementById('detail');
+  const actions  = document.getElementById('actions');
 
   try{
     if (!id) throw new Error('Geen id meegegeven.');
 
-    // extern + lokaal ophalen
     const ext  = await fetchJson(['../data/lessenreeksen.json','/data/lessenreeksen.json']);
     const extArr = normalizeSeries(ext);
     const db   = loadDB();
 
-    // extern heeft voorrang bij gelijke id; anders merge
+    // merge (extern heeft voorrang op gelijke id)
     const map = new Map(db.series.map(x => [S(x.id), x]));
     for (const x of extArr) map.set(S(x.id), x);
     const all = Array.from(map.values());
 
     const reeks = all.find(r => S(r.id) === S(id));
-    if (!reeks) throw new Error('Reeks niet gevonden: ' + id);
+    if (!reeks) throw new Error('Reeks niet gevonden.');
 
-    // velden met fallbacks
     const naam   = S(reeks.naam || reeks.name || [reeks.packageName, reeks.seriesName].filter(Boolean).join(' — '));
     const type   = S(reeks.type || '');
     const thema  = S(reeks.thema || reeks.theme || '');
@@ -121,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     : Array.isArray(reeks.trainer) ? reeks.trainer : [];
 
     // titel + basis
-    document.getElementById('reeksTitel').textContent = naam;
+    document.getElementById('reeksTitel').textContent = naam || 'Lessenreeks';
     document.getElementById('naam').textContent = naam || '—';
     document.getElementById('type').textContent = type || '—';
     document.getElementById('thema').textContent = thema || '—';
@@ -140,7 +166,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('locatie').innerHTML     = locUrl ? `<a href="${locUrl}" target="_blank" rel="noopener">${locName || '(kaart)'}</a>` : (locName || '—');
     document.getElementById('trainers').textContent  = trainers.length ? trainers.join(', ') : '—';
 
-    // lessen
+    // lessen renderen
     const lessons = normalizeLessons(reeks, db.lessons);
     const tbody = document.getElementById('lessenBody');
     if (!lessons.length){
@@ -157,13 +183,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       `).join('');
     }
 
-    // bewerken-knop (optioneel, pas pad aan als je die pagina maakt)
+    // Acties
     const btnEdit = document.getElementById('btnEdit');
     btnEdit.href = `./bewerken.html?id=${encodeURIComponent(id)}`;
-    btnEdit.style.display = '';
+
+    document.getElementById('btnExportJson').addEventListener('click', () => {
+      const payload = { reeks: reeks, lessen: lessons };
+      download(`${S(naam)||'lessenreeks'}.json`, JSON.stringify(payload, null, 2), 'application/json');
+    });
+
+    document.getElementById('btnExportIcs').addEventListener('click', () => {
+      const ics = buildICS(naam, lessons);
+      download(`${S(naam)||'lessenreeks'}.ics`, ics, 'text/calendar');
+    });
 
     loader.style.display = 'none';
     section.style.display = '';
+    actions.style.display = 'flex';
   }catch(e){
     loader.style.display = 'none';
     errorBox.textContent = S(e.message || e);
