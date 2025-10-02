@@ -1,189 +1,98 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Superhond – Dashboard</title>
-  <!-- RELATIEF naar /public/css/ -->
-  <link rel="stylesheet" href="../css/style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Superhond — Dashboard</title>
+
+  <!-- Centrale UI (RELATIEF) -->
+  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
+  <!-- optioneel: eigen thema -->
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+
+  <style>
+    /* kleine UI-hulpen voor dit scherm */
+    .tabs{display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
+    .tab{padding:.4rem .8rem;border:1px solid #e5e7eb;border-radius:.5rem;background:#fff;cursor:pointer}
+    .tab.active{background:var(--accent,#f4c400);font-weight:600}
+    .muted{color:#6b7280}
+    .error{color:#b91c1c}
+  </style>
 </head>
 <body>
-<header class="topbar">
-  <h1>🐾 Superhond – Dashboard</h1>
-  <nav class="breadcrumbs">
-    <!-- Relatief, geen leading slash -->
-    <a href="./">/dashboard/</a>
-  </nav>
-</header>
+  <!-- Gele topbar (Superhond lay-out) -->
+  <header id="topbar" class="topbar"></header>
 
-<main class="container">
+  <main class="container">
+    <h1 class="page-title">Hoofdmenu</h1>
 
-  <!-- Tabs: Agenda / Beheer -->
-  <div class="tabs">
-    <button class="tab active" data-tab="agenda">Agenda</button>
-    <button class="tab" data-tab="beheer">Beheer (lessen)</button>
-  </div>
+    <!-- Tegels -->
+    <div class="tiles">
+      <a class="tile" href="../klanten/"><span>👤</span> Klanten</a>
+      <a class="tile" href="../honden/"><span>🐶</span> Honden</a>
+      <a class="tile" href="../strippenkaarten/"><span>🎫</span> Strippenkaarten</a>
+      <a class="tile" href="../lessen/"><span>📅</span> Lessen</a>
+      <a class="tile" href="../reeksen/"><span>📦</span> Lessenreeksen</a>
+      <a class="tile" href="../trainers/"><span>🧑‍🏫</span> Trainers</a>
+      <a class="tile" href="../rapporten/"><span>📈</span> Rapporten</a>
+      <a class="tile" href="../mededeling/"><span>📢</span> Mededelingen</a>
+      <a class="tile" href="../instellingen/"><span>⚙️</span> Instellingen</a>
+      <a class="tile" href="../over/"><span>ℹ️</span> Over</a>
 
-  <!-- === AGENDA === -->
-  <section id="agenda" class="tabpanel active">
-    <div class="subtabs">
-      <button class="subtab active" data-scope="week">Week</button>
-      <button class="subtab" data-scope="alles">Alles</button>
-      <button class="subtab" data-scope="mededelingen">Mededelingen</button>
+      <!-- ✅ Lessenbeheer (admin) volgens jouw structuur -->
+      <a class="tile" href="../lessen/beheer.html"><span>⚙️</span> Lessenbeheer</a>
     </div>
 
-    <div class="agenda-toolbar">
-      <div>
-        <label>Vanaf: <input type="date" id="agendaStart"/></label>
-        <button id="btnToday">Vandaag</button>
+    <!-- Agenda blok met tabs -->
+    <section class="card" style="margin-top:1rem">
+      <h2 style="margin:0 0 .5rem">Agenda</h2>
+
+      <div class="tabs" id="agenda-tabs">
+        <button class="tab active" data-tab="week">Deze week</button>
+        <button class="tab" data-tab="alles">Alles</button>
+        <button class="tab" data-tab="mededelingen">Mededelingen</button>
       </div>
-      <div class="spacer"></div>
-      <div class="export-group">
-        <button id="btnExportLessen" class="accent">Export lessen.json</button>
-        <button id="btnExportAgenda" class="accent">Export agenda.json</button>
+
+      <div id="agenda-loader" class="muted">⏳ Laden…</div>
+      <div id="agenda-error" class="error" style="display:none"></div>
+
+      <div class="table-wrap" id="agenda-table-wrap" style="display:none;">
+        <table id="agenda-table" class="table">
+          <thead>
+            <tr>
+              <th>Naam</th>
+              <th>Datum</th>
+              <th>Locatie</th>
+              <th>Trainer(s)</th>
+            </tr>
+          </thead>
+          <tbody><!-- gevuld door ../js/agenda.js --></tbody>
+        </table>
       </div>
-    </div>
+      <p class="muted" style="margin:.5rem 0 0">
+        Tip: plaats <code>../data/agenda.json</code> of activeer <code>../api/agenda</code>.
+      </p>
+    </section>
+  </main>
 
-    <ul id="agendaList" class="card-list"></ul>
-  </section>
+  <!-- Footer met versie/buildtijd -->
+  <footer id="footer" class="footer"></footer>
 
-  <!-- === BEHEER (LESSEN) === -->
-  <section id="beheer" class="tabpanel">
-    <div class="split">
-      <!-- Form: losse les -->
-      <form id="formLes" class="card">
-        <h2>Nieuwe / Bewerken Les</h2>
-        <input type="hidden" id="lesId"/>
-
-        <label>Titel
-          <input id="lesTitel" type="text" placeholder="Bv. Puppy klas A" required/>
-        </label>
-
-        <div class="grid2">
-          <label>Start (datum+tijd)
-            <input id="lesStart" type="datetime-local" required/>
-          </label>
-          <label>Duur (min.)
-            <input id="lesDuur" type="number" min="5" step="5" value="60" required/>
-          </label>
-        </div>
-
-        <label>Eindtijd (auto, aanpasbaar)
-          <input id="lesEinde" type="datetime-local" />
-        </label>
-
-        <label>Trainers (komma-gescheiden)
-          <input id="lesTrainers" type="text" placeholder="Sam, Kim"/>
-        </label>
-
-        <div class="grid2">
-          <label>Locatie-naam
-            <input id="locNaam" type="text" placeholder="Superhond Club"/>
-          </label>
-          <label>Google Maps (URL)
-            <input id="locMaps" type="url" placeholder="https://maps.google.com/?q=..." />
-          </label>
-        </div>
-
-        <div class="row">
-          <button type="button" id="btnGenMaps">Genereer Maps-link</button>
-          <span class="hint">Gebaseerd op locatie-naam</span>
-        </div>
-
-        <div class="row">
-          <button class="primary" type="submit">Opslaan</button>
-          <button type="button" id="btnResetLes">Reset</button>
-          <button type="button" id="btnDeleteLes" class="danger">Verwijderen</button>
-        </div>
-      </form>
-
-      <!-- Form: Reeksen Generator -->
-      <form id="formReeks" class="card">
-        <h2>Reeksen-generator</h2>
-        <p class="muted">Pakket → Reeks → Lessen</p>
-        <div class="grid2">
-          <label>Pakket-naam
-            <input id="pakNaam" type="text" placeholder="Puppy Voorjaar 2026" required/>
-          </label>
-          <label>Reeks-naam
-            <input id="reeksNaam" type="text" placeholder="Maandag 18u" required/>
-          </label>
-        </div>
-
-        <div class="grid3">
-          <label>Start-datum
-            <input id="reeksStart" type="date" required/>
-          </label>
-          <label>Aantal lessen
-            <input id="reeksAantal" type="number" min="1" value="5" required/>
-          </label>
-          <label>Starttijd
-            <input id="reeksStartTijd" type="time" value="18:00" required/>
-          </label>
-        </div>
-
-        <div class="grid3">
-          <label>Duur (min.)
-            <input id="reeksDuur" type="number" min="5" step="5" value="60" required/>
-          </label>
-          <label>Interval
-            <select id="reeksInterval">
-              <option value="7">Wekelijks</option>
-              <option value="14">Tweewekelijks</option>
-            </select>
-          </label>
-          <label>Trainers
-            <input id="reeksTrainers" type="text" placeholder="Sam, Kim"/>
-          </label>
-        </div>
-
-        <div class="grid2">
-          <label>Locatie-naam
-            <input id="reeksLocNaam" type="text" placeholder="Superhond Club"/>
-          </label>
-          <label>Maps-url
-            <input id="reeksLocMaps" type="url" placeholder="https://maps.google.com/?q=..." />
-          </label>
-        </div>
-
-        <div class="row">
-          <button type="button" id="btnGenMapsReeks">Genereer Maps-link</button>
-          <button type="button" id="btnGenReeks" class="primary">Genereer & Opslaan</button>
-        </div>
-
-        <details class="preview">
-          <summary>Preview gegenereerde lessen</summary>
-          <ol id="previewReeks"></ol>
-        </details>
-      </form>
-    </div>
-
-    <div class="card">
-      <h2>Overzicht Lessen</h2>
-      <ul id="lessenList" class="table-like"></ul>
-    </div>
-
-    <div class="card">
-      <h2>Mededelingen</h2>
-      <form id="formMededeling" class="row wrap">
-        <input id="medTitel" type="text" placeholder="Titel" required/>
-        <input id="medDatum" type="date" required/>
-        <input id="medKleur" type="color" value="#ffcc00" title="Kleur"/>
-        <input id="medBericht" type="text" placeholder="Bericht" required/>
-        <button class="primary" type="submit">Toevoegen</button>
-      </form>
-      <ul id="medList" class="card-list small"></ul>
-    </div>
-
-  </section>
-
-</main>
-
-<footer class="footer">
-  <small>Superhond · v0.1 – Lessenbeheer eerst; strippenkaarten & communicatie later ✔️</small>
-</footer>
-
-<!-- ENKEL 1 MODULE-SCRIPT, RELATIEF naar /public/js/ -->
-<script type="module" src="../js/dashboard.js"></script>
+  <!-- Scripts (RELATIEF) -->
+  <script src="../js/layout.js?v=0.20.0" defer></script>
+  <script src="../js/agenda.js?v=0.20.0" defer></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      // Mount gele balk + versie info (layout.js levert SuperhondUI.mount)
+      if (window.SuperhondUI?.mount) {
+        SuperhondUI.mount({
+          title: 'Superhond',
+          icon: '🐾',
+          home: true // toont geen terugknop
+          // optioneel: layout.js kan zelf /api/version of /data/version.json lezen
+        });
+      }
+    });
+  </script>
 </body>
 </html>
