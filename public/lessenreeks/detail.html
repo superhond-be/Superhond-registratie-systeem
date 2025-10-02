@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
   <script src="../js/layout.js?v=0.20.0" defer></script>
-  <script type="module" src="./detail.js?v=0.20.0" defer></script>
+  <script src="./detail.js?v=0.20.0" defer></script>
 </head>
 <body class="subpage">
 <header id="topbar" class="topbar"></header>
@@ -22,13 +22,16 @@
   <section class="card" style="margin-top:12px">
     <h3 style="margin:0 0 8px">Gekoppelde lessen</h3>
     <div class="table-wrap">
-      <table class="table">
+      <!-- ⬇️ id toegevoegd -->
+      <table id="tabel" class="table">
         <thead>
           <tr>
             <th>Titel</th>
             <th>Datum</th>
             <th>Locatie</th>
             <th>Trainers</th>
+            <!-- ⬇️ nieuwe kolom -->
+            <th>Acties</th>
           </tr>
         </thead>
         <tbody id="lessenBody"></tbody>
