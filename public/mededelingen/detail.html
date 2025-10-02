@@ -1,48 +1,58 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Mededeling – Superhond</title>
-  <link rel="stylesheet" href="/ui/style.css">
+  <link rel="stylesheet" href="/css/style.css?v=0.20.0" />
+  <style>.meta{color:#6b7280;white-space:pre-wrap}</style>
 </head>
 <body>
-  <main class="container">
-    <h2 class="page-title">Mededeling</h2>
-    <div id="msg-detail" class="card">Bezig met laden…</div>
-    <p><a href="/" class="btn">← Terug naar dashboard</a></p>
-  </main>
+<header id="topbar" class="topbar"></header>
 
-  <script src="/ui/layout.js"></script>
-  <script>
-    SuperhondUI.mount({ title:'Mededeling', icon:'ℹ️', back:'/' });
+<main class="container">
+  <h1 class="page-title">Mededeling</h1>
+  <div id="box" class="card">Laden…</div>
+  <p style="margin-top:1rem"><a class="btn" href="/dashboard/">← Terug naar dashboard</a></p>
+</main>
 
+<footer id="footer" class="footer"></footer>
+
+<script src="/js/layout.js?v=0.20.0"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    window.SuperhondUI?.mount?.({ title:'Mededeling', icon:'📢', back:'/dashboard/' });
+  });
+
+  (async function(){
+    const S = v => String(v ?? '');
+    const escapeHtml = s => S(s).replace(/[&<>\"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
     const params = new URLSearchParams(location.search);
-    const id = params.get("id");
+    const id = params.get('id');
+    const box = document.getElementById('box');
 
-    async function load() {
-      try {
-        const res = await fetch("/data/agenda.json");
-        const data = await res.json();
-
-        const msg = data.find(item => item.href.includes(id));
-        if (!msg) {
-          document.getElementById("msg-detail").innerHTML = "<p>Mededeling niet gevonden.</p>";
-          return;
-        }
-
-        document.getElementById("msg-detail").innerHTML = `
-          <h3>${msg.titel}</h3>
-          <p><strong>Datum:</strong> ${new Date(msg.datum).toLocaleString("nl-BE")}</p>
-          <p><strong>Type:</strong> ${msg.type}</p>
-          <p>ID: ${id}</p>
-        `;
-      } catch (err) {
-        document.getElementById("msg-detail").innerHTML = "<p>Fout bij laden van mededeling.</p>";
-      }
+    async function fetchJson(url){
+      const r = await fetch(url,{cache:'no-store'});
+      if(!r.ok) throw new Error(`${url} → HTTP ${r.status}`);
+      return r.json();
     }
 
-    load();
-  </script>
+    try{
+      if (!id){ box.innerHTML = '<p class="error">Geen id opgegeven.</p>'; return; }
+      // mededelingen komen doorgaans uit agenda.json (type = mededeling)
+      const agenda = await fetchJson('/data/agenda.json').catch(()=>[]);
+      const item = (agenda||[]).find(x=>String(x.id)===String(id) && (x.type||'')==='mededeling');
+      if (!item){ box.innerHTML = `<p class="error">Mededeling met id <code>${escapeHtml(id)}</code> niet gevonden.</p>`; return; }
+
+      box.innerHTML = `
+        <h2 style="margin:.25rem 0 0">${escapeHtml(item.naam || 'Mededeling')}</h2>
+        ${item.datum ? `<div class="meta" style="margin:.25rem 0">${new Date(item.datum).toLocaleString('nl-BE',{dateStyle:'full',timeStyle:'short'})}</div>`:''}
+        <div class="meta" style="margin-top:.75rem">${escapeHtml(item.beschrijving || item.body || '—')}</div>
+      `;
+    }catch(e){
+      box.innerHTML = `<p class="error">Fout bij laden: ${S(e.message)}</p>`;
+    }
+  })();
+</script>
 </body>
 </html>
