@@ -7,70 +7,34 @@
 
   <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
-
-  <script src="../js/layout.js?v=0.20.0" defer></script>
-  <script type="module" src="./detail.js?v=0.20.0" defer></script>
 </head>
 <body class="subpage">
-  <header id="topbar" class="topbar"></header>
+<header id="topbar" class="topbar"></header>
 
-  <main class="container">
-    <h1 class="page-title" id="reeksTitel">Lessenreeks</h1>
+<main class="container">
+  <h1 class="page-title">Lessenreeks</h1>
+  <article id="detail" class="card">⏳ Laden…</article>
 
-    <div id="loader" class="loader">⏳ Laden…</div>
-    <div id="error" class="error" style="display:none;"></div>
-
-    <!-- Acties -->
-    <div id="actions" style="display:none;margin:.5rem 0 1rem;display:flex;gap:.5rem;flex-wrap:wrap">
-      <a id="btnEdit" class="btn" href="#">Bewerken</a>
-      <button id="btnExportJson" class="btn">Exporteer JSON</button>
-      <button id="btnExportIcs" class="btn">Exporteer iCal (.ics)</button>
+  <section class="card" style="margin-top:12px">
+    <h2 style="margin:0 0 .5rem">Gekoppelde lessen</h2>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>Titel</th><th>Datum</th><th>Locatie</th><th>Trainers</th></tr>
+        </thead>
+        <tbody id="lessonsBody"></tbody>
+      </table>
     </div>
+  </section>
 
-    <section id="detail" class="card" style="display:none;">
-      <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
-        <p><strong>Naam:</strong> <span id="naam">—</span></p>
-        <p><strong>Type:</strong> <span id="type">—</span></p>
-        <p><strong>Thema:</strong> <span id="thema">—</span></p>
-        <p><strong>Aantal lessen:</strong> <span id="aantal">—</span></p>
-        <p><strong>Prijs:</strong> <span id="prijs">—</span></p>
-        <p><strong>Status:</strong> <span id="status">—</span></p>
-      </div>
+  <p style="margin-top:12px">
+    <a class="btn" href="./">← Terug naar overzicht</a>
+  </p>
+</main>
 
-      <hr style="margin:12px 0">
+<footer id="footer" class="footer"></footer>
 
-      <h3 style="margin:.2rem 0">Gegevens</h3>
-      <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
-        <p><strong>Startdatum:</strong> <span id="startdate">—</span></p>
-        <p><strong>Starttijd:</strong> <span id="starttime">—</span></p>
-        <p><strong>Duur (min.):</strong> <span id="duur">—</span></p>
-        <p><strong>Interval (dagen):</strong> <span id="interval">—</span></p>
-        <p><strong>Locatie:</strong> <span id="locatie">—</span></p>
-        <p><strong>Trainers:</strong> <span id="trainers">—</span></p>
-      </div>
-
-      <h3 style="margin:1rem 0 .5rem">Lessen</h3>
-      <div class="table-wrap">
-        <table class="table" id="lessenTabel">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Datum</th>
-              <th>Tijd</th>
-              <th>Locatie</th>
-              <th>Trainers</th>
-            </tr>
-          </thead>
-          <tbody id="lessenBody"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <div style="margin-top:12px">
-      <a class="btn" href="./">← Terug naar overzicht</a>
-    </div>
-  </main>
-
-  <footer id="footer" class="footer"></footer>
+<script src="../js/layout.js?v=0.20.0"></script>
+<script type="module" src="./detail.js?v=0.20.0"></script>
 </body>
 </html>
