@@ -1,47 +1,18 @@
-[
-  {
-    "id": 201,
-    "pakket_id": 101,
-    "klas_id": 1,
-    "naam": "Puppy Pack – Najaar",
-    "type": "puppy",
-    "thema": "socialisatie",
-    "aantal_strippen": 10,
-    "geldigheidsduur_weken": 12,
-    "startdatum": "2025-10-05",
-    "max_deelnemers": 8,
-    "lesduur_minuten": 60,
-    "status": "actief",
-    "bevestigd_door_admin": true
-  },
-  {
-    "id": 202,
-    "pakket_id": 102,
-    "klas_id": 2,
-    "naam": "Basis – Herfst",
-    "type": "basis",
-    "thema": "obedience",
-    "aantal_strippen": 8,
-    "geldigheidsduur_weken": 10,
-    "startdatum": "2025-10-12",
-    "max_deelnemers": 10,
-    "lesduur_minuten": 60,
-    "status": "actief",
-    "bevestigd_door_admin": true
-  },
-  {
-    "id": 203,
-    "pakket_id": 101,
-    "klas_id": 1,
-    "naam": "Puppy Pack – Winter",
-    "type": "puppy",
-    "thema": "socialisatie",
-    "aantal_strippen": 10,
-    "geldigheidsduur_weken": 12,
-    "startdatum": "2025-11-16",
-    "max_deelnemers": 8,
-    "lesduur_minuten": 60,
-    "status": "concept",
-    "bevestigd_door_admin": false
-  }
-]
+{
+  "reeksen": [
+    {
+      "id": "reeks-001",
+      "naam": "Puppy — Maandag 18u",
+      "thema": "Basis",
+      "aantal": 8,
+      "prijs": 120
+    },
+    {
+      "id": "reeks-002",
+      "naam": "Agility — Woensdag 19u",
+      "thema": "Sport",
+      "aantal": 6,
+      "prijs": 95
+    }
+  ]
+}
