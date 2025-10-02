@@ -1,4 +1,4 @@
-// Klassen – Overzicht
+// /public/klassen/index.js
 (() => {
   const $ = s => document.querySelector(s);
   const S = v => String(v ?? '').trim();
@@ -7,171 +7,102 @@
     loader: $('#loader'),
     error:  $('#error'),
     wrap:   $('#wrap'),
-    tbody:  $('#tbody'),
-    zoek:   $('#zoek')
+    tbody:  $('#tabelBody'),
+    zoek:   $('#zoek'),
   };
 
   document.addEventListener('DOMContentLoaded', () => {
     if (window.SuperhondUI?.mount) {
-      SuperhondUI.mount({ title:'Klassen', icon:'📚', back:'../dashboard/' });
+      SuperhondUI.mount({ title:'Klassen', icon:'🏷️', back:'../dashboard/' });
     }
   });
 
-  const bust = () => (Date.now());
-
-  async function fetchJson(tryUrls){
-    for (const u of tryUrls){
-      try{
-        const url = u + (u.includes('?') ? '&' : '?') + 't=' + bust();
-        const r = await fetch(url, { cache:'no-store' });
-        if (r.ok) return r.json();
-      }catch(_){}
-    }
-    return null;
-  }
-
+  // Helpers
   function loadDB(){
-    try{
+    try {
       const raw = localStorage.getItem('superhond-db');
       const db  = raw ? JSON.parse(raw) : {};
       db.classes = Array.isArray(db.classes) ? db.classes : [];
       return db;
-    }catch{ return { classes:[] }; }
+    }catch { return { classes: [] }; }
   }
-  function saveDB(db){ localStorage.setItem('superhond-db', JSON.stringify(db)); }
-
-  // Normaliseer allerlei varianten naar een uniforme "class" rij
-  // shape: {id,name,type,thema,strippen,weken,afbeelding,omschrijving,mailblue,status}
-  function normalizeClasses(raw){
-    const arr =
-      Array.isArray(raw)           ? raw :
-      Array.isArray(raw?.klassen)  ? raw.klassen :
-      Array.isArray(raw?.classes)  ? raw.classes :
-      Array.isArray(raw?.items)    ? raw.items :
-      Array.isArray(raw?.data)     ? raw.data : [];
-
-    return arr.map(k => ({
-      id:          k.id ?? k.klasId ?? k.classId ?? cryptoRandomId(),
-      name:        S(k.name ?? k.naam ?? ''),
-      type:        S(k.type ?? k.subnaam ?? ''),
-      thema:       S(k.thema ?? k.theme ?? ''),
-      strippen:    Number(k.strippen ?? k.aantal_strips ?? k.aantalStrippen ?? 0) || 0,
-      weken:       Number(k.weken ?? k.geldigheid_weken ?? k.geldigheidsduur ?? 0) || 0,
-      afbeelding:  S(k.afbeelding ?? k.image ?? ''),
-      omschrijving:S(k.omschrijving ?? k.beschrijving ?? ''),
-      mailblue:    S(k.mailblue ?? k.mailBlue ?? ''),
-      status:      (S(k.status || 'actief').toLowerCase() === 'inactief') ? 'inactief' : 'actief'
-    }));
+  function saveDB(db){
+    localStorage.setItem('superhond-db', JSON.stringify(db));
   }
 
-  function cryptoRandomId(){
-    try { return 'cls-' + crypto.randomUUID(); }
-    catch { return 'cls-' + Math.random().toString(36).slice(2,10); }
-  }
-
-  // merge: extern overschrijft lokale bij gelijke id
-  function mergeById(primary=[], secondary=[]){
-    const map = new Map(secondary.map(x => [String(x.id), x]));
-    for (const p of primary) map.set(String(p.id), p);
-    return [...map.values()];
-  }
-
-  function escapeHTML(s=''){
-    return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;')
-      .replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
-  }
-
-  function actionsHTML(row){
-    const id = encodeURIComponent(row.id);
+  // Render rij
+  function rowHTML(r){
     return `
-      <div class="icon-actions" style="display:flex;gap:.35rem">
-        <a class="icon-btn" href="./detail.html?id=${id}" title="Bekijken"><i class="icon icon-view"></i></a>
-        <a class="icon-btn" href="./bewerken.html?id=${id}" title="Bewerken"><i class="icon icon-edit"></i></a>
-        <button class="icon-btn" data-action="delete" data-id="${escapeHTML(row.id)}" title="Verwijderen">
-          <i class="icon icon-del"></i>
-        </button>
-      </div>
-    `;
-  }
-
-  function rowHTML(k){
-    const statusBadge =
-      k.status === 'inactief'
-        ? `<span class="badge" style="background:#fee2e2;color:#991b1b">inactief</span>`
-        : `<span class="badge">actief</span>`;
-    return `
-      <tr data-id="${escapeHTML(k.id)}">
-        <td><a href="./detail.html?id=${encodeURIComponent(k.id)}">${escapeHTML(k.name || '(zonder naam)')}</a></td>
-        <td>${escapeHTML(k.type || '—')}</td>
-        <td>${escapeHTML(k.thema || '—')}</td>
-        <td>${k.strippen || 0}</td>
-        <td>${k.weken || 0}</td>
-        <td>${statusBadge}</td>
-        <td>${actionsHTML(k)}</td>
+      <tr data-id="${S(r.id)}">
+        <td>${S(r.naam)}</td>
+        <td>${S(r.type)}</td>
+        <td>${S(r.thema)}</td>
+        <td>${r.strippen || 0}</td>
+        <td>${r.geldigheidsduur || 0} wkn</td>
+        <td>${S(r.status)}</td>
+        <td style="white-space:nowrap">
+          <a class="btn btn-xs" href="./detail.html?id=${encodeURIComponent(r.id)}">👁️</a>
+          <a class="btn btn-xs" href="./bewerken.html?id=${encodeURIComponent(r.id)}">✏️</a>
+          <button class="btn btn-xs" data-action="del" data-id="${S(r.id)}">🗑️</button>
+        </td>
       </tr>
     `;
   }
 
-  let ALL = [];
-
   function renderTable(rows){
-    els.tbody.innerHTML = rows.map(rowHTML).join('');
-    els.wrap.style.display = rows.length ? '' : 'none';
+    els.tbody.innerHTML = rows.map(rowHTML).join('') || `<tr><td colspan="7" class="muted">Geen klassen gevonden.</td></tr>`;
+    els.wrap.style.display = '';
   }
 
-  function applySearch(rows){
+  function applySearch(all){
     const q = S(els.zoek.value).toLowerCase();
-    if (!q) return rows;
-    return rows.filter(k =>
-      (k.name || '').toLowerCase().includes(q) ||
-      (k.type || '').toLowerCase().includes(q) ||
-      (k.thema|| '').toLowerCase().includes(q)
+    if (!q) return all;
+    return all.filter(r =>
+      (r.naam||'').toLowerCase().includes(q) ||
+      (r.type||'').toLowerCase().includes(q) ||
+      (r.thema||'').toLowerCase().includes(q)
     );
   }
 
-  function bindActions(){
-    els.tbody.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-action="delete"]');
+  function bindActions(all){
+    els.tbody.addEventListener('click', e => {
+      const btn = e.target.closest('[data-action="del"]');
       if (!btn) return;
       const id = btn.getAttribute('data-id');
       if (!id) return;
+
       if (!confirm('Klas verwijderen?')) return;
 
       const db = loadDB();
-      db.classes = (db.classes || []).filter(c => String(c.id) !== String(id));
+      db.classes = db.classes.filter(c => String(c.id)!==String(id));
       saveDB(db);
 
-      ALL = ALL.filter(c => String(c.id) !== String(id));
-      renderTable(applySearch(ALL));
+      const newRows = all.filter(c => String(c.id)!==String(id));
+      renderTable(applySearch(newRows));
     });
   }
 
   async function init(){
+    els.loader.style.display = '';
+    els.error.style.display  = 'none';
+    els.wrap.style.display   = 'none';
+
     try{
-      els.loader.style.display = '';
-      els.error.style.display  = 'none';
-      els.wrap.style.display   = 'none';
-
-      const ext = await fetchJson(['../data/klassen.json','/data/klassen.json']);
-      const extRows = normalizeClasses(ext);
-
       const db = loadDB();
-      const locRows = normalizeClasses({ classes: db.classes });
+      const rows = db.classes.sort((a,b)=>S(a.naam).localeCompare(S(b.naam)));
 
-      ALL = mergeById(extRows, locRows)
-        .sort((a,b) => String(a.name).localeCompare(String(b.name)));
-
-      renderTable(ALL);
+      renderTable(rows);
       els.loader.style.display = 'none';
-      els.wrap.style.display   = '';
 
-      els.zoek.addEventListener('input', () => renderTable(applySearch(ALL)));
-      bindActions();
+      els.zoek.addEventListener('input', () => {
+        renderTable(applySearch(rows));
+      });
+
+      bindActions(rows);
     }catch(e){
-      console.error(e);
       els.loader.style.display = 'none';
-      els.error.style.display  = '';
-      els.error.textContent    = '⚠️ Kon klassen niet laden. ' + (e.message || e);
+      els.error.textContent = '⚠️ Fout bij laden klassen: '+(e.message||e);
+      els.error.style.display = '';
     }
   }
 
