@@ -1,11 +1,12 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Klas bewerken</title>
-  <link rel="stylesheet" href="../css/style.css?v=0.20.0"/>
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Klas – Bewerken</title>
+
+  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
   <script src="../js/layout.js?v=0.20.0" defer></script>
   <script type="module" src="./bewerken.js?v=0.20.0" defer></script>
 </head>
@@ -15,29 +16,40 @@
 <main class="container">
   <h1 class="page-title">Klas bewerken</h1>
 
-  <form id="form" class="card" style="display:grid;gap:12px">
-    <div class="grid" style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
-      <label>Naam* <input class="input" id="f_name" required/></label>
-      <label>Type <input class="input" id="f_type"/></label>
-      <label>Thema <input class="input" id="f_thema"/></label>
-      <label>Strippen (voor klant) <input class="input" id="f_strippen" type="number" min="0" step="1"/></label>
-      <label>Geldigheid (weken) <input class="input" id="f_weken" type="number" min="0" step="1"/></label>
+  <form id="formKlas" class="card">
+    <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+      <label>Naam
+        <input class="input" id="naam" type="text" required />
+      </label>
+      <label>Type
+        <input class="input" id="type" type="text" />
+      </label>
+      <label>Thema
+        <input class="input" id="thema" type="text" />
+      </label>
+      <label>Aantal strippen
+        <input class="input input-nr" id="strippen" type="number" min="0" value="0" />
+      </label>
+      <label>Geldigheidsduur (weken)
+        <input class="input input-nr" id="geldigheid" type="number" min="0" value="0" />
+      </label>
       <label>Status
-        <select class="select" id="f_status">
+        <select class="select" id="status">
           <option value="actief">Actief</option>
-          <option value="inactief">Niet actief</option>
+          <option value="inactief">Inactief</option>
         </select>
       </label>
-      <label>MailBlue <input class="input" id="f_mailblue" placeholder="bijv. lijst-id"/></label>
-      <label>Afbeelding (URL) <input class="input" id="f_afbeelding"/></label>
+      <label>Afbeelding (URL)
+        <input class="input" id="afbeelding" type="url" />
+      </label>
+      <label>Beschrijving
+        <textarea class="input" id="beschrijving" rows="3"></textarea>
+      </label>
     </div>
-    <label>Beschrijving
-      <textarea class="input" id="f_omschrijving" rows="5"></textarea>
-    </label>
 
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn" type="submit">Opslaan</button>
-      <a class="btn" id="backLink" href="./">Annuleren</a>
+      <a class="btn" href="./">Annuleren</a>
     </div>
   </form>
 </main>
