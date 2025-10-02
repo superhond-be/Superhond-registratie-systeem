@@ -4,13 +4,15 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Superhond – Dashboard</title>
-  <link rel="stylesheet" href="/assets/css/app.css"/>
+  <!-- RELATIEF naar /public/css/ -->
+  <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
 <header class="topbar">
   <h1>🐾 Superhond – Dashboard</h1>
   <nav class="breadcrumbs">
-    <a href="/dashboard/">/dashboard/</a>
+    <!-- Relatief, geen leading slash -->
+    <a href="./">/dashboard/</a>
   </nav>
 </header>
 
@@ -181,8 +183,7 @@
   <small>Superhond · v0.1 – Lessenbeheer eerst; strippenkaarten & communicatie later ✔️</small>
 </footer>
 
-<script src="/assets/js/storage.js"></script>
-<script src="/assets/js/models.js"></script>
-<script src="/assets/js/dashboard.js"></script>
+<!-- ENKEL 1 MODULE-SCRIPT, RELATIEF naar /public/js/ -->
+<script type="module" src="../js/dashboard.js"></script>
 </body>
 </html>
