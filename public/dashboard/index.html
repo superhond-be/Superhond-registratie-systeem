@@ -7,7 +7,6 @@
 
   <!-- Centrale UI (RELATIEF) -->
   <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
-  <!-- optioneel: eigen thema -->
   <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
 
   <style>
@@ -17,6 +16,18 @@
     .tab.active{background:var(--accent,#f4c400);font-weight:600}
     .muted{color:#6b7280}
     .error{color:#b91c1c}
+
+    /* badge op tegel */
+    .tile.badged { position: relative; }
+    .tile .badge-dot {
+      position:absolute; top:8px; right:10px;
+      min-width:22px; height:22px; padding:0 6px;
+      display:inline-flex; align-items:center; justify-content:center;
+      border-radius:999px; font-size:12px; line-height:1;
+      background:var(--accent,#f4c400); color:#000;
+      border:1px solid rgba(0,0,0,.08);
+      box-shadow:0 1px 2px rgba(0,0,0,.08);
+    }
   </style>
 </head>
 <body class="dashboard-page">
@@ -32,144 +43,17 @@
       <a class="tile" href="../honden/"><span>🐶</span> Honden</a>
       <a class="tile" href="../strippenkaarten/"><span>🎫</span> Strippenkaarten</a>
       <a class="tile" href="../lessen/"><span>📅</span> Lessen</a>
-
-      <!-- ⬇️ Lessenreeks-tegel met live teller -->
-      <a class="tile" href="../lessenreeks/">
-        <span>📦</span>
-        <div class="tile-body">
-          <span class="tile-title">Lessenreeksen</span>
-          <span class="tile-sub" id="reeksen-count">—</span>
-        </div>
+      <!-- ⬇️ aangepast naar /lessenreeks/ -->
+      <a class="tile badged" href="../lessenreeks/">
+        <span>📦</span> Lessenreeks
+        <span class="badge-dot">2</span> <!-- voorbeeld badge -->
       </a>
-
       <a class="tile" href="../trainers/"><span>🧑‍🏫</span> Trainers</a>
       <a class="tile" href="../rapporten/"><span>📈</span> Rapporten</a>
       <a class="tile" href="../mededeling/"><span>📢</span> Mededelingen</a>
       <a class="tile" href="../instellingen/"><span>⚙️</span> Instellingen</a>
       <a class="tile" href="../over/"><span>ℹ️</span> Over</a>
 
-      <!-- ✅ Lessenbeheer (admin) volgens jouw structuur -->
+      <!-- ✅ Lessenbeheer (admin) -->
       <a class="tile" href="../lessen/beheer.html"><span>⚙️</span> Lessenbeheer</a>
     </div>
-
-    <!-- Agenda blok met tabs -->
-    <section class="card" style="margin-top:1rem">
-      <h2 style="margin:0 0 .5rem">Agenda</h2>
-
-      <div class="tabs" id="agenda-tabs">
-        <button class="tab active" data-tab="week">Deze week</button>
-        <button class="tab" data-tab="alles">Alles</button>
-        <button class="tab" data-tab="mededelingen">Mededelingen</button>
-      </div>
-
-      <div id="agenda-loader" class="muted">⏳ Laden…</div>
-      <div id="agenda-error" class="error" style="display:none"></div>
-
-      <div class="table-wrap" id="agenda-table-wrap" style="display:none;">
-        <table id="agenda-table" class="table">
-          <thead>
-            <tr>
-              <th>Naam</th>
-              <th>Datum</th>
-              <th>Locatie</th>
-              <th>Trainer(s)</th>
-            </tr>
-          </thead>
-          <tbody><!-- gevuld door ../js/agenda.js --></tbody>
-        </table>
-      </div>
-      <p class="muted" style="margin:.5rem 0 0">
-        Tip: plaats <code>../data/agenda.json</code> of activeer <code>../api/agenda</code>.
-      </p>
-    </section>
-  </main>
-
-  <!-- Footer met versie/buildtijd -->
-  <footer id="footer" class="footer"></footer>
-
-  <!-- Scripts (RELATIEF) -->
-  <script src="../js/layout.js?v=0.20.0" defer></script>
-  <script src="../js/agenda.js?v=0.20.0" defer></script>
-
-  <!-- ⬇️ Live teller voor lessenreeksen (na andere scripts) -->
-  <script>
-  (function(){
-    const S = v => String(v ?? '').trim();
-
-    function loadDB(){
-      try{
-        const raw = localStorage.getItem('superhond-db');
-        const db  = raw ? JSON.parse(raw) : {};
-        db.series = Array.isArray(db.series) ? db.series : [];
-        return db;
-      }catch{ return { series:[] }; }
-    }
-
-    async function fetchJson(tryUrls){
-      for (const u of tryUrls){
-        try{
-          const url = u + (u.includes('?') ? '&' : '?') + 't=' + Date.now();
-          const r = await fetch(url, { cache:'no-store' });
-          if (r.ok) return r.json();
-        }catch(_){}
-      }
-      return null;
-    }
-
-    function normalizeSeries(raw){
-      if (!raw) return [];
-      const arr =
-        Array.isArray(raw)          ? raw :
-        Array.isArray(raw.reeksen)  ? raw.reeksen :
-        Array.isArray(raw.series)   ? raw.series :
-        Array.isArray(raw.items)    ? raw.items :
-        Array.isArray(raw.data)     ? raw.data : [];
-
-      return arr.map(r => ({
-        id: r.id ?? r.reeksId ?? r.seriesId ?? null,
-        name: S([r.packageName ?? r.pakket ?? r.pkg ?? r.naam ?? r.name ?? '',
-                 r.seriesName  ?? r.reeks   ?? r.serie ?? '']
-                .filter(Boolean).join(' — ')) || S(r.naam || r.name || ''),
-        status: (S(r.status || '').toLowerCase() || 'actief')
-      }));
-    }
-
-    function uniqueById(primary=[], secondary=[]){
-      const key = x => S(x.id) || S(x.name);
-      const map = new Map(secondary.map(x => [key(x), x])); // local eerst
-      for (const p of primary) map.set(key(p), p);          // extern overwrite
-      return [...map.values()];
-    }
-
-    async function updateTile(){
-      const el = document.getElementById('reeksen-count');
-      if (!el) return;
-
-      const ext = await fetchJson(['../data/lessenreeksen.json','/data/lessenreeksen.json']);
-      const extRows = normalizeSeries(ext);
-
-      const locRows = normalizeSeries(loadDB());
-
-      const all = uniqueById(extRows, locRows);
-      const actief = all.filter(r => r.status !== 'inactief').length;
-
-      el.textContent = actief ? (actief + ' actief') : '0 actief';
-    }
-
-    document.addEventListener('DOMContentLoaded', updateTile);
-  })();
-  </script>
-  <script>
-    // Topbar mount
-    window.addEventListener('DOMContentLoaded', () => {
-      if (window.SuperhondUI?.mount) {
-        SuperhondUI.mount({
-          title: 'Superhond',
-          icon: '🐾',
-          home: true
-        });
-      }
-    });
-  </script>
-</body>
-</html>
