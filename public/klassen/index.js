@@ -1,125 +1,79 @@
-// Klassen – overzicht: laad uit localStorage + (optioneel) ../data/klassen.json
+// Klassen – Overzicht
 (() => {
-  const $  = s => document.querySelector(s);
-  const S  = v => String(v ?? '').trim();
+  const $ = s => document.querySelector(s);
+  const S = v => String(v ?? '').trim();
 
   const els = {
     loader: $('#loader'),
     error:  $('#error'),
     wrap:   $('#wrap'),
-    tbody:  document.querySelector('#tabel tbody'),
-    zoek:   $('#zoek'),
+    tbody:  $('#tbody'),
+    zoek:   $('#zoek')
   };
 
-  // Topbar/footer mount
   document.addEventListener('DOMContentLoaded', () => {
     if (window.SuperhondUI?.mount) {
-      SuperhondUI.mount({ title: 'Klassen', icon: '📚', back: '../dashboard/' });
+      SuperhondUI.mount({ title:'Klassen', icon:'📚', back:'../dashboard/' });
     }
   });
 
-  // ---------- Helpers ----------
-  function bust(u){ return u + (u.includes('?') ? '&' : '?') + 't=' + Date.now(); }
+  const bust = () => (Date.now());
 
-  async function fetchJson(tryUrls) {
-    for (const u of tryUrls) {
-      try {
-        const r = await fetch(bust(u), { cache:'no-store' });
+  async function fetchJson(tryUrls){
+    for (const u of tryUrls){
+      try{
+        const url = u + (u.includes('?') ? '&' : '?') + 't=' + bust();
+        const r = await fetch(url, { cache:'no-store' });
         if (r.ok) return r.json();
-      } catch(_) {}
+      }catch(_){}
     }
     return null;
   }
 
-  function loadDB() {
-    try {
+  function loadDB(){
+    try{
       const raw = localStorage.getItem('superhond-db');
       const db  = raw ? JSON.parse(raw) : {};
-      db.klassen = Array.isArray(db.klassen) ? db.klassen : [];
+      db.classes = Array.isArray(db.classes) ? db.classes : [];
       return db;
-    } catch {
-      return { klassen: [] };
-    }
+    }catch{ return { classes:[] }; }
   }
   function saveDB(db){ localStorage.setItem('superhond-db', JSON.stringify(db)); }
 
-  // Normaliseer uiteenlopende vormen → {id,name,type,thema,strippen,valid_weeks,status}
-  function normalizeKlassen(raw) {
-    if (!raw) return [];
+  // Normaliseer allerlei varianten naar een uniforme "class" rij
+  // shape: {id,name,type,thema,strippen,weken,afbeelding,omschrijving,mailblue,status}
+  function normalizeClasses(raw){
     const arr =
-      Array.isArray(raw)            ? raw :
-      Array.isArray(raw?.klassen)   ? raw.klassen :
-      Array.isArray(raw?.classes)   ? raw.classes :
-      Array.isArray(raw?.items)     ? raw.items :
-      Array.isArray(raw?.data)      ? raw.data : [];
+      Array.isArray(raw)           ? raw :
+      Array.isArray(raw?.klassen)  ? raw.klassen :
+      Array.isArray(raw?.classes)  ? raw.classes :
+      Array.isArray(raw?.items)    ? raw.items :
+      Array.isArray(raw?.data)     ? raw.data : [];
 
-    const rows = [];
-    for (const k of arr) {
-      const id      = k.id ?? k.klasId ?? k.classId ?? null;
-      const name    = S(k.naam ?? k.name ?? '');
-      const type    = S(k.type ?? k.subnaam ?? '');
-      const thema   = S(k.thema ?? k.theme ?? '');
-      const strip   = Number(k.strippen ?? k.aantal_strippen ?? k.strips ?? 0) || 0;
-      const weeks   = Number(k.geldigheid_weken ?? k.geldigheid ?? k.valid_weeks ?? 0) || 0;
-      const status  = S(k.status ?? 'actief').toLowerCase(); // 'actief' / 'inactief'
-      rows.push({ id, name, type, thema, strippen:strip, valid_weeks:weeks, status });
-    }
-    return rows;
+    return arr.map(k => ({
+      id:          k.id ?? k.klasId ?? k.classId ?? cryptoRandomId(),
+      name:        S(k.name ?? k.naam ?? ''),
+      type:        S(k.type ?? k.subnaam ?? ''),
+      thema:       S(k.thema ?? k.theme ?? ''),
+      strippen:    Number(k.strippen ?? k.aantal_strips ?? k.aantalStrippen ?? 0) || 0,
+      weken:       Number(k.weken ?? k.geldigheid_weken ?? k.geldigheidsduur ?? 0) || 0,
+      afbeelding:  S(k.afbeelding ?? k.image ?? ''),
+      omschrijving:S(k.omschrijving ?? k.beschrijving ?? ''),
+      mailblue:    S(k.mailblue ?? k.mailBlue ?? ''),
+      status:      (S(k.status || 'actief').toLowerCase() === 'inactief') ? 'inactief' : 'actief'
+    }));
   }
 
-  // merge op id of (name+type+thema) als noodsleutel
-  function uniqueMerge(primary=[], secondary=[]) {
-    const key = x => S(x.id) || `${S(x.name)}|${S(x.type)}|${S(x.thema)}`;
-    const map = new Map(secondary.map(x => [key(x), x])); // lokaal eerst
-    for (const p of primary) map.set(key(p), p);          // extern overschrijft bij zelfde key
+  function cryptoRandomId(){
+    try { return 'cls-' + crypto.randomUUID(); }
+    catch { return 'cls-' + Math.random().toString(36).slice(2,10); }
+  }
+
+  // merge: extern overschrijft lokale bij gelijke id
+  function mergeById(primary=[], secondary=[]){
+    const map = new Map(secondary.map(x => [String(x.id), x]));
+    for (const p of primary) map.set(String(p.id), p);
     return [...map.values()];
-  }
-
-  // ---------- Render ----------
-  let ALL_ROWS = [];
-
-  function statusBadge(status) {
-    const st = (S(status)||'actief').toLowerCase();
-    const cls = st === 'inactief' ? 'badge-status badge-status--inactief'
-                                  : 'badge-status badge-status--actief';
-    const label = st === 'inactief' ? 'Inactief' : 'Actief';
-    return `<span class="${cls}">${label}</span>`;
-  }
-
-  function actionsHTML(r) {
-    if (!r.id) return '';
-    const idEnc = encodeURIComponent(r.id);
-    return `
-      <div class="icon-actions">
-        <a class="icon-btn" href="./detail.html?id=${idEnc}" title="Bekijken" aria-label="Bekijken">
-          <i class="icon icon-view"></i>
-        </a>
-        <a class="icon-btn" href="./bewerken.html?id=${idEnc}" title="Bewerken" aria-label="Bewerken">
-          <i class="icon icon-edit"></i>
-        </a>
-        <button class="icon-btn" data-action="delete" data-id="${r.id}" title="Verwijderen" aria-label="Verwijderen">
-          <i class="icon icon-del"></i>
-        </button>
-      </div>
-    `;
-  }
-
-  function rowHTML(r) {
-    const nameCell = r.id
-      ? `<a href="./detail.html?id=${encodeURIComponent(r.id)}">${escapeHTML(r.name || '(zonder naam)')}</a>`
-      : escapeHTML(r.name || '(zonder naam)');
-
-    return `
-      <tr data-id="${escapeHTML(r.id || '')}">
-        <td>${nameCell}</td>
-        <td>${escapeHTML(r.type || '—')}</td>
-        <td>${escapeHTML(r.thema || '—')}</td>
-        <td>${Number.isFinite(r.strippen)? r.strippen : '—'}</td>
-        <td>${Number.isFinite(r.valid_weeks)? r.valid_weeks : '—'}</td>
-        <td>${statusBadge(r.status)}</td>
-        <td>${actionsHTML(r)}</td>
-      </tr>
-    `;
   }
 
   function escapeHTML(s=''){
@@ -127,70 +81,93 @@
       .replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
   }
 
-  function renderTable(rows) {
-    ALL_ROWS = rows.slice();
+  function actionsHTML(row){
+    const id = encodeURIComponent(row.id);
+    return `
+      <div class="icon-actions" style="display:flex;gap:.35rem">
+        <a class="icon-btn" href="./detail.html?id=${id}" title="Bekijken"><i class="icon icon-view"></i></a>
+        <a class="icon-btn" href="./bewerken.html?id=${id}" title="Bewerken"><i class="icon icon-edit"></i></a>
+        <button class="icon-btn" data-action="delete" data-id="${escapeHTML(row.id)}" title="Verwijderen">
+          <i class="icon icon-del"></i>
+        </button>
+      </div>
+    `;
+  }
+
+  function rowHTML(k){
+    const statusBadge =
+      k.status === 'inactief'
+        ? `<span class="badge" style="background:#fee2e2;color:#991b1b">inactief</span>`
+        : `<span class="badge">actief</span>`;
+    return `
+      <tr data-id="${escapeHTML(k.id)}">
+        <td><a href="./detail.html?id=${encodeURIComponent(k.id)}">${escapeHTML(k.name || '(zonder naam)')}</a></td>
+        <td>${escapeHTML(k.type || '—')}</td>
+        <td>${escapeHTML(k.thema || '—')}</td>
+        <td>${k.strippen || 0}</td>
+        <td>${k.weken || 0}</td>
+        <td>${statusBadge}</td>
+        <td>${actionsHTML(k)}</td>
+      </tr>
+    `;
+  }
+
+  let ALL = [];
+
+  function renderTable(rows){
     els.tbody.innerHTML = rows.map(rowHTML).join('');
     els.wrap.style.display = rows.length ? '' : 'none';
   }
 
-  function applySearch(allRows) {
-    const q = S(els.zoek?.value).toLowerCase();
-    if (!q) return allRows;
-    return allRows.filter(r =>
-      (r.name || '').toLowerCase().includes(q) ||
-      (r.type || '').toLowerCase().includes(q) ||
-      (r.thema|| '').toLowerCase().includes(q)
+  function applySearch(rows){
+    const q = S(els.zoek.value).toLowerCase();
+    if (!q) return rows;
+    return rows.filter(k =>
+      (k.name || '').toLowerCase().includes(q) ||
+      (k.type || '').toLowerCase().includes(q) ||
+      (k.thema|| '').toLowerCase().includes(q)
     );
   }
 
-  function bindActions() {
+  function bindActions(){
     els.tbody.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action="delete"]');
       if (!btn) return;
       const id = btn.getAttribute('data-id');
       if (!id) return;
-
-      if (!confirm('Deze klas verwijderen?')) return;
+      if (!confirm('Klas verwijderen?')) return;
 
       const db = loadDB();
-      db.klassen = (db.klassen || []).filter(k => String(k.id) !== String(id));
+      db.classes = (db.classes || []).filter(c => String(c.id) !== String(id));
       saveDB(db);
 
-      const newRows = ALL_ROWS.filter(r => String(r.id) !== String(id));
-      renderTable(applySearch(newRows));
+      ALL = ALL.filter(c => String(c.id) !== String(id));
+      renderTable(applySearch(ALL));
     });
   }
 
-  // ---------- Init ----------
-  async function init() {
-    try {
+  async function init(){
+    try{
       els.loader.style.display = '';
       els.error.style.display  = 'none';
       els.wrap.style.display   = 'none';
 
-      // Extern (optioneel demo-json)
-      const ext = await fetchJson(['../data/klassen.json', '/data/klassen.json']);
-      const extRows = normalizeKlassen(ext);
+      const ext = await fetchJson(['../data/klassen.json','/data/klassen.json']);
+      const extRows = normalizeClasses(ext);
 
-      // Lokaal
       const db = loadDB();
-      const locRows = normalizeKlassen({ klassen: db.klassen });
+      const locRows = normalizeClasses({ classes: db.classes });
 
-      // Merge + sort
-      const all = uniqueMerge(extRows, locRows)
+      ALL = mergeById(extRows, locRows)
         .sort((a,b) => String(a.name).localeCompare(String(b.name)));
 
-      renderTable(all);
-
+      renderTable(ALL);
       els.loader.style.display = 'none';
       els.wrap.style.display   = '';
 
-      els.zoek?.addEventListener('input', () => {
-        renderTable(applySearch(all));
-      });
-
+      els.zoek.addEventListener('input', () => renderTable(applySearch(ALL)));
       bindActions();
-    } catch (e) {
+    }catch(e){
       console.error(e);
       els.loader.style.display = 'none';
       els.error.style.display  = '';
