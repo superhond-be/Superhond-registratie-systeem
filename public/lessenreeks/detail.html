@@ -3,168 +3,35 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Reeks detail – Superhond</title>
-  <link rel="stylesheet" href="/css/style.css?v=0.20.0" />
-  <style>
-    .meta{color:#6b7280}
-    .chips{display:flex;gap:.25rem;flex-wrap:wrap}
-    .chip{display:inline-flex;align-items:center;padding:.2rem .55rem;border:1px solid #e5e7eb;border-radius:999px;background:#fff}
-  </style>
+  <title>Lessenreeks – Detail</title>
+
+  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
 </head>
-<body>
+<body class="subpage">
 <header id="topbar" class="topbar"></header>
 
 <main class="container">
-  <h1 class="page-title">Reeks detail</h1>
+  <h1 class="page-title">Lessenreeks – Detail</h1>
 
-  <div id="box" class="card">Laden…</div>
+  <div id="loader" class="loader">⏳ Laden…</div>
+  <div id="error" class="error" style="display:none"></div>
 
-  <section class="card" style="margin-top:1rem">
-    <h3 style="margin-top:0">Aankomende lessen</h3>
-    <div class="table-wrap" id="wrap" hidden>
-      <table class="table" id="tbl">
-        <thead>
-        <tr>
-          <th>Datum</th>
-          <th>Tijd</th>
-          <th>Trainer(s)</th>
-          <th>Locatie</th>
-          <th></th>
-        </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+  <article id="box" class="card" style="display:none"></article>
+
+  <section id="actions" class="card" style="display:none; margin-top:12px">
+    <div style="display:flex; gap:8px; flex-wrap:wrap">
+      <button id="btnRegen" class="btn">Her-genereer lessen & opslaan</button>
+      <button id="btnExportReeksen" class="btn">Export reeksen.json</button>
+      <button id="btnExportLessen" class="btn">Export lessen.json</button>
+      <a href="./" class="btn">← Terug naar overzicht</a>
     </div>
-    <p id="empty" class="meta" hidden>Geen lessen gevonden voor deze reeks.</p>
   </section>
-
-  <p style="margin-top:1rem"><a class="btn" href="/dashboard/">← Terug naar dashboard</a></p>
 </main>
 
 <footer id="footer" class="footer"></footer>
 
-<script src="/js/layout.js?v=0.20.0"></script>
-<script>
-  window.addEventListener('DOMContentLoaded', () => {
-    window.SuperhondUI?.mount?.({ title:'Reeks detail', icon:'📦', back:'/dashboard/' });
-  });
-
-  (function(){
-    const params = new URLSearchParams(location.search);
-    const id = params.get('id');
-
-    const box = document.getElementById('box');
-    const wrap = document.getElementById('wrap');
-    const tbody = document.querySelector('#tbl tbody');
-    const empty = document.getElementById('empty');
-
-    const S = v => String(v ?? '');
-    const escapeHtml = s => S(s).replace(/[&<>\"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-    const chip = t => `<span class="chip">${escapeHtml(t)}</span>`;
-
-    function humanDate(d){
-      const D = new Date(d);
-      if (isNaN(+D)) return S(d);
-      return D.toLocaleDateString('nl-BE', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-    }
-    function timeRange(start, einde){
-      return [start, einde].filter(Boolean).join(' – ');
-    }
-    function buildMapsUrl(loc){
-      if (!loc) return '';
-      if (loc.mapsUrl) return loc.mapsUrl;
-      const line1 = [loc.straat, loc.huisnr].filter(Boolean).join(' ');
-      const line2 = [loc.postcode, loc.gemeente||loc.plaats].filter(Boolean).join(' ');
-      const q = [line1, line2, loc.land||'BE'].filter(Boolean).join(', ');
-      return q.trim() ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : '';
-    }
-
-    async function fetchJson(url){
-      const r = await fetch(url,{cache:'no-store'});
-      if(!r.ok) throw new Error(`${url} → HTTP ${r.status}`);
-      return r.json();
-    }
-
-    async function loadAll(){
-      const bust = `?t=${Date.now()}`;
-      const [reeksen, lessen, trainers, locaties] = await Promise.all([
-        fetchJson('/data/reeksen.json'+bust).catch(()=>[]),
-        fetchJson('/data/lessen.json'+bust).catch(()=>[]),
-        fetchJson('/data/trainers.json'+bust).catch(()=>[]),
-        fetchJson('/data/locaties.json'+bust).catch(()=>[])
-      ]);
-      return { reeksen, lessen, trainers, locaties };
-    }
-
-    (async function init(){
-      if (!id){ box.innerHTML = '<p class="error">Geen id opgegeven.</p>'; return; }
-
-      try{
-        const all = await loadAll();
-
-        const reeks = (all.reeksen||[]).find(r => String(r.id)===String(id));
-        if (!reeks){ box.innerHTML = `<p class="error">Reeks met id <code>${escapeHtml(id)}</code> niet gevonden.</p>`; return; }
-
-        const trainersById = new Map((all.trainers||[]).map(t=>[String(t.id), t]));
-        const locatiesById = new Map((all.locaties||[]).map(l=>[String(l.id), l]));
-
-        // header info
-        const trainerIds = Array.isArray(reeks.trainerIds) ? reeks.trainerIds
-                         : (reeks.trainerId!=null ? [reeks.trainerId] : []);
-        const trainerNames = trainerIds.map(i => trainersById.get(String(i))).filter(Boolean).map(t=>t.voornaam).join(', ');
-        const loc = reeks.locatieId!=null ? locatiesById.get(String(reeks.locatieId)) : null;
-
-        box.innerHTML = `
-          <h2 style="margin:.25rem 0 0">${escapeHtml(reeks.naam || 'Reeks')}</h2>
-          <ul>
-            ${reeks.type ? `<li><strong>Type:</strong> ${escapeHtml(reeks.type)}</li>`:''}
-            ${typeof reeks.aantalLessen==='number' ? `<li><strong>Aantal lessen:</strong> ${reeks.aantalLessen}</li>`:''}
-            ${typeof reeks.maxDeelnemers==='number' || typeof reeks.maxDeelnemersOverride==='number'
-                ? `<li><strong>Max deelnemers:</strong> ${escapeHtml(String(reeks.maxDeelnemersOverride ?? reeks.maxDeelnemers))}</li>`:''}
-            ${typeof reeks.lesduurMinuten==='number' || typeof reeks.lesduurMinutenOverride==='number'
-                ? `<li><strong>Lesduur:</strong> ${escapeHtml(String(reeks.lesduurMinutenOverride ?? reeks.lesduurMinuten))} min</li>`:''}
-            ${reeks.startdatum ? `<li><strong>Startdatum:</strong> ${escapeHtml(reeks.startdatum)}</li>`:''}
-            ${trainerNames ? `<li><strong>Trainer(s):</strong> ${escapeHtml(trainerNames)}</li>`:''}
-            ${loc ? `<li><strong>Locatie:</strong> <a href="${buildMapsUrl(loc)}" target="_blank" rel="noopener">${escapeHtml(loc.naam)}</a></li>`:''}
-            ${reeks.status ? `<li><strong>Status:</strong> ${escapeHtml(reeks.status)}</li>`:''}
-          </ul>
-        `;
-
-        // lessen van deze reeks
-        const list = (all.lessen||[])
-          .filter(l => String(l.reeksId) === String(id))
-          .sort((a,b) => String(a.datum+a.start).localeCompare(String(b.datum+b.start)));
-
-        if (!list.length) {
-          wrap.hidden = true; empty.hidden = false;
-          return;
-        }
-
-        tbody.innerHTML = list.map(l=>{
-          const trainerIdsL = Array.isArray(l.trainerIds) ? l.trainerIds : (l.trainerId!=null ? [l.trainerId] : []);
-          const trainerChips = trainerIdsL
-            .map(i => trainersById.get(String(i)))
-            .filter(Boolean)
-            .map(t => chip(t.voornaam || (t.achternaam ? t.achternaam : 'Trainer')))
-            .join(' ');
-          const locL = l.locatieId!=null ? locatiesById.get(String(l.locatieId)) : null;
-          return `
-            <tr>
-              <td>${escapeHtml(humanDate(l.datum?.length<=10 ? `${l.datum}T${l.start||'00:00'}` : l.datum))}</td>
-              <td>${escapeHtml(timeRange(l.start, l.einde))}</td>
-              <td>${trainerChips || '—'}</td>
-              <td>${locL ? `<a href="${buildMapsUrl(locL)}" target="_blank" rel="noopener">${escapeHtml(locL.naam)}</a>`:'—'}</td>
-              <td><a class="btn btn-xs" href="/lessen/detail.html?id=${encodeURIComponent(l.id)}">Open</a></td>
-            </tr>
-          `;
-        }).join('');
-
-        wrap.hidden = false; empty.hidden = true;
-      }catch(e){
-        box.innerHTML = `<p class="error">Fout bij laden: ${S(e.message)}</p>`;
-      }
-    })();
-  })();
-</script>
+<script src="../js/layout.js?v=0.20.0" defer></script>
+<script type="module" src="./detail.js?v=0.20.0" defer></script>
 </body>
 </html>
