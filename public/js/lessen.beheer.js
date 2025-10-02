@@ -3,6 +3,21 @@ import { generateLessons } from "/js/lessen.reeks.generator.js";
 import { loadAll, saveLes } from "/js/lessen.store.js";
 
 
+async function generateForReeks(reeksId){
+  const all = await loadAll(); // {pakketten, reeksen, locaties, trainers, lessen}
+  const reeks  = all.reeksen.find(r => String(r.id)===String(reeksId));
+  const pakket = all.pakketten.find(p => String(p.id)===String(reeks.lessenpakketId));
+  const lessons = generateLessons({ reeks, pakket });
+  for (const l of lessons) await saveLes(l);
+  state = await loadAll();
+  render();
+}
+
+if (btn.dataset.act === "gen") {
+  const id = tr.dataset.id || collect(tr).reeksId;
+  await generateForReeks(id);
+  alert("Reeks gegenereerd 👍");
+}
 // Superhond — Lessenbeheer (inline edit + auto agenda export + reeksgeneratie)
 import {
   loadAll, saveLes, deleteLes,
