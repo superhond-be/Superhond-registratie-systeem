@@ -1,5 +1,6 @@
-// /public/lessenreeks/index.js
-// Lessenreeksen – icoon-acties + kolom Tijd (start — eind) + badge 'actieve lessen' (toekomst)
+<!-- Plaats NIET in HTML. Dit is de volledige JS voor /public/lessenreeks/index.js -->
+<script>
+/* Lessenreeksen – overzicht met koppeling naar klassen + telling toekomstige lessen */
 (() => {
   const $  = s => document.querySelector(s);
   const S  = v => String(v ?? '').trim();
@@ -20,144 +21,130 @@
   });
 
   // ---------- Helpers ----------
-  const bust = () => '?t=' + Date.now();
-
-  function euro(n){
-    if (n == null || isNaN(n)) return '—';
-    return new Intl.NumberFormat('nl-BE', { style:'currency', currency:'EUR' })
-      .format(Number(n));
-  }
-  function escapeHTML(s=''){
-    return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;')
-      .replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
-  }
-  function addMinutesToHHmm(hhmm='00:00', minutes=0){
-    const [hStr,mStr] = String(hhmm).split(':');
-    const h = Number(hStr||0), m = Number(mStr||0);
-    const total = h*60 + m + Number(minutes||0);
-    const day = 24*60;
-    const norm = ((total % day) + day) % day;
-    const hh = Math.floor(norm/60);
-    const mm = norm % 60;
-    const pad = n => String(n).padStart(2,'0');
-    return `${pad(hh)}:${pad(mm)}`;
-  }
-  async function fetchJson(tryUrls) {
-    for (const u of tryUrls) {
-      try {
-        const url = u + (u.includes('?') ? '&' : '?') + 't=' + Date.now();
-        const r = await fetch(url, { cache:'no-store' });
-        if (r.ok) return r.json();
-      } catch(_) {}
+  function bust(u){ return u + (u.includes('?')?'&':'?') + 't=' + Date.now(); }
+  async function fetchJson(tryUrls){
+    for (const u of tryUrls){
+      try{ const r = await fetch(bust(u), { cache:'no-store' }); if (r.ok) return r.json(); }catch(_){}
     }
     return null;
   }
-  function loadDB() {
-    try {
+  function loadDB(){
+    try{
       const raw = localStorage.getItem('superhond-db');
       const db  = raw ? JSON.parse(raw) : {};
       db.series  = Array.isArray(db.series)  ? db.series  : [];
       db.lessons = Array.isArray(db.lessons) ? db.lessons : [];
       return db;
-    } catch {
-      return { series:[], lessons:[] };
-    }
+    }catch{ return { series:[], lessons:[] }; }
   }
   function saveDB(db){ localStorage.setItem('superhond-db', JSON.stringify(db)); }
 
-  // Normaliseer willekeurige vormen naar uniforme rij
-  // {id, name, thema, count, price, startTime, endTime, durationMin}
-  function normalizeSeries(raw) {
-    if (!raw) return [];
-    const arr =
-      Array.isArray(raw) ? raw :
-      Array.isArray(raw?.reeksen) ? raw.reeksen :
-      Array.isArray(raw?.series) ? raw.series :
-      Array.isArray(raw?.items) ? raw.items :
-      Array.isArray(raw?.data) ? raw.data : [];
-
-    const rows = [];
-    for (const r of arr) {
-      const id   = r.id ?? r.reeksId ?? r.seriesId ?? null;
-      const pkg  = r.packageName ?? r.pakket ?? r.pkg ?? r.naam ?? r.name ?? '';
-      const ser  = r.seriesName  ?? r.reeks   ?? r.serie ?? '';
-      const name = S([pkg, ser].filter(Boolean).join(' — ')) || S(r.naam || r.name || '');
-      const thema= r.theme ?? r.thema ?? '';
-
-      const cnt  = Number(
-                    r.count ?? r.aantal ?? r.lessonsCount ??
-                    (Array.isArray(r.lessen) ? r.lessen.length :
-                     Array.isArray(r.lessons)? r.lessons.length : 0)
-                  ) || 0;
-      const price= Number(r.price ?? r.prijs ?? r.prijs_excl ?? 0);
-
-      // Recurrence/tijd
-      const rec   = r.recurrence || r.herhaling || {};
-      const startTime   = S(rec.startTime || r.startTime || '');
-      const durationMin = Number(rec.durationMin ?? r.durationMin ?? 0) || 0;
-      const endTime     = (startTime && durationMin > 0)
-                            ? addMinutesToHHmm(startTime, durationMin)
-                            : '';
-
-      rows.push({ id, name, thema, count: cnt, price, startTime, endTime, durationMin });
-    }
-    return rows;
+  const pad2 = n => String(n).padStart(2,'0');
+  const euro = n => (n == null || isNaN(n)) ? '—' :
+    new Intl.NumberFormat('nl-BE',{style:'currency',currency:'EUR'}).format(Number(n));
+  function addMinutesToHHmm(hhmm='00:00', minutes=0){
+    const [h,m] = String(hhmm).split(':').map(Number);
+    const t = (h*60 + (m||0) + Number(minutes||0) + 24*60) % (24*60);
+    return `${pad2(Math.floor(t/60))}:${pad2(t%60)}`;
   }
-
-  // Extern wint op id, anders alles samen
-  function mergeById(primary = [], secondary = []) {
-    const key = x => String(x.id ?? x.name ?? Math.random());
-    const map = new Map(secondary.map(x => [key(x), x])); // local eerst
-    for (const p of primary) map.set(key(p), p);          // extern overschrijft
-    return Array.from(map.values());
-  }
-
-  // ---- Actieve lessen tellen per reeks (toekomst)
-  function countActiveLessonsFor(seriesId, allLessons){
-    if (!seriesId) return 0;
+  function isFuture(startISO){
+    if (!startISO) return false;
+    const s = new Date(String(startISO).replace(' ','T'));
     const now = new Date();
-    return allLessons.filter(l =>
-      String(l.seriesId) === String(seriesId) &&
-      l.startISO && new Date(String(l.startISO).replace(' ','T')) >= now
-    ).length;
+    return s >= now;
   }
+
+  // ---------- Normalizers ----------
+  function normalizeKlassen(raw){
+    if (!raw) return [];
+    const arr = Array.isArray(raw.klassen) ? raw.klassen :
+                Array.isArray(raw.items)   ? raw.items   :
+                Array.isArray(raw.data)    ? raw.data    :
+                Array.isArray(raw)         ? raw         : [];
+    return arr.map(k => ({
+      id:   k.id,
+      naam: S(k.naam || k.name || ''),
+      type: S(k.type || ''),
+      thema: S(k.thema || k.theme || ''),
+      strippen: Number(k.aantalStrippen ?? k.strippen ?? 0) || 0,
+      geldigheid_weken: Number(k.geldigheidsduur_weken ?? k.weken ?? 0) || 0,
+      prijs_excl: Number(k.prijs_excl ?? k.price ?? 0) || 0,
+      status: S(k.status || 'actief')
+    }));
+  }
+
+  function normalizeReeksen(raw){
+    if (!raw) return [];
+    const arr = Array.isArray(raw.lessenreeksen) ? raw.lessenreeksen :
+                Array.isArray(raw.reeksen)       ? raw.reeksen       :
+                Array.isArray(raw.items)         ? raw.items         :
+                Array.isArray(raw.data)          ? raw.data          :
+                Array.isArray(raw)               ? raw               : [];
+    return arr.map(r => ({
+      id: S(r.id ?? r.reeksId ?? r.seriesId ?? ''),
+      klasId: S(r.klasId ?? r.classId ?? ''),
+      naam: S(r.naam || r.name || ''),
+      datum: S(r.datum || r.startDatum || ''),
+      begintijd: S(r.begintijd || r.startTime || ''),
+      eindtijd:  S(r.eindtijd  || r.endTime   || ''),
+      thema: S(r.thema || r.theme || ''),
+      maxDeelnemers: Number(r.maxDeelnemers ?? r.max ?? 0) || 0,
+      locatie: (r.locatie && typeof r.locatie === 'object')
+        ? { naam:S(r.locatie.naam || r.locatie.name || ''), mapsUrl:S(r.locatie.mapsUrl || '') || null }
+        : { naam:S(r.locatie || r.location || ''), mapsUrl:null },
+      trainers: Array.isArray(r.trainers) ? r.trainers.map(S) : [],
+      status: S(r.status || 'actief')
+    }));
+  }
+
+  function normalizeLessons(arr){
+    if (!Array.isArray(arr)) return [];
+    return arr.map(l => ({
+      id: S(l.id),
+      seriesId: S(l.seriesId || l.reeksId || ''),
+      klasId: S(l.klasId || ''),
+      titel: S(l.titel || l.title || l.name || 'Les'),
+      startISO: S(l.startISO || l.start || ''),
+      endISO:   S(l.endISO   || l.end   || ''),
+      locatie: (l.locatie && typeof l.locatie === 'object')
+        ? { naam:S(l.locatie.naam || l.locatie.name || ''), mapsUrl:S(l.locatie.mapsUrl || '') || null }
+        : { naam:S(l.locatie || ''), mapsUrl:null },
+      trainers: Array.isArray(l.trainers) ? l.trainers.map(S) : [],
+      status: S(l.status || 'actief')
+    }));
+  }
+
+  // ---------- Merge helpers ----------
+  const byId = (arr, id) => arr.find(x => String(x.id) === String(id));
 
   // ---------- Render ----------
   let ALL_ROWS = [];
-  let ALL_LESSONS = []; // uit localStorage
 
   function actionsHTML(r) {
     if (!r.id) return '';
     const idEnc = encodeURIComponent(r.id);
     return `
       <div class="icon-actions">
-        <a class="icon-btn" href="./detail.html?id=${idEnc}" title="Bekijken" aria-label="Bekijken">
-          <i class="icon icon-view"></i>
-        </a>
-        <a class="icon-btn" href="./bewerken.html?id=${idEnc}" title="Bewerken" aria-label="Bewerken">
-          <i class="icon icon-edit"></i>
-        </a>
-        <button class="icon-btn" data-action="delete" data-id="${escapeHTML(r.id)}" title="Verwijderen" aria-label="Verwijderen">
-          <i class="icon icon-del"></i>
-        </button>
+        <a class="icon-btn" href="./detail.html?id=${idEnc}" title="Bekijken"><i class="icon icon-view"></i></a>
+        <a class="icon-btn" href="./bewerken.html?id=${idEnc}" title="Bewerken"><i class="icon icon-edit"></i></a>
+        <button class="icon-btn" data-action="delete" data-id="${r.id}" title="Verwijderen"><i class="icon icon-del"></i></button>
       </div>
     `;
   }
 
   function rowHTML(r) {
-    const tijd = (r.startTime && r.endTime) ? `${r.startTime} — ${r.endTime}` : '—';
-    const actief = countActiveLessonsFor(r.id, ALL_LESSONS);
-
-    // Badge vóór de naam
-    const badge = `<span class="badge" style="margin-right:.4rem">${actief}</span>`;
+    const tijd = (r.begintijd && r.eindtijd) ? `${r.begintijd} — ${r.eindtijd}` :
+                  (r.begintijd && r.lesduur_min ? `${r.begintijd} — ${addMinutesToHHmm(r.begintijd,r.lesduur_min)}` : '—');
+    const prijsTxt = (r.klas && (r.klas.prijs_excl || r.klas.prijs_excl === 0)) ? euro(r.klas.prijs_excl) : '—';
 
     return `
-      <tr data-id="${escapeHTML(r.id || '')}">
-        <td>${badge}${r.id ? `<a href="./detail.html?id=${encodeURIComponent(r.id)}">${escapeHTML(r.name)}</a>` : escapeHTML(r.name)}</td>
-        <td>${escapeHTML(r.thema || '—')}</td>
+      <tr data-id="${r.id}">
+        <td style="text-align:center;font-weight:700">${r.futureCount}</td>
+        <td>${r.id ? `<a href="./detail.html?id=${encodeURIComponent(r.id)}">${r.naam}</a>` : r.naam}</td>
+        <td>${r.thema || (r.klas?.thema || '—')}</td>
         <td>${tijd}</td>
-        <td>${r.count || 0}</td>
-        <td style="text-align:right">${(r.price || r.price === 0) ? euro(r.price) : '—'}</td>
+        <td>${r.futureCount}</td>
+        <td style="text-align:right">${prijsTxt}</td>
         <td>${actionsHTML(r)}</td>
       </tr>
     `;
@@ -173,8 +160,9 @@
     const q = S(els.zoek?.value).toLowerCase();
     if (!q) return allRows;
     return allRows.filter(r =>
-      (r.name || '').toLowerCase().includes(q) ||
-      (r.thema|| '').toLowerCase().includes(q)
+      (r.naam || '').toLowerCase().includes(q) ||
+      (r.thema|| '').toLowerCase().includes(q) ||
+      (r.klas?.naam || '').toLowerCase().includes(q)
     );
   }
 
@@ -195,6 +183,10 @@
       const newRows = ALL_ROWS.filter(r => String(r.id) !== String(id));
       renderTable(applySearch(newRows));
     });
+
+    els.zoek?.addEventListener('input', () => {
+      renderTable(applySearch(ALL_ROWS));
+    });
   }
 
   // ---------- Init ----------
@@ -204,26 +196,36 @@
       els.error.style.display  = 'none';
       els.wrap.style.display   = 'none';
 
-      // 1) extern (JSON demo)
-      const ext = await fetchJson(['../data/lessenreeksen.json', '/data/lessenreeksen.json']);
-      const extRows = normalizeSeries(ext);
+      // extern JSON (optioneel) + localStorage
+      const [klasJSON, reeksJSON] = await Promise.all([
+        fetchJson(['../data/klassen.json','/data/klassen.json']),
+        fetchJson(['../data/lessenreeksen.json','/data/lessenreeksen.json'])
+      ]);
+      const KLASSEN = normalizeKlassen(klasJSON);
+      const REEKSEN = normalizeReeksen(reeksJSON);
 
-      // 2) lokaal (localStorage)
       const db = loadDB();
-      ALL_LESSONS = Array.isArray(db.lessons) ? db.lessons : [];
-      const locRows = normalizeSeries({ series: db.series });
+      const localLessons = normalizeLessons(db.lessons);
 
-      // 3) merge + sort
-      const all = mergeById(extRows, locRows)
-        .sort((a,b) => String(a.name).localeCompare(String(b.name)));
+      // Verrijk reeksen met klas + teller toekomstige lessen
+      const enriched = REEKSEN.map(r => {
+        const klas = byId(KLASSEN, r.klasId) || null;
 
-      renderTable(all);
+        // eindtijd afleiden als ontbreekt en klas.lesduur_min beschikbaar
+        const lesduurMin = Number(klas?.lesduur_min ?? 0);
+        const eindtijd = r.eindtijd || (r.begintijd && lesduurMin ? addMinutesToHHmm(r.begintijd, lesduurMin) : '');
+
+        // tel toekomstige lessen in deze reeks
+        const futureCount = localLessons.filter(
+          l => String(l.seriesId) === String(r.id) && isFuture(l.startISO)
+        ).length;
+
+        return { ...r, klas, eindtijd, futureCount, lesduur_min: lesduurMin };
+      }).sort((a,b)=>S(a.naam).localeCompare(S(b.naam)));
+
+      renderTable(enriched);
       els.loader.style.display = 'none';
       els.wrap.style.display   = '';
-
-      els.zoek?.addEventListener('input', () => {
-        renderTable(applySearch(all));
-      });
 
       bindActions();
     } catch (e) {
@@ -236,3 +238,4 @@
 
   document.addEventListener('DOMContentLoaded', init);
 })();
+</script>
