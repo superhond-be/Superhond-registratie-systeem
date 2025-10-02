@@ -1,4 +1,5 @@
-// Lessenreeks – detail + gekoppelde lessen uit localStorage
+// /public/lessenreeks/detail.js
+// Detailpagina: haal reeks uit localStorage én /data/lessenreeksen.json (fallback)
 (() => {
   const S = v => String(v ?? '');
   const $ = s => document.querySelector(s);
@@ -14,6 +15,7 @@
   const box = $('#detail');
   const tbody = $('#lessonsBody');
 
+  // ---- helpers ----
   function loadDB() {
     try {
       const raw = localStorage.getItem('superhond-db');
@@ -25,7 +27,10 @@
       return { series:[], lessons:[] };
     }
   }
-
+  function euro(n){
+    if (n == null || isNaN(n)) return '—';
+    return new Intl.NumberFormat('nl-BE',{style:'currency',currency:'EUR'}).format(Number(n));
+  }
   function fmtDateRange(sISO, eISO) {
     const s = sISO ? new Date(sISO) : null;
     const e = eISO ? new Date(eISO) : null;
@@ -36,7 +41,6 @@
     const t2   = e ? `${d2(e.getHours())}:${d2(e.getMinutes())}` : '';
     return e ? `${date}, ${t1} — ${t2}` : `${date}, ${t1}`;
   }
-
   function rowLesson(l){
     const locName = l.location?.name || '—';
     const locUrl  = l.location?.mapsUrl;
@@ -51,9 +55,36 @@
     `;
   }
 
-  function euro(n){
-    if (n == null || isNaN(n)) return '—';
-    return new Intl.NumberFormat('nl-BE',{style:'currency',currency:'EUR'}).format(Number(n));
+  // normaliseer JSON → {id,name,thema,count,price}
+  function normalizeSeries(raw){
+    if (!raw) return [];
+    const arr =
+      Array.isArray(raw) ? raw :
+      Array.isArray(raw?.reeksen) ? raw.reeksen :
+      Array.isArray(raw?.series) ? raw.series :
+      Array.isArray(raw?.items) ? raw.items :
+      Array.isArray(raw?.data) ? raw.data : [];
+    return arr.map(r => {
+      const id   = r.id ?? r.reeksId ?? r.seriesId ?? null;
+      const pkg  = r.packageName ?? r.pakket ?? r.pkg ?? r.naam ?? r.name ?? '';
+      const ser  = r.seriesName  ?? r.reeks   ?? r.serie ?? '';
+      const name = [pkg, ser].filter(Boolean).join(' — ') || (r.naam || r.name || '');
+      const thema= r.theme ?? r.thema ?? '';
+      const cnt  = Number(r.count ?? r.aantal ?? r.lessonsCount ?? (Array.isArray(r.lessen)?r.lessen.length:0)) || 0;
+      const price= Number(r.price ?? r.prijs ?? r.prijs_excl ?? 0);
+      return { id, name, thema, count: cnt, price };
+    });
+  }
+
+  async function fetchJson(tryUrls){
+    for (const u of tryUrls) {
+      try {
+        const url = u + (u.includes('?')?'':'?t=') + Date.now();
+        const r = await fetch(url, { cache:'no-store' });
+        if (r.ok) return r.json();
+      } catch(_) {}
+    }
+    return null;
   }
 
   function render(series, lessons){
@@ -68,16 +99,29 @@
     tbody.innerHTML = lessons.map(rowLesson).join('') || `<tr><td colspan="4" class="muted">Geen lessen gekoppeld.</td></tr>`;
   }
 
-  function init(){
+  async function init(){
     if (!id) { box.textContent = 'Geen id opgegeven.'; return; }
 
     const db = loadDB();
-    const series = db.series.find(r => String(r.id) === String(id));
+    // 1) Probeer localStorage
+    let series = db.series.find(r => String(r.id) === String(id));
+
+    // 2) Fallback: demo JSON
+    if (!series) {
+      const ext = await fetchJson(['../data/lessenreeksen.json', '/data/lessenreeksen.json']);
+      const extRows = normalizeSeries(ext);
+      series = extRows.find(r => String(r.id) === String(id));
+    }
+
     if (!series) {
       box.innerHTML = `<p class="error">Reeks met id <code>${S(id)}</code> niet gevonden.</p>`;
+      tbody.innerHTML = '';
       return;
     }
-    const lessons = db.lessons.filter(l => String(l.seriesId) === String(id))
+
+    // lessen uit localStorage koppelen (demo JSON bevat geen losse lessen)
+    const lessons = db.lessons
+      .filter(l => String(l.seriesId) === String(id))
       .sort((a,b) => String(a.startISO).localeCompare(String(b.startISO)));
 
     render(series, lessons);
