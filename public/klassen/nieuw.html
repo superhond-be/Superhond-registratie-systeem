@@ -7,61 +7,71 @@
 
   <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
-  <script src="../js/layout.js?v=0.20.0" defer></script>
-  <script type="module" src="./nieuw.js?v=0.20.0" defer></script>
 </head>
 <body class="subpage">
-<header id="topbar" class="topbar"></header>
+  <header id="topbar" class="topbar"></header>
 
-<main class="container">
-  <h1 class="page-title">Nieuwe klas</h1>
+  <main class="container">
+    <h1 class="page-title">Nieuwe klas</h1>
 
-  <form id="formKlas" class="card">
-    <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
-      <label>Naam (hoofdnaam)*
-        <input class="input" id="naam" type="text" placeholder="bv. Puppy" required />
-      </label>
-      <label>Type (subnaam)
-        <input class="input" id="type" type="text" placeholder="bv. Voorjaar 2026" />
-      </label>
-      <label>Thema
-        <input class="input" id="thema" type="text" placeholder="bv. Basis / Agility" />
-      </label>
-      <label>Strippen (voor klant)*
-        <input class="input input-nr" id="strippen" type="number" min="1" step="1" value="10" required />
-      </label>
-      <label>Geldigheid (weken)*
-        <input class="input input-nr" id="geldigheid" type="number" min="1" step="1" value="10" required />
-      </label>
-      <label>Prijs excl. btw (€)
-        <input class="input input-nr" id="prijs" type="number" min="0" step="0.01" placeholder="0,00" />
-      </label>
-      <label>Status
-        <select class="select" id="status">
-          <option value="actief" selected>Actief</option>
-          <option value="inactief">Niet actief</option>
-        </select>
-      </label>
-      <label>MailBlue (lijst/ID)
-        <input class="input" id="mailblue" type="text" placeholder="bv. lijst-ID" />
-      </label>
-      <label>Afbeelding (URL)
-        <input class="input" id="afbeelding" type="url" placeholder="https://…" />
-      </label>
-      <label style="grid-column:1/-1">Beschrijving
-        <textarea class="input" id="beschrijving" rows="4" placeholder="Korte uitleg…"></textarea>
-      </label>
-    </div>
+    <form id="formKlas" class="card">
+      <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+        <label>Naam (hoofdnaam)*
+          <input class="input" id="naam" type="text" placeholder="Bv. Puppy Start" required />
+        </label>
 
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" type="submit">Opslaan</button>
-      <a class="btn" href="./">Annuleren</a>
-    </div>
+        <label>Type (subnaam)*
+          <input class="input" id="type" type="text" placeholder="Bv. Basis" required />
+        </label>
 
-    <p id="msg" class="muted" style="margin-top:8px"></p>
-  </form>
-</main>
+        <label>Thema
+          <input class="input" id="thema" type="text" placeholder="Puppy / Agility / …" />
+        </label>
 
-<footer id="footer" class="footer"></footer>
+        <label>Aantal strippen (voor klant)*
+          <input class="input input-nr" id="strippen" type="number" min="0" step="1" value="10" required />
+        </label>
+
+        <label>Geldigheidsduur (weken)*
+          <input class="input input-nr" id="geldigheid" type="number" min="0" step="1" value="12" required />
+        </label>
+
+        <label>MailBlue (automation / tag)
+          <input class="input" id="mailblue" type="text" placeholder="bv. automation_123" />
+        </label>
+
+        <label>Status
+          <select class="select" id="status">
+            <option value="actief" selected>Actief</option>
+            <option value="inactief">Niet actief</option>
+          </select>
+        </label>
+
+        <label>Afbeelding (URL)
+          <input class="input" id="afbeelding" type="url" placeholder="https://…/puppy.jpg" />
+        </label>
+      </div>
+
+      <label style="display:block;margin-top:12px;">Beschrijving
+        <textarea class="input" id="beschrijving" rows="4" placeholder="Korte omschrijving van de klas"></textarea>
+      </label>
+
+      <details style="margin-top:12px">
+        <summary><strong>Preview</strong></summary>
+        <div id="preview" class="muted" style="margin-top:8px">Vul de velden in om een preview te zien…</div>
+      </details>
+
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" type="submit">Opslaan</button>
+        <button class="btn" type="button" id="btnReset">Reset</button>
+        <a class="btn" href="./">Annuleren</a>
+      </div>
+    </form>
+  </main>
+
+  <footer id="footer" class="footer"></footer>
+
+  <script src="../js/layout.js?v=0.20.0" defer></script>
+  <script type="module" src="./nieuw.js?v=0.20.0" defer></script>
 </body>
 </html>
