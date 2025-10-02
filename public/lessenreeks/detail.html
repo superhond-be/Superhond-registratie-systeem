@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
   <script src="../js/layout.js?v=0.20.0" defer></script>
-  <script src="./detail.js?v=0.20.0" defer></script>
+  <script type="module" src="./detail.js?v=0.20.0" defer></script>
 </head>
 <body class="subpage">
 <header id="topbar" class="topbar"></header>
@@ -19,23 +19,59 @@
   <article id="msg" class="card" style="display:none"></article>
   <article id="info" class="card"></article>
 
+  <!-- Nieuw: blok-generator om extra lessen toe te voegen in deze reeks -->
+  <section class="card" style="margin-top:12px">
+    <h3 style="margin:0 0 8px">Les-blok toevoegen</h3>
+    <form id="blok-form" class="row wrap" style="gap:8px">
+      <label>Start-datum
+        <input class="input" id="blkStartDate" type="date" required />
+      </label>
+      <label>Starttijd
+        <input class="input" id="blkStartTime" type="time" value="09:00" required />
+      </label>
+      <label>Aantal
+        <input class="input input-nr" id="blkAant" type="number" min="1" value="5" required />
+      </label>
+      <label>Duur (min)
+        <input class="input input-nr" id="blkDuur" type="number" min="5" step="5" value="60" required />
+      </label>
+      <label>Interval (dagen)
+        <input class="input input-nr" id="blkInterval" type="number" min="1" value="7" required />
+      </label>
+      <label>Trainers (komma’s)
+        <input class="input" id="blkTrainers" type="text" placeholder="Sofie, Paul" />
+      </label>
+      <label>Locatie-naam
+        <input class="input" id="blkLocName" type="text" placeholder="Tabloo" />
+      </label>
+      <label>Google Maps (URL)
+        <input class="input" id="blkLocMaps" type="url" placeholder="https://maps.google.com/?q=..." />
+      </label>
+      <button class="btn" id="btnGenBlok" type="submit">Voeg lessen toe</button>
+    </form>
+  </section>
+
   <section class="card" style="margin-top:12px">
     <h3 style="margin:0 0 8px">Gekoppelde lessen</h3>
     <div class="table-wrap">
-      <!-- ⬇️ id toegevoegd -->
-      <table id="tabel" class="table">
+      <table class="table">
         <thead>
           <tr>
             <th>Titel</th>
             <th>Datum</th>
+            <th>Begin</th>
+            <th>Einde</th>
             <th>Locatie</th>
             <th>Trainers</th>
-            <!-- ⬇️ nieuwe kolom -->
             <th>Acties</th>
           </tr>
         </thead>
         <tbody id="lessenBody"></tbody>
       </table>
+    </div>
+
+    <div style="margin-top:10px">
+      <button class="btn" id="btnAdd">+ Les toevoegen</button>
     </div>
   </section>
 
