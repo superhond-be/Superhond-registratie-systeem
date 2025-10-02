@@ -1,5 +1,5 @@
 // /public/lessenreeks/index.js
-// Lessenreeksen – icoon-acties + kolom Tijd (start — eind)
+// Lessenreeksen – icoon-acties + kolom Tijd (start — eind) + badge 'actieve lessen' (toekomst)
 (() => {
   const $  = s => document.querySelector(s);
   const S  = v => String(v ?? '').trim();
@@ -35,12 +35,13 @@
     const [hStr,mStr] = String(hhmm).split(':');
     const h = Number(hStr||0), m = Number(mStr||0);
     const total = h*60 + m + Number(minutes||0);
-    const hh = Math.floor((total % (24*60) + (24*60)) % (24*60) / 60);
-    const mm = ((total % 60) + 60) % 60;
+    const day = 24*60;
+    const norm = ((total % day) + day) % day;
+    const hh = Math.floor(norm/60);
+    const mm = norm % 60;
     const pad = n => String(n).padStart(2,'0');
     return `${pad(hh)}:${pad(mm)}`;
   }
-
   async function fetchJson(tryUrls) {
     for (const u of tryUrls) {
       try {
@@ -51,7 +52,6 @@
     }
     return null;
   }
-
   function loadDB() {
     try {
       const raw = localStorage.getItem('superhond-db');
@@ -84,7 +84,6 @@
       const name = S([pkg, ser].filter(Boolean).join(' — ')) || S(r.naam || r.name || '');
       const thema= r.theme ?? r.thema ?? '';
 
-      // aantal lessen (niet verplicht bij oneindige reeks) → toon 0 of opgeslagen waarde
       const cnt  = Number(
                     r.count ?? r.aantal ?? r.lessonsCount ??
                     (Array.isArray(r.lessen) ? r.lessen.length :
@@ -92,7 +91,7 @@
                   ) || 0;
       const price= Number(r.price ?? r.prijs ?? r.prijs_excl ?? 0);
 
-      // Recurrence
+      // Recurrence/tijd
       const rec   = r.recurrence || r.herhaling || {};
       const startTime   = S(rec.startTime || r.startTime || '');
       const durationMin = Number(rec.durationMin ?? r.durationMin ?? 0) || 0;
@@ -113,8 +112,19 @@
     return Array.from(map.values());
   }
 
+  // ---- Actieve lessen tellen per reeks (toekomst)
+  function countActiveLessonsFor(seriesId, allLessons){
+    if (!seriesId) return 0;
+    const now = new Date();
+    return allLessons.filter(l =>
+      String(l.seriesId) === String(seriesId) &&
+      l.startISO && new Date(String(l.startISO).replace(' ','T')) >= now
+    ).length;
+  }
+
   // ---------- Render ----------
   let ALL_ROWS = [];
+  let ALL_LESSONS = []; // uit localStorage
 
   function actionsHTML(r) {
     if (!r.id) return '';
@@ -136,9 +146,14 @@
 
   function rowHTML(r) {
     const tijd = (r.startTime && r.endTime) ? `${r.startTime} — ${r.endTime}` : '—';
+    const actief = countActiveLessonsFor(r.id, ALL_LESSONS);
+
+    // Badge vóór de naam
+    const badge = `<span class="badge" style="margin-right:.4rem">${actief}</span>`;
+
     return `
       <tr data-id="${escapeHTML(r.id || '')}">
-        <td>${r.id ? `<a href="./detail.html?id=${encodeURIComponent(r.id)}">${escapeHTML(r.name)}</a>` : escapeHTML(r.name)}</td>
+        <td>${badge}${r.id ? `<a href="./detail.html?id=${encodeURIComponent(r.id)}">${escapeHTML(r.name)}</a>` : escapeHTML(r.name)}</td>
         <td>${escapeHTML(r.thema || '—')}</td>
         <td>${tijd}</td>
         <td>${r.count || 0}</td>
@@ -195,6 +210,7 @@
 
       // 2) lokaal (localStorage)
       const db = loadDB();
+      ALL_LESSONS = Array.isArray(db.lessons) ? db.lessons : [];
       const locRows = normalizeSeries({ series: db.series });
 
       // 3) merge + sort
