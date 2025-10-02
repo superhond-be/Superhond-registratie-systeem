@@ -1,192 +1,136 @@
-// Superhond — Dashboard Agenda (API → fallback /data/agenda.json)
-// - Tabs: Deze week / Alles / Mededelingen
-// - Trainers als chips (meerdere namen mogelijk)
-// - Locatie klikbaar naar Google Maps (mapsUrl of geconcateneerd adres)
-// - Auto-fallback naar "Alles" als "Deze week" leeg is
-
+// Agenda – tabs + data + filtering
 (function () {
-  const tabs  = document.querySelectorAll('#agenda-tabs .tab[data-tab], #agenda-tabs .tab:not([data-tab])');
-  const table = document.getElementById('agenda-table');
-  const tbody = table?.querySelector('tbody');
-  const wrap  = document.getElementById('agenda-table-wrap');
-  const elErr = document.getElementById('agenda-error');
-  const elLoad= document.getElementById('agenda-loader');
+  const TABS = document.querySelectorAll('#agenda-tabs .tab');
+  const loader = document.getElementById('agenda-loader');
+  const errorBox = document.getElementById('agenda-error');
+  const tableWrap = document.getElementById('agenda-table-wrap');
+  const tbody = document.querySelector('#agenda-table tbody');
 
-  if (!table || !tbody || !wrap) {
-    console.error('Agenda: ontbrekende DOM (#agenda-table / #agenda-table-wrap).');
-    if (elErr) { elErr.style.display = 'block'; elErr.textContent = 'Agenda lay-out ontbreekt.'; }
-    return;
-  }
-
-  let items = []; // ruwe items van API/JSON
-
-  // ------------- helpers -------------
   const S = v => String(v ?? '');
-  const toDate = d => (d ? new Date(d) : null);
+  const bust = () => '?t=' + Date.now();
 
-  function isSameWeek(d) {
-    if (!d) return false;
+  async function fetchJson(tryUrls) {
+    for (const u of tryUrls) {
+      const r = await fetch(u + bust(), { cache: 'no-store' });
+      if (r.ok) return r.json();
+    }
+    throw new Error('Geen data-bron bereikbaar (' + tryUrls.join(', ') + ')');
+  }
+
+  function toDate(x) {
+    // accepteer '2025-10-15T10:00', '2025-10-15 10:00', of '2025-10-15'
+    if (!x) return null;
+    return new Date(String(x).replace(' ', 'T'));
+  }
+
+  function fmtDateRange(startISO, endISO) {
+    const s = toDate(startISO), e = toDate(endISO);
+    if (!s) return '—';
+    const d2 = n => String(n).padStart(2, '0');
+    const date = `${d2(s.getDate())}/${d2(s.getMonth()+1)}/${s.getFullYear()}`;
+    const t = `${d2(s.getHours())}:${d2(s.getMinutes())}`;
+    if (e) {
+      const t2 = `${d2(e.getHours())}:${d2(e.getMinutes())}`;
+      return `${date}, ${t} — ${t2}`;
+    }
+    return `${date}, ${t}`;
+  }
+
+  function isThisWeek(startISO) {
+    const s = toDate(startISO);
+    if (!s) return false;
     const now = new Date();
-    const start = new Date(now);
-    const dow = (now.getDay() + 6) % 7; // 0 = maandag
-    start.setDate(now.getDate() - dow);
-    start.setHours(0,0,0,0);
-    const end = new Date(start);
-    end.setDate(start.getDate() + 7);
-    return d >= start && d < end;
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // vandaag 00:00
+    const end = new Date(start); end.setDate(end.getDate() + 7);              // +7 dagen
+    return s >= start && s < end;
   }
 
-  function humanDateTime(iso) {
-    const dt = toDate(iso);
-    if (!dt || String(dt) === 'Invalid Date') return S(iso);
-    // nl-BE compacte notatie
-    return dt.toLocaleString('nl-BE', { dateStyle:'short', timeStyle:'short' });
-  }
-
-  function chipHtml(text) {
-    return `<span class="chip" style="display:inline-flex;align-items:center;padding:.15rem .5rem;border:1px solid #e5e7eb;border-radius:999px;background:#fff">${escapeHtml(text)}</span>`;
-  }
-
-  function escapeHtml(s){
-    return S(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
-  function buildMapsUrlFromItem(it){
-    if (it.mapsUrl) return it.mapsUrl;
-    const parts = [it.locatieStraat, it.locatieHuisnr].filter(Boolean).join(' ');
-    const city  = [it.locatiePostcode, it.locatiePlaats || it.gemeente].filter(Boolean).join(' ');
-    const full  = [parts, city, it.land || 'BE'].filter(Boolean).join(', ');
-    if (!full.trim()) return '';
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(full)}`;
-  }
-
-  function trainersArray(val){
-    if (Array.isArray(val)) return val;
-    if (!val) return [];
-    // string met komma's splitsen
-    return S(val).split(',').map(s => s.trim()).filter(Boolean);
-  }
-
-  function rowHtml(it) {
-    const when = it.eindtijd ? `${humanDateTime(it.datum)} – ${S(it.eindtijd)}` : humanDateTime(it.datum);
-    const trainers = trainersArray(it.trainer);
-    const maps = it.mapsUrl || buildMapsUrlFromItem(it);
-    const locHtml = maps
-      ? `<a href="${escapeHtml(maps)}" target="_blank" rel="noopener">${escapeHtml(it.locatie || '')}</a>`
-      : escapeHtml(it.locatie || '');
-
-    // Link naar detail (les/reeks/mededeling)
-    const type = it.type || 'les';
-    let url = '#';
-    if (type === 'les')           url = `/lessen/detail.html?id=${encodeURIComponent(it.id)}`;
-    else if (type === 'reeks')    url = `/lessenreeks/detail.html?id=${encodeURIComponent(it.id)}`;
-    else if (type === 'mededeling') url = `/mededelingen/detail.html?id=${encodeURIComponent(it.id)}`;
-
+  function rowForLesson(item) {
+    const title = S(item.title || item.name);
+    const href = item.id ? `../lessen/detail.html?id=${encodeURIComponent(item.id)}` : '#';
+    const locName = item.location?.name || '—';
+    const locUrl  = item.location?.mapsUrl;
+    const trainers = Array.isArray(item.trainers) ? item.trainers : [];
     return `
       <tr>
-        <td><a href="${url}">${escapeHtml(it.naam || '—')}</a></td>
-        <td>${when}</td>
-        <td>${locHtml}</td>
-        <td>${trainers.length ? trainers.map(chipHtml).join(' ') : '—'}</td>
+        <td><a href="${href}">${title}</a></td>
+        <td>${fmtDateRange(item.startISO || item.start, item.endISO || item.end)}</td>
+        <td>${locUrl ? `<a href="${locUrl}" target="_blank" rel="noopener">${S(locName)}</a>` : S(locName)}</td>
+        <td>${trainers.length ? trainers.map(S).map(t=>`<span class="badge">${t}</span>`).join(' ') : '—'}</td>
       </tr>
     `;
   }
 
-  function setActive(tabName){
-    document.querySelectorAll('#agenda-tabs .tab').forEach(btn=>{
-      const isActive = btn.dataset.tab === tabName;
-      btn.classList.toggle('active', isActive);
-      btn.setAttribute('aria-pressed', isActive ? 'true':'false');
-    });
+  function rowForNotice(n) {
+    const title = S(n.title || n.name);
+    const href = n.id ? `../mededeling/detail.html?id=${encodeURIComponent(n.id)}` : '#';
+    const when = S(n.dateISO || n.date || '—');
+    return `
+      <tr>
+        <td>📢 <a href="${href}">${title}</a></td>
+        <td>${when}</td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+    `;
   }
 
-  function render(kind='week'){
-    let list = items.slice();
+  function render(scope, data) {
+    // data: verwacht { lessons:[], notices:[] } of één gemengde lijst
+    const lessons = data.lessons || (data.items || data).filter?.(x => (x.type || 'les') !== 'mededeling') || [];
+    const notices = data.notices || (data.items || data).filter?.(x => (x.type || 'les') === 'mededeling') || [];
 
-    if (kind === 'week') {
-      list = list.filter(x => isSameWeek(toDate(x.datum)));
-    } else if (kind === 'mededelingen') {
-      list = list.filter(x => (x.type || 'les') === 'mededeling');
-    } // 'alles' → geen extra filter
-
-    // sorteer op datum
-    list.sort((a,b) => S(a.datum).localeCompare(S(b.datum)));
-
-    // auto-fallback: week → alles
-    if (kind === 'week' && list.length === 0) {
-      setActive('alles');
-      return render('alles');
+    let rows = '';
+    if (scope === 'mededelingen') {
+      rows = notices
+        .slice()
+        .sort((a,b) => S(b.dateISO||b.date).localeCompare(S(a.dateISO||a.date)))
+        .map(rowForNotice).join('');
+    } else {
+      const source = lessons
+        .slice()
+        .sort((a,b) => S(a.startISO||a.start).localeCompare(S(b.startISO||b.start)));
+      const filtered = scope === 'week'
+        ? source.filter(x => isThisWeek(x.startISO || x.start))
+        : source;
+      rows = filtered.map(rowForLesson).join('');
     }
 
-    tbody.innerHTML = list.length
-      ? list.map(rowHtml).join('')
-      : `<tr><td colspan="4"><em>Geen items</em></td></tr>`;
-
-    elLoad.style.display = 'none';
-    wrap.style.display = '';
+    tbody.innerHTML = rows || `<tr><td colspan="4" class="muted">Geen items gevonden.</td></tr>`;
+    loader.textContent = '';
+    errorBox.style.display = 'none';
+    tableWrap.style.display = 'block';
   }
 
-  async function fetchJson(url){
-    const r = await fetch(url, { cache:'no-store' });
-    if (!r.ok) throw new Error(`${url} → HTTP ${r.status}`);
-    return r.json();
-  }
-
-  async function loadAgenda(){
-    // API → data/agenda.json (absolute) → ../data/agenda.json → ./data/agenda.json
-    const bust = `?t=${Date.now()}`;
-    const sources = [
-      '/api/agenda',
-      '/data/agenda.json',
-      '../data/agenda.json',
-      './data/agenda.json'
-    ];
-    const tried = [];
-    for (const u of sources) {
-      try {
-        const data = await fetchJson(u + bust);
-        console.log('[agenda] geladen uit:', u, 'items:', Array.isArray(data) ? data.length : 'n/a');
-        return Array.isArray(data) ? data : (data.items || []); // /api kan {items:[...]} teruggeven
-      } catch (e) {
-        tried.push(e.message);
-      }
-    }
-    throw new Error('Geen agenda-bron bereikbaar.\n' + tried.join('\n'));
-  }
-
-  // init
-  (async () => {
+  async function init() {
     try {
-      items = await loadAgenda();
-      // normaliseer: datum verplicht ISO (YYYY-MM-DDTHH:mm)
-      items = items
-        .filter(Boolean)
-        .map(x => {
-          // support "datum":"YYYY-MM-DD" + "start":"HH:MM"
-          if (x && x.datum && x.datum.length <= 10 && x.start) {
-            return { ...x, datum: `${x.datum}T${x.start}` };
-          }
-          return x;
-        });
+      loader.textContent = '⏳ Data laden…';
+      tableWrap.style.display = 'none';
+      errorBox.style.display = 'none';
 
-      setActive('week');
-      render('week');
+      // API → fallback JSON
+      const agenda = await fetchJson(['../api/agenda', '../data/agenda.json']);
+
+      // start met 'alles'
+      render('alles', agenda);
+
+      // tab events
+      TABS.forEach(btn => {
+        btn.addEventListener('click', () => {
+          TABS.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          render(btn.dataset.tab, agenda);
+        });
+      });
+
     } catch (e) {
       console.error(e);
-      elLoad.style.display = 'none';
-      elErr.style.display = 'block';
-      elErr.textContent = '⚠️ Kon agenda niet laden: ' + e.message;
-      wrap.style.display = '';
-      tbody.innerHTML = `<tr><td colspan="4"><em>Kon agenda niet laden</em></td></tr>`;
+      loader.textContent = '';
+      tableWrap.style.display = 'none';
+      errorBox.textContent = '⚠️ Kon agenda niet laden. ' + (e.message || e);
+      errorBox.style.display = 'block';
     }
-  })();
+  }
 
-  // tab events
-  document.getElementById('agenda-tabs')?.addEventListener('click', (e)=>{
-    const btn = e.target.closest('.tab');
-    if (!btn) return;
-    const tab = btn.dataset.tab || 'week';
-    setActive(tab);
-    render(tab);
-  });
+  document.addEventListener('DOMContentLoaded', init);
 })();
