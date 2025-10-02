@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Klas bewerken</title>
+  <link rel="stylesheet" href="../css/style.css?v=0.20.0"/>
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0"/>
+  <script src="../js/layout.js?v=0.20.0" defer></script>
+  <script type="module" src="./bewerken.js?v=0.20.0" defer></script>
+</head>
+<body class="subpage">
+<header id="topbar" class="topbar"></header>
+
+<main class="container">
+  <h1 class="page-title">Klas bewerken</h1>
+
+  <form id="form" class="card" style="display:grid;gap:12px">
+    <div class="grid" style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+      <label>Naam* <input class="input" id="f_name" required/></label>
+      <label>Type <input class="input" id="f_type"/></label>
+      <label>Thema <input class="input" id="f_thema"/></label>
+      <label>Strippen (voor klant) <input class="input" id="f_strippen" type="number" min="0" step="1"/></label>
+      <label>Geldigheid (weken) <input class="input" id="f_weken" type="number" min="0" step="1"/></label>
+      <label>Status
+        <select class="select" id="f_status">
+          <option value="actief">Actief</option>
+          <option value="inactief">Niet actief</option>
+        </select>
+      </label>
+      <label>MailBlue <input class="input" id="f_mailblue" placeholder="bijv. lijst-id"/></label>
+      <label>Afbeelding (URL) <input class="input" id="f_afbeelding"/></label>
+    </div>
+    <label>Beschrijving
+      <textarea class="input" id="f_omschrijving" rows="5"></textarea>
+    </label>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" type="submit">Opslaan</button>
+      <a class="btn" id="backLink" href="./">Annuleren</a>
+    </div>
+  </form>
+</main>
+
+<footer id="footer" class="footer"></footer>
+</body>
+</html>
