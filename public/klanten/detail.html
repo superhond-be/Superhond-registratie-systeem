@@ -5,10 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Klant detail – Superhond</title>
 
-  <!-- Centrale UI (standaard mappen) -->
-  <link rel="stylesheet" href="/css/style.css?v=0.19.2" />
-  <!-- Optioneel: -->
-  <link rel="stylesheet" href="/css/superhond.css?v=0.19.2" />
+  <!-- RELATIEF naar css -->
+  <link rel="stylesheet" href="../css/style.css?v=0.19.2" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.19.2" />
 </head>
 <body>
   <!-- Topbar -->
@@ -17,19 +16,21 @@
   <main class="container">
     <h2 class="page-title">Klant detail</h2>
     <div id="box" class="card">⏳ Bezig met laden…</div>
-    <p><a href="/klanten/" class="btn">← Terug naar klanten</a></p>
+    <!-- RELATIEVE teruglink -->
+    <p><a href="./" class="btn">← Terug naar klanten</a></p>
   </main>
 
   <!-- Footer -->
   <footer id="footer" class="footer"></footer>
 
-  <!-- Layout -->
-  <script src="/js/layout.js?v=0.19.2"></script>
+  <!-- Layout (RELATIEF) -->
+  <script src="../js/layout.js?v=0.19.2"></script>
   <script>
     // Topbar/footer
     window.addEventListener('DOMContentLoaded', () => {
       if (window.SuperhondUI?.mount) {
-        SuperhondUI.mount({ title:'Klant detail', icon:'👤', back:'/klanten/' });
+        // back wijst naar de map zelf
+        SuperhondUI.mount({ title:'Klant detail', icon:'👤', back:'./' });
       }
     });
 
@@ -64,13 +65,12 @@
         return;
       }
       try {
-        // 1) haal klanten + honden (API → fallback data)
+        // API → fallback data (RELATIEF)
         const [klanten, honden] = await Promise.all([
-          fetchJson(['/api/klanten', '/data/klanten.json']),
-          fetchJson(['/api/honden',  '/data/honden.json'])
+          fetchJson(['../api/klanten', '../data/klanten.json']),
+          fetchJson(['../api/honden',  '../data/honden.json'])
         ]);
 
-        // 2) zoek klant (string-vergelijking voorkomt nummer/string mismatch)
         const klant = (klanten || []).find(k => String(k.id) === String(id));
         if (!klant) {
           target.innerHTML = `<p class="error">Klant met id <code>${S(id)}</code> niet gevonden.</p>`;
@@ -98,7 +98,7 @@
               ${
                 hondenVanKlant.length
                   ? `<ul>${hondenVanKlant.map(h => `
-                       <li><a href="/honden/detail.html?id=${encodeURIComponent(h.id)}">${S(h.naam)}</a></li>
+                       <li><a href="../honden/detail.html?id=${encodeURIComponent(h.id)}">${S(h.naam)}</a></li>
                      `).join('')}</ul>`
                   : '<p class="muted">Geen honden gekoppeld.</p>'
               }
