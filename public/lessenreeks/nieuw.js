@@ -1,13 +1,12 @@
 // /public/lessenreeks/nieuw.js
-// Reeks op basis van: startDatum + startTijd + eindDatum + interval(dagen) + duur(min)
-// Lessen van start t/m eind (inclusief), eindtijd = start + duur.
-// Trainers (voornamen) & locatie uit input (later optioneel uit data-bestanden).
-
+// Reeks = oneindige recurrence. We bewaren enkel recurrence in db.series.
+// Voor agenda/materialisatie genereren we lessen in een venster:
+// - Als eindDatum is ingevuld: t/m eindDatum (inclusief).
+// - Anders: komende 'horizon' weken (default 12).
 (() => {
   const $ = s => document.querySelector(s);
   const S = v => String(v ?? '').trim();
 
-  // ---- DOM refs ----
   const form = $('#formReeks');
   const el = {
     pakNaam:    $('#pakNaam'),
@@ -19,6 +18,7 @@
     endDatum:   $('#endDatum'),
     interval:   $('#interval'),
     duur:       $('#duur'),
+    horizon:    $('#horizon'),
     trainers:   $('#trainers'),
     locNaam:    $('#locNaam'),
     locMaps:    $('#locMaps'),
@@ -27,7 +27,6 @@
     previewList:$('#previewList'),
   };
 
-  // ---- UI mount ----
   document.addEventListener('DOMContentLoaded', () => {
     if (window.SuperhondUI?.mount) {
       SuperhondUI.mount({ title: 'Nieuwe lessenreeks', icon:'📦', back:'../lessenreeks/' });
@@ -36,55 +35,39 @@
 
   // ---- Helpers ----
   const pad2 = n => String(n).padStart(2, '0');
-  const bust = () => Date.now();
   const dayNames2 = ['zo','ma','di','wo','do','vr','za'];
 
-  function toISO(dateYYYYMMDD, timeHHmm) {
-    return `${dateYYYYMMDD}T${timeHHmm}`;
-  }
-  function addMinutes(iso, minutes) {
+  const toISO = (dateYYYYMMDD, timeHHmm) => `${dateYYYYMMDD}T${timeHHmm}`;
+  function addMinutes(iso, minutes){
     const d = new Date(iso);
     d.setMinutes(d.getMinutes() + Number(minutes || 0));
     return d.toISOString().slice(0,16);
   }
-  function addDays(dateYYYYMMDD, days) {
+  function addDays(dateYYYYMMDD, days){
     const d = new Date(dateYYYYMMDD + 'T00:00');
     d.setDate(d.getDate() + Number(days || 0));
     return d.toISOString().slice(0,10);
   }
-  function cmpDate(aYYYYMMDD, bYYYYMMDD) {
-    // return -1,0,1
-    if (aYYYYMMDD < bYYYYMMDD) return -1;
-    if (aYYYYMMDD > bYYYYMMDD) return 1;
-    return 0;
-  }
-  function day2letters(dateYYYYMMDD) {
+  function cmpDate(a, b){ return a < b ? -1 : a > b ? 1 : 0; }
+  function day2letters(dateYYYYMMDD){
     const d = new Date(dateYYYYMMDD + 'T00:00');
     return dayNames2[d.getDay()];
   }
-  function fmtRange(startISO, endISO) {
-    const s = new Date(startISO);
-    const e = new Date(endISO);
-    const day2 = dayNames2[s.getDay()];
+  function fmtRange(startISO, endISO){
+    const s = new Date(startISO), e = new Date(endISO);
+    const day = dayNames2[s.getDay()];
     const date = `${pad2(s.getDate())}/${pad2(s.getMonth()+1)}/${s.getFullYear()}`;
     const t1 = `${pad2(s.getHours())}:${pad2(s.getMinutes())}`;
     const t2 = `${pad2(e.getHours())}:${pad2(e.getMinutes())}`;
-    return `${day2} ${date} ${t1} — ${t2}`;
-  }
-  function euro(n){
-    if (n == null || isNaN(n)) return '—';
-    return new Intl.NumberFormat('nl-BE',{style:'currency',currency:'EUR'}).format(Number(n));
+    return `${day} ${date} ${t1} — ${t2}`;
   }
   function firstNameOnly(name=''){
     const cleaned = S(name).replace(/\s+/g,' ').trim();
-    if (!cleaned) return '';
-    return cleaned.split(' ')[0];
+    return cleaned ? cleaned.split(' ')[0] : '';
   }
-  function parseTrainersInput(v=''){
-    return S(v).split(',').map(s=>firstNameOnly(s)).filter(Boolean);
-  }
+  const parseTrainers = v => S(v).split(',').map(s=>firstNameOnly(s)).filter(Boolean);
 
-  // ---- DB helpers ----
+  // ---- DB ----
   function loadDB(){
     try{
       const raw = localStorage.getItem('superhond-db');
@@ -96,22 +79,28 @@
       return { series:[], lessons:[] };
     }
   }
-  function saveDB(db){
-    localStorage.setItem('superhond-db', JSON.stringify(db));
-  }
+  function saveDB(db){ localStorage.setItem('superhond-db', JSON.stringify(db)); }
 
-  // ---- Generate lessons (interval-based) ----
-  function* dateIterator(startDate, endDate, stepDays){
+  // ---- Materialisatie helpers ----
+  function* dateIterator(startDate, endDateExclusive, stepDays){
     let d = startDate;
-    while (cmpDate(d, endDate) <= 0) {
+    while (cmpDate(d, endDateExclusive) < 0) {
       yield d;
       d = addDays(d, stepDays);
     }
   }
-
-  function generateLessonsInterval({ startDate, endDate, startTime, intervalDays, durationMin, title, trainers, location }){
+  function generateWindow({ startDate, startTime, durationMin, intervalDays }, windowStart, windowEndExclusive, title, trainers, location){
     const lessons = [];
-    for (const d of dateIterator(startDate, endDate, intervalDays)){
+    // Startpunt alignen op de reeks-start (als windowStart vóór startDate ligt, start vanaf startDate)
+    const first = cmpDate(windowStart, startDate) < 0 ? startDate : windowStart;
+
+    // Vind de eerste datum in het interval-grid >= first
+    const diffDays = Math.round((new Date(first) - new Date(startDate)) / 86400000);
+    const offset   = ((diffDays % intervalDays) + intervalDays) % intervalDays;
+    let firstAligned = first;
+    if (offset !== 0) firstAligned = addDays(first, intervalDays - offset);
+
+    for (const d of dateIterator(firstAligned, windowEndExclusive, intervalDays)){
       const startISO = toISO(d, startTime);
       const endISO   = addMinutes(startISO, durationMin);
       lessons.push({
@@ -126,103 +115,82 @@
     return lessons;
   }
 
-  function buildPreviewItems(cfg){
-    const items = generateLessonsInterval(cfg);
-    return items.map(l => `${fmtRange(l.startISO, l.endISO)} — ${S(cfg.title)}`);
-  }
+  function collectConfig(forSave){
+    const meta = {
+      packageName: S(el.pakNaam.value),
+      seriesName:  S(el.reeksNaam.value),
+      thema:       S(el.thema.value),
+      price:       Number(el.prijs.value || 0)
+    };
+    const recurrence = {
+      startDate:   S(el.startDatum.value),
+      startTime:   S(el.startTijd.value || '09:00'),
+      intervalDays:Math.max(1, Number(el.interval.value || 7)),
+      durationMin: Math.max(5, Number(el.duur.value || 60))
+    };
+    const endDateOpt = S(el.endDatum.value); // optioneel
+    const horizonWk  = Math.max(1, Number(el.horizon?.value || 12));
 
-  // ---- Collect form -> config ----
-  function collectConfig({ forSave }){
-    const pakNaam   = S(el.pakNaam.value);
-    const reeksNaam = S(el.reeksNaam.value);
-    const thema     = S(el.thema.value);
-    const prijs     = Number(el.prijs.value || 0);
-
-    const startDate = S(el.startDatum.value); // YYYY-MM-DD
-    const startTime = S(el.startTijd.value || '09:00');
-    const endDate   = S(el.endDatum.value);   // YYYY-MM-DD
-    const intervalDays = Math.max(1, Number(el.interval.value || 7));
-    const duur      = Math.max(5, Number(el.duur.value || 60));
-
-    if (!pakNaam || !reeksNaam || !startDate || !endDate) {
-      alert('Gelieve pakket-naam, reeks-naam, startdatum en einddatum in te vullen.');
-      return null;
-    }
-    if (cmpDate(endDate, startDate) < 0) {
-      alert('Eind-datum moet op of na de start-datum liggen.');
+    if (!meta.packageName || !meta.seriesName || !recurrence.startDate) {
+      alert('Gelieve pakket-naam, reeks-naam en startdatum in te vullen.');
       return null;
     }
 
-    // Trainers (voornamen)
-    const trainers = parseTrainersInput(el.trainers.value);
-
-    // Locatie
+    const trainers = parseTrainers(el.trainers.value);
     const location = S(el.locNaam.value)
       ? { name: S(el.locNaam.value), mapsUrl: S(el.locMaps.value) || null }
       : null;
 
-    // Titel voor in lesregels
-    const title = `${pakNaam}${reeksNaam ? ' — ' + reeksNaam : ''}`;
+    const title = `${meta.packageName}${meta.seriesName ? ' — ' + meta.seriesName : ''}`;
 
-    // Lessen worden bepaald door het interval: strippen = aantal gegenereerde lessen
-    // (Wordt pas berekend na generate.)
-    return {
-      meta: { pakNaam, reeksNaam, thema, prijs },
-      lessonsCfg: { startDate, endDate, startTime, intervalDays, durationMin: duur, title, trainers, location },
-      forSave
-    };
+    return { meta, recurrence, endDateOpt, horizonWk, trainers, location, title, forSave };
   }
 
   function renderPreview(cfg){
-    const items = buildPreviewItems(cfg.lessonsCfg);
+    // Preview: als eind-datum is opgegeven, toon t/m die datum; anders t/m (start + horizon weken)
+    const windowStart = cfg.recurrence.startDate;
+    const windowEndExclusive = cfg.endDateOpt
+      ? addDays(cfg.endDateOpt, 1)
+      : addDays(cfg.recurrence.startDate, cfg.horizonWk * 7);
+
+    const items = generateWindow(cfg.recurrence, windowStart, windowEndExclusive, cfg.title, cfg.trainers, cfg.location)
+      .map(l => `${fmtRange(l.startISO, l.endISO)} — ${cfg.title}`);
+
     el.previewList.innerHTML = items.map(li => `<li>${li}</li>`).join('');
     el.previewWrap.open = true;
   }
 
-  function saveSeriesAndLessons(cfg){
+  function saveSeriesAndMaterialize(cfg){
     const db = loadDB();
 
-    // Genereer lessen volgens interval
-    const lessons = generateLessonsInterval(cfg.lessonsCfg);
-
-    // strippen = aantal lessen
-    const strippen = lessons.length;
-
-    // einddatum reeks = laatste lesdatum (ISO yyyy-mm-dd)
-    const lastISO = lessons.length ? lessons[lessons.length - 1].startISO : cfg.lessonsCfg.startDate + 'T' + cfg.lessonsCfg.startTime;
-    const endDate = lastISO.slice(0,10);
-
-    // Maak seriesId
-    const seriesId = `reeks-${cfg.meta.pakNaam.toLowerCase().replace(/\s+/g,'-')}-${cfg.meta.reeksNaam.toLowerCase().replace(/\s+/g,'-')}-${Math.random().toString(36).slice(2,6)}`;
-
-    // Bewaar reeks
+    // 1) Reeks opslaan (oneindig, dus enkel recurrence)
+    const id = `reeks-${cfg.meta.packageName.toLowerCase().replace(/\s+/g,'-')}-${cfg.meta.seriesName.toLowerCase().replace(/\s+/g,'-')}-${Math.random().toString(36).slice(2,6)}`;
     db.series.push({
-      id: seriesId,
-      packageName: cfg.meta.pakNaam,
-      seriesName:  cfg.meta.reeksNaam,
+      id,
+      packageName: cfg.meta.packageName,
+      seriesName:  cfg.meta.seriesName,
       thema:       cfg.meta.thema,
-      price:       cfg.meta.prijs,
-      strippen,                 // aantal gegenereerde lessen
-      // geldigheidWeken kan later vanuit pakket/klant ingesteld worden; hier laten we '0' staan
-      geldigheidWeken: 0,
-      startDate:  cfg.lessonsCfg.startDate,
-      startTime:  cfg.lessonsCfg.startTime,
-      endDate,                  // laatste lesdatum
-      durationMin: cfg.lessonsCfg.durationMin,
-      intervalDays: cfg.lessonsCfg.intervalDays, // bijv. 7
-      status: 'actief'
+      price:       cfg.meta.price,
+      recurrence:  { ...cfg.recurrence }, // startDate,startTime,intervalDays,durationMin
+      status:      'actief'
     });
 
-    // Bewaar lessen
-    db.lessons.push(...lessons.map(l => ({ ...l, seriesId })));
+    // 2) Eerste venster materialiseren in db.lessons
+    const windowStart = cfg.recurrence.startDate;
+    const windowEndExclusive = cfg.endDateOpt
+      ? addDays(cfg.endDateOpt, 1)
+      : addDays(cfg.recurrence.startDate, cfg.horizonWk * 7);
+
+    const lessons = generateWindow(cfg.recurrence, windowStart, windowEndExclusive, cfg.title, cfg.trainers, cfg.location)
+      .map(l => ({ ...l, seriesId: id }));
+
+    db.lessons.push(...lessons);
 
     saveDB(db);
 
-    renderPreview(cfg); // optioneel preview tonen
+    renderPreview(cfg); // optioneel laten openklappen
 
-    alert(`Lessenreeks opgeslagen.\n${strippen} lessen om de ${cfg.lessonsCfg.intervalDays} dagen.\nVan ${cfg.lessonsCfg.startDate} t/m ${endDate}.`);
-
-    // terug naar overzicht
+    alert(`Lessenreeks opgeslagen.\n${lessons.length} lessen gematerialiseerd voor het startvenster.\nDe reeks zelf blijft oneindig (recurrence).`);
     location.href = './';
   }
 
@@ -230,16 +198,16 @@
   document.addEventListener('DOMContentLoaded', () => {
     el.previewBtn?.addEventListener('click', (e) => {
       e.preventDefault();
-      const cfg = collectConfig({ forSave:false });
+      const cfg = collectConfig(false);
       if (!cfg) return;
       renderPreview(cfg);
     });
 
     form?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const cfg = collectConfig({ forSave:true });
+      const cfg = collectConfig(true);
       if (!cfg) return;
-      saveSeriesAndLessons(cfg);
+      saveSeriesAndMaterialize(cfg);
     });
   });
 })();
