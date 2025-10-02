@@ -1,23 +1,13 @@
 {
   "klassen": [
     {
-      "id": "cls-puppy",
+      "id": "klas-001",
       "naam": "Puppy",
       "type": "Basis",
       "thema": "Opvoeding",
       "strippen": 10,
-      "weken": 12,
-      "status": "actief",
-      "beschrijving": "Intro voor pups.",
-      "mailBlue": "LIST_123"
-    },
-    {
-      "id": "cls-agility",
-      "naam": "Agility",
-      "type": "Sport",
-      "thema": "Behendigheid",
-      "strippen": 8,
-      "weken": 10,
+      "geldigheid_weken": 12,
+      "beschrijving": "Basisklas voor pups.",
       "status": "actief"
     }
   ]
