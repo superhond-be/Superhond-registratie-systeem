@@ -1,12 +1,11 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Klas – Detail</title>
-
-  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+  <link rel="stylesheet" href="../css/style.css?v=0.20.0"/>
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0"/>
   <script src="../js/layout.js?v=0.20.0" defer></script>
   <script type="module" src="./detail.js?v=0.20.0" defer></script>
 </head>
@@ -14,12 +13,13 @@
 <header id="topbar" class="topbar"></header>
 
 <main class="container">
-  <h1 class="page-title">Klas detail</h1>
+  <h1 class="page-title">Klas</h1>
 
   <article id="msg" class="card" style="display:none"></article>
-  <article id="info" class="card"></article>
+  <article id="box" class="card">⏳ Laden…</article>
 
-  <p style="margin-top:12px">
+  <p style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn" id="btnEdit" href="#">Bewerken</a>
     <a class="btn" href="./">← Terug naar overzicht</a>
   </p>
 </main>
