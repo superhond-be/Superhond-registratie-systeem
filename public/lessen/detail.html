@@ -4,14 +4,13 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Les – Detail</title>
-  <!-- RELATIEF naar assets (1 niveau omhoog) -->
-  <link rel="stylesheet" href="../assets/css/app.css"/>
+  <!-- RELATIEF naar /public/css/ -->
+  <link rel="stylesheet" href="../css/style.css"/>
 </head>
 <body>
 <header class="topbar">
   <h1>Les – Detail</h1>
   <nav class="breadcrumbs">
-    <!-- Relatief terug naar dashboard-map -->
     <a href="../dashboard/">← Terug naar dashboard</a>
   </nav>
 </header>
@@ -21,8 +20,8 @@
 </main>
 
 <script type="module">
-  // RELATIEVE import
-  import { getLesson } from '../assets/js/models.js';
+  // RELATIEVE import naar /public/js/
+  import { getLesson } from '../js/models.js';
 
   function qs(k){ return new URL(location.href).searchParams.get(k); }
   function escapeHTML(s=''){
