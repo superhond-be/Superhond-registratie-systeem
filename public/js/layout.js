@@ -20,14 +20,15 @@
     const icon  = opts.icon  || '🐾';
     const back  = opts.back  || HOME;
 
-    // 👉 Accentkleur bepalen
-    const isDashboard = location.pathname.replace(/\/+$/, '') === HOME.replace(/\/+$/, '');
+    // 👉 Accentkleur kiezen: geel voor dashboard, blauw elders
+    const path = location.pathname.replace(/\/+$/, ''); // strip trailing slash
+    const isDashboard =
+      path.endsWith('/dashboard') || path.endsWith('/dashboard/index.html');
+
     if (!isDashboard) {
-      // subpagina = blauw
-      document.body.classList.add('subpage');
+      document.body.classList.add('subpage');   // blauw
     } else {
-      // dashboard = geel (zekerheidshalve)
-      document.body.classList.remove('subpage');
+      document.body.classList.remove('subpage'); // geel
     }
 
     // Topbar
@@ -36,7 +37,7 @@
       top.innerHTML = '';
       const wrap = el('div', { class: 'container' });
 
-      // Terugknop (alleen tonen als back niet leeg is en niet HOME)
+      // Terugknop alleen tonen als we niet op dashboard zitten
       if (back && !isDashboard) {
         wrap.appendChild(
           el('a', { href: back, class: 'btn btn-back' }, el('span', { text: '← Terug' }))
@@ -45,7 +46,7 @@
 
       // Brand (link altijd naar HOME)
       wrap.appendChild(
-        el('a', { href: HOME, class: 'brand' }, el('span', { text: `${icon} ${title}` }))
+        el('a', { href: HOME, class: 'brand' }, el('span', { text: `${icon} Superhond` }))
       );
 
       // Versiebadge rechts
