@@ -1,6 +1,18 @@
 <!doctype html>
-<meta charset="utf-8">
-<title>Superhond</title>
-<meta http-equiv="refresh" content="0; url=/dashboard/">
-<script>location.replace('/dashboard/');</script>
-<p>Doorsturen naar <a href="/dashboard/">dashboard</a>…</p>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="refresh" content="0; url=/dashboard/">
+  <title>Superhond ➜ Dashboard</title>
+  <script>
+    // Fallback: werkt ook als /dashboard/ geen absolute root is
+    (function(){
+      var target = location.pathname.replace(/\/index\.html?$/,'') + '/dashboard/';
+      location.replace(target);
+    })();
+  </script>
+</head>
+<body>
+  <p>Doorsturen naar <a href="/dashboard/">/dashboard/</a>…</p>
+</body>
+</html>
