@@ -1,11 +1,12 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Klassen – Overzicht</title>
-  <link rel="stylesheet" href="../css/style.css?v=0.20.0"/>
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Klassen – Superhond</title>
+
+  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
   <script src="../js/layout.js?v=0.20.0" defer></script>
   <script type="module" src="./index.js?v=0.20.0" defer></script>
 </head>
@@ -15,30 +16,28 @@
 <main class="container">
   <h1 class="page-title">Klassen</h1>
 
-  <div class="card" style="margin-bottom:12px">
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <input id="zoek" class="input" type="search" placeholder="Zoek naam, type of thema…"/>
-      <a class="btn" href="./nieuw.html">+ Nieuwe klas</a>
-    </div>
+  <div class="toolbar">
+    <a class="btn" href="./nieuw.html">➕ Nieuwe klas</a>
+    <input id="zoek" type="search" placeholder="Zoek klas…" />
   </div>
 
-  <div id="loader" class="loader">⏳ Laden…</div>
-  <div id="error" class="card error" style="display:none"></div>
+  <div id="loader" class="muted">⏳ Laden…</div>
+  <div id="error" class="error" style="display:none"></div>
 
-  <div class="table-wrap" id="wrap" style="display:none">
+  <div id="wrap" class="table-wrap" style="display:none">
     <table class="table">
       <thead>
-      <tr>
-        <th>Naam</th>
-        <th>Type</th>
-        <th>Thema</th>
-        <th>Strippen</th>
-        <th>Geldigheid (weken)</th>
-        <th>Status</th>
-        <th style="width:1%">Acties</th>
-      </tr>
+        <tr>
+          <th>Naam</th>
+          <th>Type</th>
+          <th>Thema</th>
+          <th>Strippen</th>
+          <th>Geldigheid</th>
+          <th>Status</th>
+          <th>Acties</th>
+        </tr>
       </thead>
-      <tbody id="tbody"></tbody>
+      <tbody id="tabelBody"></tbody>
     </table>
   </div>
 </main>
