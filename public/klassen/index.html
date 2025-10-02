@@ -4,13 +4,27 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Klassen – Superhond</title>
-<p style="margin:12px 0">
-  <a class="btn" href="./nieuw.html">+ Nieuwe klas</a>
-</p>
+
+  <!-- Centrale UI -->
   <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
-  <script src="../js/layout.js?v=0.20.0" defer></script>
-  <script type="module" src="./index.js?v=0.20.0" defer></script>
+
+  <style>
+    .toolbar{display:flex;gap:.5rem;align-items:center;margin:.5rem 0 1rem;flex-wrap:wrap}
+    .toolbar .input{min-width:240px}
+    .badge-status{display:inline-block;padding:2px 8px;border-radius:999px;font-size:.85em}
+    .badge-status--actief{background:#dcfce7;color:#166534}
+    .badge-status--inactief{background:#fee2e2;color:#991b1b}
+
+    .icon-actions{display:flex;gap:.35rem;align-items:center}
+    .icon-btn{display:inline-flex;align-items:center;justify-content:center;
+      width:32px;height:32px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;text-decoration:none;color:inherit}
+    .icon-btn:hover{background:#f8fafc}
+    .icon{font-style:normal}
+    .icon-view::before{content:"👁"}
+    .icon-edit::before{content:"✏️"}
+    .icon-del::before{content:"🗑"}
+  </style>
 </head>
 <body class="subpage">
 <header id="topbar" class="topbar"></header>
@@ -19,12 +33,12 @@
   <h1 class="page-title">Klassen</h1>
 
   <div class="toolbar">
-    <input id="zoek" type="search" placeholder="Zoek klas…" />
-    <a class="btn" href="./nieuw.html">➕ Nieuwe klas</a>
+    <input id="zoek" class="input" type="search" placeholder="Zoek op naam / type / thema…" />
+    <a class="btn" href="./nieuw.html">+ Nieuwe klas</a>
   </div>
 
-  <div id="loader">⏳ Laden…</div>
-  <div id="error" style="display:none"></div>
+  <div id="loader" class="loader">⏳ Laden…</div>
+  <div id="error" class="error" style="display:none"></div>
 
   <div class="table-wrap" id="wrap" style="display:none;">
     <table class="table" id="tabel">
@@ -34,16 +48,32 @@
           <th>Type</th>
           <th>Thema</th>
           <th>Strippen</th>
-          <th>Geldigheid</th>
+          <th>Geldigheid (weken)</th>
           <th>Status</th>
           <th>Acties</th>
         </tr>
       </thead>
-      <tbody></tbody>
+      <tbody><!-- gevuld door index.js --></tbody>
     </table>
   </div>
 </main>
 
 <footer id="footer" class="footer"></footer>
+
+<!-- Layout + pagina script -->
+<script src="../js/layout.js?v=0.20.0" defer></script>
+<script type="module" src="./index.js?v=0.20.0" defer></script>
+
+<script>
+  // Zodra er rijen zijn, toon de tabel-wrap
+  document.addEventListener('DOMContentLoaded', () => {
+    const tbody = document.querySelector("#tabel tbody");
+    const wrap  = document.getElementById("wrap");
+    const obs = new MutationObserver(() => {
+      if (tbody.rows.length) wrap.style.display = "";
+    });
+    obs.observe(tbody, { childList: true });
+  });
+</script>
 </body>
 </html>
