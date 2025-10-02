@@ -1,4 +1,4 @@
-// Agenda – robuuste loader + tabs + filtering (kalenderweek)
+// Agenda – robuuste loader + tabs + filtering (kalenderweek + week-fallback)
 (function () {
   const TABS = document.querySelectorAll('#agenda-tabs .tab');
   const loader = document.getElementById('agenda-loader');
@@ -117,29 +117,55 @@
     `;
   }
 
+  // render() toont content en geeft het aantal getoonde rijen terug
   function render(scope, norm) {
     const { lessons, notices } = norm;
 
     let rows = '';
+    let count = 0;
+
     if (scope === 'mededelingen') {
-      rows = notices
+      const list = notices
         .slice()
-        .sort((a,b) => S(b.dateISO||b.date||b.datum).localeCompare(S(a.dateISO||a.date||a.datum)))
-        .map(rowForNotice).join('');
+        .sort((a,b) => S(b.dateISO||b.date||b.datum).localeCompare(S(a.dateISO||a.date||a.datum)));
+      rows = list.map(rowForNotice).join('');
+      count = list.length;
     } else {
       const source = lessons
         .slice()
         .sort((a,b) => S(a.startISO||a.start||a.startDate).localeCompare(S(b.startISO||b.start||b.startDate)));
-      const filtered = scope === 'week'
+
+      let filtered = scope === 'week'
         ? source.filter(x => isThisWeek(x.startISO || x.start || x.startDate))
         : source;
+
+      // ⭐ Fallback: als kalenderweek leeg is, toon eerstvolgende 5 lessen
+      let hintRow = '';
+      if (scope === 'week' && filtered.length === 0) {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        filtered = source.filter(x => {
+          const d = toDate(x.startISO || x.start || x.startDate);
+          return d && d >= today;
+        }).slice(0, 5);
+
+        if (filtered.length) {
+          hintRow = `<tr><td colspan="4" class="muted">Geen items in deze kalenderweek — tonen eerstvolgende lessen.</td></tr>`;
+        }
+      }
+
       rows = filtered.map(rowForLesson).join('');
+      if (!rows) rows = `<tr><td colspan="4" class="muted">Geen items gevonden.</td></tr>`;
+      if (hintRow) rows += hintRow;
+      count = filtered.length;
     }
 
-    tbody.innerHTML = rows || `<tr><td colspan="4" class="muted">Geen items gevonden.</td></tr>`;
+    tbody.innerHTML = rows;
     loader.textContent = '';
     errorBox.style.display = 'none';
     tableWrap.style.display = 'block';
+
+    return count;
   }
 
   async function init() {
