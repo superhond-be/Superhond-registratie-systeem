@@ -1,4 +1,5 @@
-// Agenda – robuuste loader + tabs + filtering (kalenderweek + week-fallback)
+// /public/js/agenda.js
+// Agenda – API/JSON baseline + localStorage lessen (merge) + tabs + kalenderweek + dedupe
 (function () {
   const TABS = document.querySelectorAll('#agenda-tabs .tab');
   const loader = document.getElementById('agenda-loader');
@@ -9,6 +10,7 @@
   const S = v => String(v ?? '');
   const bust = () => '?t=' + Date.now();
 
+  // ---------- I/O helpers ----------
   async function fetchJson(tryUrls) {
     for (const u of tryUrls) {
       try {
@@ -16,39 +18,64 @@
         if (r.ok) return r.json();
       } catch (_) {}
     }
-    throw new Error('Geen data-bron bereikbaar (' + tryUrls.join(', ') + ')');
+    return null;
   }
 
-  // ---- Normalisatie van verschillende agenda-vormen ----
-  function normalize(raw) {
-    if (Array.isArray(raw)) return split(raw); // kale array
+  function loadLocalLessons() {
+    try {
+      const raw = localStorage.getItem('superhond-db');
+      const db = raw ? JSON.parse(raw) : {};
+      return Array.isArray(db?.lessons) ? db.lessons : [];
+    } catch { return []; }
+  }
 
-    const keys = ['items', 'agenda', 'data'];
-    for (const k of keys) {
-      if (Array.isArray(raw?.[k])) return split(raw[k]);
-    }
-    if (Array.isArray(raw?.lessons) || Array.isArray(raw?.notices)) {
+  // ---------- Normalisatie ----------
+  function normalizeAgenda(raw) {
+    // accepteert: array of object met {lessons, notices} of {items}
+    if (!raw) return { lessons: [], notices: [] };
+
+    // 1) als array: split op type
+    if (Array.isArray(raw)) return splitArray(raw);
+
+    // 2) als object
+    if (Array.isArray(raw.lessons) || Array.isArray(raw.notices)) {
       return {
         lessons: Array.isArray(raw.lessons) ? raw.lessons : [],
-        notices: Array.isArray(raw.notices) ? raw.notices : []
+        notices: Array.isArray(raw.notices) ? raw.notices : [],
       };
     }
+    if (Array.isArray(raw.items)) return splitArray(raw.items);
+    if (Array.isArray(raw.data))  return splitArray(raw.data);
+
     return { lessons: [], notices: [] };
   }
 
-  function split(arr) {
+  function splitArray(arr) {
     const lessons = [];
     const notices = [];
     for (const it of arr) {
-      const type = (it.type || it.kind || '').toLowerCase();
-      if (type === 'mededeling' || type === 'notice') notices.push(it);
+      const t = (it.type || it.kind || 'les').toLowerCase();
+      if (t === 'mededeling' || t === 'notice') notices.push(it);
       else lessons.push(it);
     }
     return { lessons, notices };
   }
 
-  // ---- Helpers ----
+  // ---------- Utils ----------
   function toDate(x) { return x ? new Date(String(x).replace(' ', 'T')) : null; }
+
+  // Kalenderweek: maandag 00:00 t/m volgende maandag (excl.)
+  function isThisWeek(startISO) {
+    const s = toDate(startISO);
+    if (!s) return false;
+    const now = new Date();
+    const day = (now.getDay() + 6) % 7; // ma=0..zo=6
+    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    weekStart.setDate(weekStart.getDate() - day);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    return s >= weekStart && s < weekEnd;
+  }
 
   function fmtDateRange(startISO, endISO) {
     const s = toDate(startISO), e = toDate(endISO);
@@ -63,26 +90,23 @@
     return `${date}, ${t1}`;
   }
 
-  // Kalenderweek: maandag 00:00 t/m zondag 23:59
-  function isThisWeek(startISO) {
-    const s = toDate(startISO);
-    if (!s) return false;
-
-    const now = new Date();
-    // 0=zo,1=ma,... → we willen maandag als start
-    const day = (now.getDay() + 6) % 7;       // ma=0 ... zo=6
-    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    weekStart.setDate(weekStart.getDate() - day); // terug naar maandag 00:00
-
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 7);       // volgende maandag (exclusief)
-
-    return s >= weekStart && s < weekEnd;
+  // Deduplicatie: key op (id || title) + startISO
+  function dedupeLessons(list) {
+    const keyOf = x => {
+      const id = S(x.id || x.lessonId || x._id || x.title || x.name);
+      const start = S(x.startISO || x.start || x.startDate || x.begin);
+      return id + '|' + start;
+    };
+    const map = new Map();
+    for (const it of list) map.set(keyOf(it), it);
+    return Array.from(map.values());
   }
 
+  // ---------- Row builders ----------
   function rowForLesson(item) {
     const title = S(item.title || item.name);
     const href = item.id ? `../lessen/detail.html?id=${encodeURIComponent(item.id)}` : '#';
+
     const start = item.startISO || item.start || item.startDate || item.begin;
     const end   = item.endISO   || item.end   || item.endDate   || item.einde;
 
@@ -117,78 +141,77 @@
     `;
   }
 
-  // render() toont content en geeft het aantal getoonde rijen terug
-  function render(scope, norm) {
-    const { lessons, notices } = norm;
+  // ---------- Renderer ----------
+  function render(scope, data) {
+    const lessons = data.lessons.slice()
+      .sort((a,b) => S(a.startISO||a.start||a.startDate).localeCompare(S(b.startISO||b.start||b.startDate)));
+    const notices = data.notices.slice()
+      .sort((a,b) => S(b.dateISO||b.date||b.datum).localeCompare(S(a.dateISO||a.date||a.datum)));
 
     let rows = '';
-    let count = 0;
 
     if (scope === 'mededelingen') {
-      const list = notices
-        .slice()
-        .sort((a,b) => S(b.dateISO||b.date||b.datum).localeCompare(S(a.dateISO||a.date||a.datum)));
-      rows = list.map(rowForNotice).join('');
-      count = list.length;
+      rows = notices.map(rowForNotice).join('');
     } else {
-      const source = lessons
-        .slice()
-        .sort((a,b) => S(a.startISO||a.start||a.startDate).localeCompare(S(b.startISO||b.start||b.startDate)));
+      let list = (scope === 'week')
+        ? lessons.filter(x => isThisWeek(x.startISO || x.start || x.startDate))
+        : lessons;
 
-      let filtered = scope === 'week'
-        ? source.filter(x => isThisWeek(x.startISO || x.start || x.startDate))
-        : source;
-
-      // ⭐ Fallback: als kalenderweek leeg is, toon eerstvolgende 5 lessen
-      let hintRow = '';
-      if (scope === 'week' && filtered.length === 0) {
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        filtered = source.filter(x => {
+      // Fallback in 'week': toon eerstvolgende 5 lessen als de kalenderweek leeg is
+      if (scope === 'week' && list.length === 0) {
+        const today = new Date();
+        const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const upcoming = lessons.filter(x => {
           const d = toDate(x.startISO || x.start || x.startDate);
-          return d && d >= today;
+          return d && d >= startOfToday;
         }).slice(0, 5);
-
-        if (filtered.length) {
-          hintRow = `<tr><td colspan="4" class="muted">Geen items in deze kalenderweek — tonen eerstvolgende lessen.</td></tr>`;
+        if (upcoming.length) {
+          rows = upcoming.map(rowForLesson).join('') +
+            `<tr><td colspan="4" class="muted">Geen items in deze kalenderweek — tonen eerstvolgende lessen.</td></tr>`;
         }
+      } else {
+        rows = list.map(rowForLesson).join('');
       }
-
-      rows = filtered.map(rowForLesson).join('');
-      if (!rows) rows = `<tr><td colspan="4" class="muted">Geen items gevonden.</td></tr>`;
-      if (hintRow) rows += hintRow;
-      count = filtered.length;
     }
 
-    tbody.innerHTML = rows;
+    tbody.innerHTML = rows || `<tr><td colspan="4" class="muted">Geen items gevonden.</td></tr>`;
     loader.textContent = '';
     errorBox.style.display = 'none';
     tableWrap.style.display = 'block';
-
-    return count;
   }
 
+  // ---------- Init ----------
   async function init() {
     try {
       loader.textContent = '⏳ Data laden…';
       tableWrap.style.display = 'none';
       errorBox.style.display = 'none';
 
+      // 1) baseline (API → fallback JSON)
       const raw = await fetchJson([
         '../api/agenda', '/api/agenda',
         '../data/agenda.json', '/data/agenda.json'
       ]);
-      const norm = normalize(raw);
+      const base = normalizeAgenda(raw);
 
-      // start met 'alles'
-      render('alles', norm);
+      // 2) localStorage-lessen inladen en normaliseren als 'lessons'
+      const localLessons = loadLocalLessons();
+      const mergedLessons = dedupeLessons([
+        ...base.lessons,
+        ...localLessons
+      ]);
 
-      // tab events
+      const merged = { lessons: mergedLessons, notices: base.notices };
+
+      // Start op "alles"
+      render('alles', merged);
+
+      // Tab events
       TABS.forEach(btn => {
         btn.addEventListener('click', () => {
           TABS.forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
-          render(btn.dataset.tab, norm);
+          render(btn.dataset.tab, merged);
         });
       });
 
