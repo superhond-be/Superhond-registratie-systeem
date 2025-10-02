@@ -1,98 +1,59 @@
-// Klas – Detail
+// Detail van een klas
 (() => {
   const $ = s => document.querySelector(s);
   const S = v => String(v ?? '').trim();
 
   document.addEventListener('DOMContentLoaded', () => {
     if (window.SuperhondUI?.mount) {
-      SuperhondUI.mount({ title:'Klas – Detail', icon:'📚', back:'./' });
+      SuperhondUI.mount({ title:'Klas – Detail', icon:'🏷️', back:'./' });
     }
   });
 
-  const bust = () => (Date.now());
-  async function fetchJson(tryUrls){
-    for (const u of tryUrls){
-      try{
-        const url = u + (u.includes('?')?'&':'?') + 't=' + bust();
-        const r = await fetch(url, { cache:'no-store' });
-        if (r.ok) return r.json();
-      }catch(_){}
-    }
-    return null;
-  }
   function loadDB(){
-    try{
+    try {
       const raw = localStorage.getItem('superhond-db');
       const db  = raw ? JSON.parse(raw) : {};
       db.classes = Array.isArray(db.classes) ? db.classes : [];
       return db;
-    }catch{ return { classes:[] }; }
-  }
-
-  function normalizeClasses(raw){
-    const arr =
-      Array.isArray(raw) ? raw :
-      Array.isArray(raw?.klassen) ? raw.klassen :
-      Array.isArray(raw?.classes) ? raw.classes :
-      Array.isArray(raw?.items) ? raw.items :
-      Array.isArray(raw?.data) ? raw.data : [];
-
-    return arr.map(k => ({
-      id: S(k.id ?? k.klasId ?? k.classId ?? ''),
-      name: S(k.name ?? k.naam ?? ''),
-      type: S(k.type ?? k.subnaam ?? ''),
-      thema: S(k.thema ?? k.theme ?? ''),
-      strippen: Number(k.strippen ?? k.aantal_strips ?? k.aantalStrippen ?? 0) || 0,
-      weken: Number(k.weken ?? k.geldigheid_weken ?? k.geldigheidsduur ?? 0) || 0,
-      afbeelding: S(k.afbeelding ?? k.image ?? ''),
-      omschrijving: S(k.omschrijving ?? k.beschrijving ?? ''),
-      mailblue: S(k.mailblue ?? k.mailBlue ?? ''),
-      status: (S(k.status || 'actief').toLowerCase() === 'inactief') ? 'inactief' : 'actief'
-    }));
-  }
-
-  function escapeHTML(s=''){
-    return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;')
-      .replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+    }catch { return { classes: [] }; }
   }
 
   async function init(){
-    const box = $('#box'); const msg = $('#msg'); const edit = $('#btnEdit');
-    const id = new URLSearchParams(location.search).get('id');
+    const params = new URLSearchParams(location.search);
+    const id = params.get('id');
 
-    const [ext, db] = await Promise.all([
-      fetchJson(['../data/klassen.json','/data/klassen.json']),
-      Promise.resolve(loadDB())
-    ]);
+    const info = $('#info');
+    const msg  = $('#msg');
 
-    const all = [
-      ...normalizeClasses(ext),
-      ...normalizeClasses({ classes: db.classes })
-    ];
+    const db = loadDB();
+    const klas = db.classes.find(c => String(c.id) === String(id));
 
-    const rec = all.find(x => String(x.id) === String(id));
-    if (!rec){
+    if (!klas){
       msg.style.display = '';
       msg.className = 'card error';
-      msg.textContent = 'Klas niet gevonden.';
-      box.style.display = 'none';
+      msg.textContent = `⚠️ Klas met id ${id} niet gevonden.`;
+      info.innerHTML = '';
       return;
     }
 
-    edit.href = `./bewerken.html?id=${encodeURIComponent(rec.id)}`;
+    msg.style.display = 'none';
 
-    box.innerHTML = `
-      <h2 style="margin-top:0">${escapeHTML(rec.name || '(zonder naam)')}</h2>
-      <div class="grid" style="display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
-        <div><strong>Type:</strong> ${escapeHTML(rec.type || '—')}</div>
-        <div><strong>Thema:</strong> ${escapeHTML(rec.thema || '—')}</div>
-        <div><strong>Strippen (voor klant):</strong> ${rec.strippen || 0}</div>
-        <div><strong>Geldigheid (weken):</strong> ${rec.weken || 0}</div>
-        <div><strong>Status:</strong> ${escapeHTML(rec.status)}</div>
-        <div><strong>MailBlue:</strong> ${escapeHTML(rec.mailblue || '—')}</div>
+    info.innerHTML = `
+      <h2 style="margin-top:0">${S(klas.naam)}</h2>
+      <div class="grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">
+        <div><strong>Type:</strong> ${S(klas.type)}</div>
+        <div><strong>Thema:</strong> ${S(klas.thema)}</div>
+        <div><strong>Aantal strippen:</strong> ${klas.strippen || 0}</div>
+        <div><strong>Geldigheidsduur:</strong> ${klas.geldigheidsduur || 0} weken</div>
+        <div><strong>Status:</strong> ${S(klas.status || '—')}</div>
       </div>
-      ${rec.afbeelding ? `<p style="margin-top:10px"><img src="${escapeHTML(rec.afbeelding)}" alt="" style="max-width:320px;border:1px solid #e5e7eb;border-radius:8px"/></p>`:''}
-      <p style="white-space:pre-wrap">${escapeHTML(rec.omschrijving || '')}</p>
+
+      <div style="margin-top:12px">
+        <strong>Beschrijving:</strong><br>
+        <p>${S(klas.beschrijving || '—')}</p>
+      </div>
+
+      ${klas.afbeelding ? `<img src="${S(klas.afbeelding)}" alt="Afbeelding van ${S(klas.naam)}" style="max-width:200px;margin-top:12px">` : ''}
     `;
   }
 
