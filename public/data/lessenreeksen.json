@@ -1,18 +1,14 @@
 {
-  "reeksen": [
-    {
-      "id": "reeks-001",
-      "naam": "Puppy — Maandag 18u",
-      "thema": "Basis",
-      "aantal": 8,
-      "prijs": 120
-    },
-    {
-      "id": "reeks-002",
-      "naam": "Agility — Woensdag 19u",
-      "thema": "Sport",
-      "aantal": 6,
-      "prijs": 95
-    }
-  ]
+  "id": "reeks-abc123",
+  "packageName": "Puppy Voorjaar 2026",
+  "seriesName": "Zondag 09u",
+  "thema": "Puppy",
+  "price": 120,
+  "recurrence": {
+    "startDate": "2026-03-01",
+    "startTime": "09:00",
+    "intervalDays": 7,
+    "durationMin": 60
+  },
+  "status": "actief"
 }
