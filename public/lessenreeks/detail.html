@@ -20,6 +20,13 @@
     <div id="loader" class="loader">⏳ Laden…</div>
     <div id="error" class="error" style="display:none;"></div>
 
+    <!-- Acties -->
+    <div id="actions" style="display:none;margin:.5rem 0 1rem;display:flex;gap:.5rem;flex-wrap:wrap">
+      <a id="btnEdit" class="btn" href="#">Bewerken</a>
+      <button id="btnExportJson" class="btn">Exporteer JSON</button>
+      <button id="btnExportIcs" class="btn">Exporteer iCal (.ics)</button>
+    </div>
+
     <section id="detail" class="card" style="display:none;">
       <div style="display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
         <p><strong>Naam:</strong> <span id="naam">—</span></p>
@@ -54,15 +61,13 @@
               <th>Trainers</th>
             </tr>
           </thead>
-          <tbody id="lessenBody">
-          </tbody>
+          <tbody id="lessenBody"></tbody>
         </table>
       </div>
     </section>
 
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+    <div style="margin-top:12px">
       <a class="btn" href="./">← Terug naar overzicht</a>
-      <a id="btnEdit" class="btn" href="#" style="display:none">Bewerken</a>
     </div>
   </main>
 
