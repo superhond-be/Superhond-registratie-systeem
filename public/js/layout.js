@@ -1,4 +1,4 @@
-// Superhond layout (topbar/footer) – canonical home → /dashboard/
+// Superhond layout (topbar/footer)
 (() => {
   const HOME = '/dashboard/';
 
@@ -9,9 +9,7 @@
       else if (k === 'text') n.textContent = v;
       else n.setAttribute(k, v);
     });
-    (Array.isArray(children) ? children : [children])
-      .filter(Boolean)
-      .forEach(c => n.appendChild(c));
+    (Array.isArray(children) ? children : [children]).filter(Boolean).forEach(c => n.appendChild(c));
     return n;
   }
 
@@ -20,40 +18,34 @@
     const icon  = opts.icon  || '🐾';
     const back  = opts.back  || HOME;
 
-    // 👉 Accentkleur kiezen: geel voor dashboard, blauw elders
-    const path = location.pathname.replace(/\/+$/, ''); // strip trailing slash
-    const isDashboard =
-      path.endsWith('/dashboard') || path.endsWith('/dashboard/index.html');
-
-    if (!isDashboard) {
-      document.body.classList.add('subpage');   // blauw
-    } else {
-      document.body.classList.remove('subpage'); // geel
+    // Detecteer context → voeg body-class toe
+    const path = location.pathname;
+    if (path.includes('/dashboard')) {
+      document.body.classList.add('dashboard-page');
+    } else if (path.includes('/beheer')) {
+      document.body.classList.add('admin-page');
     }
 
     // Topbar
     const top = document.getElementById('topbar');
     if (top) {
       top.innerHTML = '';
-      const wrap = el('div', { class: 'container' });
+      const wrap = el('div', { class: 'container topbar-flex' });
 
-      // Terugknop alleen tonen als we niet op dashboard zitten
-      if (back && !isDashboard) {
+      // Terugknop
+      if (back) {
         wrap.appendChild(
           el('a', { href: back, class: 'btn btn-back' }, el('span', { text: '← Terug' }))
         );
       }
 
-      // Brand (link altijd naar HOME)
+      // Brand
       wrap.appendChild(
         el('a', { href: HOME, class: 'brand' }, el('span', { text: `${icon} Superhond` }))
       );
 
-      // Versiebadge rechts
-      const badge = el('span', {
-        class: 'badge-version',
-        text: window.__APP_VERSION__ || 'v0.19.x'
-      });
+      // Versiebadge
+      const badge = el('span', { class: 'version-badge', text: window.__APP_VERSION__ || 'v0.20.x' });
       wrap.appendChild(badge);
 
       top.appendChild(wrap);
@@ -63,13 +55,11 @@
     const foot = document.getElementById('footer');
     if (foot) {
       const now = new Date();
-      const ts  = now.toISOString().replace('T', ' ').slice(0, 19);
+      const ts  = now.toISOString().replace('T',' ').slice(0,19);
       foot.innerHTML = '';
       foot.appendChild(
-        el('div', { class: 'container' },
-          el('small', {
-            text: `© Superhond 2025 — v0.19.x (static) — ${ts}\nAPI offline — static versie gebruikt`
-          })
+        el('div', { class:'container' },
+          el('small', { text:`© Superhond 2025 — v0.20.x — ${ts}` })
         )
       );
     }
