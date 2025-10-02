@@ -5,107 +5,74 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Nieuwe lessenreeks – Superhond</title>
 
-  <link rel="stylesheet" href="/css/style.css?v=0.20.0" />
-  <script src="/js/layout.js?v=0.20.0" defer></script>
-  <script type="module" src="/js/reeksen.wizard.js?v=0.20.0" defer></script>
+  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
 </head>
-<body>
+<body class="subpage">
 <header id="topbar" class="topbar"></header>
 
 <main class="container">
   <h1 class="page-title">Nieuwe lessenreeks</h1>
 
-  <div class="card" style="max-width:960px">
-    <form id="frm" class="grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div>
-        <label>Pakket</label>
-        <select id="pakket" class="input" required></select>
-      </div>
-
-      <div>
-        <label>Reeksnaam</label>
-        <input id="naam" class="input" placeholder="bv. Puppy Pack – Najaar" />
-      </div>
-
-      <div>
-        <label>Startdatum</label>
-        <input id="startdatum" type="date" class="input" required />
-      </div>
-
-      <div>
-        <label>Starttijd</label>
-        <input id="starttijd" type="time" class="input" value="10:00" required />
-      </div>
-
-      <div>
-        <label>Trainer</label>
-        <select id="trainer" class="input" required></select>
-      </div>
-
-      <div>
-        <label>Locatie</label>
-        <select id="locatie" class="input" required></select>
-      </div>
-
-      <div>
-        <label>Status</label>
-        <select id="status" class="input">
-          <option value="concept">Concept (wachten op bevestiging)</option>
-          <option value="actief" selected>Actief</option>
+  <form id="formReeks" class="card">
+    <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+      <label>Pakket-naam
+        <input class="input" id="pakNaam" type="text" placeholder="Puppy Voorjaar 2026" required />
+      </label>
+      <label>Reeks-naam
+        <input class="input" id="reeksNaam" type="text" placeholder="Maandag 18u" required />
+      </label>
+      <label>Thema
+        <input class="input" id="thema" type="text" placeholder="Puppy / Agility / ..." />
+      </label>
+      <label>Prijs (€)
+        <input class="input input-nr" id="prijs" type="number" min="0" step="1" placeholder="0" />
+      </label>
+      <label>Start-datum
+        <input class="input" id="startDatum" type="date" required />
+      </label>
+      <label>Starttijd
+        <input class="input" id="startTijd" type="time" value="18:00" required />
+      </label>
+      <label>Aantal lessen
+        <input class="input input-nr" id="aantal" type="number" min="1" value="5" required />
+      </label>
+      <label>Duur (min.)
+        <input class="input input-nr" id="duur" type="number" min="5" step="5" value="60" required />
+      </label>
+      <label>Interval
+        <select class="select" id="interval">
+          <option value="7">Wekelijks (7 dagen)</option>
+          <option value="14">Tweewekelijks (14 dagen)</option>
         </select>
-      </div>
-
-      <div>
-        <label>Aantal lessen (strippen)</label>
-        <input id="aantal" type="number" min="1" class="input" />
-        <small class="muted">Standaard komt dit uit het gekozen pakket</small>
-      </div>
-
-      <div>
-        <label>Lesduur (minuten)</label>
-        <input id="lesduur" type="number" min="1" class="input" />
-        <small class="muted">Standaard komt dit uit het gekozen pakket</small>
-      </div>
-
-      <div>
-        <label>Max deelnemers</label>
-        <input id="max" type="number" min="1" class="input" />
-        <small class="muted">Standaard komt dit uit het gekozen pakket</small>
-      </div>
-
-      <div>
-        <label>Geldigheid (weken)</label>
-        <input id="wkn" type="number" min="0" class="input" />
-        <small class="muted">Standaard komt dit uit het gekozen pakket</small>
-      </div>
-
-      <div style="grid-column:1 / -1; display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.5rem">
-        <button id="btn-gen" type="submit" class="btn primary">Reeks aanmaken</button>
-        <button id="btn-demo" type="button" class="btn">Demo reeks toevoegen</button>
-        <a class="btn" href="/lessen/planner.html">→ Planner</a>
-        <a class="btn" href="/">→ Dashboard</a>
-        <span id="msg" class="muted"></span>
-      </div>
-    </form>
-  </div>
-
-  <div class="card" style="max-width:960px; margin-top:12px">
-    <h3>Voorbeeldplanning</h3>
-    <div id="preview" class="table-wrap">
-      <table class="table">
-        <thead><tr><th>#</th><th>Datum</th><th>Start</th><th>Einde</th><th>Trainer</th><th>Locatie</th></tr></thead>
-        <tbody id="preview-body"></tbody>
-      </table>
+      </label>
+      <label>Trainers (komma-gescheiden)
+        <input class="input" id="trainers" type="text" placeholder="Sam, Kim" />
+      </label>
+      <label>Locatie-naam
+        <input class="input" id="locNaam" type="text" placeholder="Superhond Club" />
+      </label>
+      <label>Google Maps (URL)
+        <input class="input" id="locMaps" type="url" placeholder="https://maps.google.com/?q=..." />
+      </label>
     </div>
-  </div>
+
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" type="button" id="btnPreview">Preview</button>
+      <button class="btn" type="submit">Genereer & Opslaan</button>
+      <a class="btn" href="./">Annuleren</a>
+    </div>
+
+    <details id="previewWrap" class="preview" style="margin-top:12px">
+      <summary><strong>Preview gegenereerde lessen</strong></summary>
+      <ol id="previewList" style="margin-top:8px"></ol>
+    </details>
+  </form>
 </main>
 
 <footer id="footer" class="footer"></footer>
 
-<script>
-  window.addEventListener('DOMContentLoaded', ()=>{
-    SuperhondUI.mount({ title:'Superhond — Nieuwe reeks', icon:'📦', back:'/' });
-  });
-</script>
+<script src="../js/layout.js?v=0.20.0" defer></script>
+<script type="module" src="./nieuw.js?v=0.20.0" defer></script>
 </body>
 </html>
