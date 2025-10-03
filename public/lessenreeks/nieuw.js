@@ -9,7 +9,35 @@
     }
     init();
   });
+// --- snelle, GC-vriendelijke helpers ---
+const pad = n => String(n).padStart(2, "0");
 
+function parseDateYMD(ymd) {
+  // ymd "2025-11-30" -> Date zonder tijd
+  const [y,m,d] = ymd.split("-").map(Number);
+  return new Date(y, (m||1)-1, d||1);
+}
+
+function addDays(date, days) {
+  const d = new Date(date.getTime());
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function combineISO(date, hhmm) {
+  // "2025-11-30" + "11:00" -> "2025-11-30T11:00:00"
+  const y = date.getFullYear(), m = pad(date.getMonth()+1), d = pad(date.getDate());
+  const [hh="00", mm="00"] = String(hhmm||"").split(":");
+  return `${y}-${m}-${d}T${pad(hh)}:${pad(mm)}:00`;
+}
+
+function addMinutesToHHmm(hhmm, minutes) {
+  const [h=0,m=0] = String(hhmm||"0:0").split(":").map(Number);
+  const total = h*60 + m + Number(minutes||0);
+  const H = Math.floor(((total % 1440)+1440)%1440 / 60);
+  const M = ((total % 60) + 60) % 60;
+  return `${pad(H)}:${pad(M)}`;
+}
   async function init(){
     await populateClassSelect();
     bindClassAutofill();
