@@ -1,29 +1,25 @@
-// store.js – snelle bucket-based opslag voor Superhond
+// store.js — lichte, snelle opslag (losse buckets i.p.v. één groot object)
 
-// --- generieke helpers ---
+/* ---------- generiek ---------- */
 function readBucket(key) {
-  try {
-    return JSON.parse(localStorage.getItem(key)) || [];
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(localStorage.getItem(key)) || []; }
+  catch { return []; }
 }
-
 function writeBucket(key, arr) {
   localStorage.setItem(key, JSON.stringify(arr || []));
 }
 
-// --- specifieke buckets ---
-export function getKlassen()   { return readBucket('superhond-classes'); }
-export function setKlassen(v) { writeBucket('superhond-classes', v); }
+/* ---------- buckets ---------- */
+export function getKlassen()        { return readBucket('superhond-classes'); }
+export function setKlassen(v)      { writeBucket('superhond-classes', v); }
 
-export function getReeksen()   { return readBucket('superhond-series'); }
-export function setReeksen(v) { writeBucket('superhond-series', v); }
+export function getReeksen()        { return readBucket('superhond-series'); }
+export function setReeksen(v)      { writeBucket('superhond-series', v); }
 
-export function getLessen()   { return readBucket('superhond-lessons'); }
-export function setLessen(v) { writeBucket('superhond-lessons', v); }
+export function getLessen()         { return readBucket('superhond-lessons'); }
+export function setLessen(v)       { writeBucket('superhond-lessons', v); }
 
-// --- migratie vanuit oude "superhond-db" ---
+/* ---------- migratie van oude 'superhond-db' (eenmalig) ---------- */
 export function ensureMigrated() {
   try {
     const raw = localStorage.getItem('superhond-db');
@@ -40,14 +36,12 @@ export function ensureMigrated() {
       writeBucket('superhond-lessons', db.lessons);
     }
 
-    // Optioneel: opruimen
+    // Optioneel opruimen van legacy blob:
     // localStorage.removeItem('superhond-db');
-  } catch {
-    // ignore
-  }
+  } catch { /* ignore */ }
 }
 
-// --- status helper ---
+/* ---------- status helper ---------- */
 export function isActiefStatus(s) {
   return String(s || '').trim().toLowerCase() === 'actief';
 }
