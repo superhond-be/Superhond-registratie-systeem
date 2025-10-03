@@ -3,41 +3,37 @@
   const $ = s => document.querySelector(s);
   const S = v => String(v ?? "").trim();
 
+  /* ---------------- snelle helpers (voor performance/consistency) ---------------- */
+  const pad = n => String(n).padStart(2, "0");
+  function parseDateYMD(ymd) {
+    const [y,m,d] = String(ymd||"").split("-").map(Number);
+    return new Date(y||1970, (m||1)-1, d||1);
+  }
+  function addDays(date, days) {
+    const d = new Date(date.getTime());
+    d.setDate(d.getDate() + Number(days||0));
+    return d;
+  }
+  function combineISO(date, hhmm) {
+    const y = date.getFullYear(), m = pad(date.getMonth()+1), d = pad(date.getDate());
+    const [hh="00", mm="00"] = String(hhmm||"").split(":");
+    return `${y}-${m}-${d}T${pad(hh)}:${pad(mm)}:00`;
+  }
+  function addMinutesToHHmm(hhmm, minutes) {
+    const [h=0,m=0] = String(hhmm||"0:0").split(":").map(Number);
+    const total = h*60 + m + Number(minutes||0);
+    const H = Math.floor(((total % 1440)+1440)%1440 / 60);
+    const M = ((total % 60) + 60) % 60;
+    return `${pad(H)}:${pad(M)}`;
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     if (window.SuperhondUI?.mount) {
       SuperhondUI.mount({ title: "Nieuwe lessenreeks", icon: "📦", back: "./" });
     }
     init();
   });
-// --- snelle, GC-vriendelijke helpers ---
-const pad = n => String(n).padStart(2, "0");
 
-function parseDateYMD(ymd) {
-  // ymd "2025-11-30" -> Date zonder tijd
-  const [y,m,d] = ymd.split("-").map(Number);
-  return new Date(y, (m||1)-1, d||1);
-}
-
-function addDays(date, days) {
-  const d = new Date(date.getTime());
-  d.setDate(d.getDate() + days);
-  return d;
-}
-
-function combineISO(date, hhmm) {
-  // "2025-11-30" + "11:00" -> "2025-11-30T11:00:00"
-  const y = date.getFullYear(), m = pad(date.getMonth()+1), d = pad(date.getDate());
-  const [hh="00", mm="00"] = String(hhmm||"").split(":");
-  return `${y}-${m}-${d}T${pad(hh)}:${pad(mm)}:00`;
-}
-
-function addMinutesToHHmm(hhmm, minutes) {
-  const [h=0,m=0] = String(hhmm||"0:0").split(":").map(Number);
-  const total = h*60 + m + Number(minutes||0);
-  const H = Math.floor(((total % 1440)+1440)%1440 / 60);
-  const M = ((total % 60) + 60) % 60;
-  return `${pad(H)}:${pad(M)}`;
-}
   async function init(){
     await populateClassSelect();
     bindClassAutofill();
@@ -47,13 +43,13 @@ function addMinutesToHHmm(hhmm, minutes) {
   function report(msg, isError=false){
     const hint = $("#classesHint");
     const err  = $("#classesError");
-    if (!hint || !err) return;
+    if (!hint && !err) return; // geen hint-/error-plek in de HTML: gewoon stil zijn
     if (isError){
-      err.style.display = "block";
-      err.textContent = msg;
+      if (err){ err.style.display = "block"; err.textContent = msg; }
+      if (hint){ hint.textContent = ""; }
     } else {
-      err.style.display = "none";
-      hint.textContent  = msg;
+      if (err){ err.style.display = "none"; err.textContent = ""; }
+      if (hint){ hint.textContent = msg; }
     }
   }
 
@@ -132,7 +128,10 @@ function addMinutesToHHmm(hhmm, minutes) {
     // 4) UI
     sel.innerHTML = "";
     if (all.length === 0){
-      sel.innerHTML = `<option value="">— Geen klassen gevonden —</option>`;
+      const o = document.createElement("option");
+      o.value = "";
+      o.textContent = "— Geen klassen gevonden —";
+      sel.appendChild(o);
       sel.disabled = true;
 
       const extCnt = ext.length, locCnt = loc.length;
@@ -141,10 +140,8 @@ function addMinutesToHHmm(hhmm, minutes) {
         `gevonden lokaal: ${locCnt}`,
         `gefilterd (inactief): ${extCnt + locCnt - all.length}`
       ].join(" • ");
-
       report(`Geen klassen beschikbaar. (${why})`, true);
 
-      // Kleine hint wat JSON mag zijn
       console.warn("Plaats /public/data/klassen.json met bv.:", {
         klassen: [
           { id:"klas-001", naam:"Puppy start", type:"start", thema:"Puppypack",
@@ -155,7 +152,14 @@ function addMinutesToHHmm(hhmm, minutes) {
     }
 
     sel.disabled = false;
-    sel.insertAdjacentHTML("beforeend", `<option value="">— Kies een klas —</option>`);
+
+    // placeholder
+    const ph = document.createElement("option");
+    ph.value = "";
+    ph.textContent = "— Kies een klas —";
+    sel.appendChild(ph);
+
+    // opties
     for (const k of all){
       const parts = [];
       if (k.type)  parts.push(k.type);
@@ -196,7 +200,9 @@ function addMinutesToHHmm(hhmm, minutes) {
       if (fldGeld)  fldGeld.value  = Number(opt.dataset.weken || 0);
 
       if (fldPkg && !S(fldPkg.value)){
-        fldPkg.value = opt.textContent.replace(/ \(.+\)$/, "");
+        const txt = String(opt.textContent||"");
+        // haal " (…)" achteraan weg indien aanwezig
+        fldPkg.value = txt.replace(/\s\([^)]+\)$/, "");
       }
     });
   }
