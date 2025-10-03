@@ -5,7 +5,15 @@ const btnAdd = document.getElementById("btn-add");
 const total  = document.getElementById("total");
 
 let state = { klassen:[] };
+import { getKlassen, setKlassen, ensureMigrated } from '../js/store.js';
 
+document.addEventListener('DOMContentLoaded', ensureMigrated);
+
+// ...bij opslaan:
+const items = getKlassen();
+const i = items.findIndex(x => String(x.id) === String(klas.id));
+if (i >= 0) items[i] = klas; else items.push(klas);
+setKlassen(items);   // <-- alleen deze bucket
 function row(k={}) {
   const tr = document.createElement("tr");
   tr.dataset.id = k.id ?? "";
