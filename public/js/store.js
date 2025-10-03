@@ -1,5 +1,44 @@
 // Superhond store.js — robuuste loader (altijd absolute /data/* paden)
+// /public/js/store.js
 
+// --- generieke buckets ---
+function readBucket(key){
+  try { return JSON.parse(localStorage.getItem(key)) || []; }
+  catch { return []; }
+}
+function writeBucket(key, arr){
+  localStorage.setItem(key, JSON.stringify(arr || []));
+}
+
+// --- specifieke helpers ---
+export function getKlassen(){  return readBucket('superhond-classes'); }
+export function setKlassen(v){ writeBucket('superhond-classes', v); }
+
+export function getReeksen(){  return readBucket('superhond-series'); }
+export function setReeksen(v){ writeBucket('superhond-series', v); }
+
+export function getLessen(){   return readBucket('superhond-lessons'); }
+export function setLessen(v){  writeBucket('superhond-lessons', v); }
+
+// backward-compat: migreer 1x uit oude sleutel
+export function ensureMigrated(){
+  try{
+    const raw = localStorage.getItem('superhond-db');
+    if (!raw) return;
+    const db = JSON.parse(raw) || {};
+    if (Array.isArray(db.classes) && !localStorage.getItem('superhond-classes')){
+      writeBucket('superhond-classes', db.classes);
+    }
+    if (Array.isArray(db.series) && !localStorage.getItem('superhond-series')){
+      writeBucket('superhond-series', db.series);
+    }
+    if (Array.isArray(db.lessons) && !localStorage.getItem('superhond-lessons')){
+      writeBucket('superhond-lessons', db.lessons);
+    }
+    // 1x opruimen mag, maar is optioneel:
+    // localStorage.removeItem('superhond-db');
+  }catch{}
+}
 const LS = {
   klanten: "sh_klanten",
   honden: "sh_honden",
