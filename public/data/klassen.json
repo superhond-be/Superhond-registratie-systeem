@@ -2,18 +2,18 @@
   "klassen": [
     {
       "id": "klas-001",
-      "naam": "Puppy",
-      "type": "Basisklas",
-      "thema": "Basis",
+      "naam": "Puppy start",
+      "type": "Start",
+      "thema": "Puppypack",
       "strippen": 10,
       "geldigheid_weken": 12,
       "status": "actief"
     },
     {
       "id": "klas-002",
-      "naam": "Agility",
-      "type": "Sport",
-      "thema": "Agility",
+      "naam": "Puppy gevorderd",
+      "type": "Vervolg",
+      "thema": "Puppypack",
       "strippen": 8,
       "geldigheid_weken": 10,
       "status": "actief"
