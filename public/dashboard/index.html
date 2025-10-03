@@ -112,6 +112,310 @@
       </div>
     </section>
   </main>
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Superhond — Dashboard</title>
+
+  <!-- Centrale UI (RELATIEF) -->
+  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+
+  <style>
+    /* tabs */
+    .tabs{display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
+    .tab{position:relative;padding:.4rem .8rem;border:1px solid #e5e7eb;border-radius:.5rem;background:#fff;cursor:pointer}
+    .tab.active{background:var(--accent,#f4c400);font-weight:600}
+    .tab .dot{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;font-size:11px;line-height:1;background:#111827;color:#fff}
+
+    .muted{color:#6b7280}
+    .error{color:#b91c1c}
+
+    /* badges op tegels */
+    .tile.badged{position:relative}
+    .tile .badge-dot{
+      position:absolute; top:8px; right:10px;
+      min-width:22px; height:22px; padding:0 6px;
+      display:inline-flex; align-items:center; justify-content:center;
+      border-radius:999px; font-size:12px; line-height:1;
+      background:var(--accent,#f4c400); color:#000;
+      border:1px solid rgba(0,0,0,.08);
+      box-shadow:0 1px 2px rgba(0,0,0,.08);
+    }
+  </style>
+</head>
+<body class="dashboard-page">
+  <!-- Topbar -->
+  <header id="topbar" class="topbar"></header>
+
+  <main class="container">
+    <h1 class="page-title">Hoofdmenu</h1>
+
+    <!-- Tegels -->
+    <div class="tiles">
+      <a class="tile" href="../klanten/"><span>👤</span> Klanten</a>
+      <a class="tile" href="../honden/"><span>🐶</span> Honden</a>
+      <a class="tile" href="../strippenkaarten/"><span>🎫</span> Strippenkaarten</a>
+
+      <!-- 📅 Lessen met teller (deze week) -->
+      <a class="tile badged" href="../lessen/">
+        <span>📅</span>
+        <div class="tile-body">
+          <span class="tile-title">Lessen</span>
+          <span class="tile-sub" id="lessen-week-sub">—</span>
+        </div>
+        <span class="badge-dot" id="lessen-week-badge">0</span>
+      </a>
+
+      <!-- 📦 Lessenreeksen met teller (actief) -->
+      <a class="tile badged" href="../lessenreeks/">
+        <span>📦</span>
+        <div class="tile-body">
+          <span class="tile-title">Lessenreeksen</span>
+          <span class="tile-sub" id="reeksen-sub">—</span>
+        </div>
+        <span class="badge-dot" id="reeksen-badge">0</span>
+      </a>
+
+      <!-- 📢 Mededelingen met teller -->
+      <a class="tile badged" href="../mededeling/">
+        <span>📢</span>
+        <div class="tile-body">
+          <span class="tile-title">Mededelingen</span>
+          <span class="tile-sub" id="mededeling-sub">—</span>
+        </div>
+        <span class="badge-dot" id="mededeling-badge">0</span>
+      </a>
+
+      <a class="tile" href="../trainers/"><span>🧑‍🏫</span> Trainers</a>
+      <a class="tile" href="../rapporten/"><span>📈</span> Rapporten</a>
+      <a class="tile" href="../instellingen/"><span>⚙️</span> Instellingen</a>
+      <a class="tile" href="../over/"><span>ℹ️</span> Over</a>
+
+      <!-- ✅ Lessenbeheer (admin) -->
+      <a class="tile" href="../lessen/beheer.html"><span>⚙️</span> Lessenbeheer</a>
+    </div>
+
+    <!-- Agenda blok met tabs -->
+    <section class="card" style="margin-top:1rem">
+      <h2 style="margin:0 0 .5rem">Agenda</h2>
+
+      <div class="tabs" id="agenda-tabs">
+        <button class="tab active" data-tab="week">Deze week <span class="dot" id="tab-week-dot">0</span></button>
+        <button class="tab" data-tab="alles">Alles <span class="dot" id="tab-all-dot">0</span></button>
+        <button class="tab" data-tab="mededelingen">Mededelingen <span class="dot" id="tab-notes-dot">0</span></button>
+      </div>
+
+      <div id="agenda-loader" class="muted">⏳ Laden…</div>
+      <div id="agenda-error" class="error" style="display:none"></div>
+
+      <div class="table-wrap" id="agenda-table-wrap" style="display:none;">
+        <table id="agenda-table" class="table">
+          <thead>
+            <tr>
+              <th>Naam</th>
+              <th>Datum</th>
+              <th>Locatie</th>
+              <th>Trainer(s)</th>
+            </tr>
+          </thead>
+          <tbody><!-- gevuld door ../js/agenda.js --></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer id="footer" class="footer"></footer>
+
+  <!-- Scripts -->
+  <script src="../js/layout.js?v=0.20.0" defer></script>
+  <script src="../js/agenda.js?v=0.20.0" defer></script>
+
+  <!-- Badge-updaters (tegels + tabs) -->
+  <script>
+  (function(){
+    const S = v => String(v ?? '').trim();
+
+    async function fetchJson(tryUrls){
+      for (const u of tryUrls){
+        try{
+          const url = u + (u.includes('?')?'&':'?') + 't=' + Date.now();
+          const r = await fetch(url, { cache:'no-store' });
+          if (r.ok) return r.json();
+        }catch(_){}
+      }
+      return null;
+    }
+
+    function loadLocalLessons(){
+      try{
+        const raw = localStorage.getItem('superhond-db');
+        const db  = raw ? JSON.parse(raw) : {};
+        const lessons = Array.isArray(db.lessons) ? db.lessons : [];
+        return lessons.map(l => ({
+          id: S(l.id),
+          title: S(l.title || l.name || 'Les'),
+          startISO: S(l.startISO || l.start),
+          endISO:   S(l.endISO   || l.end)
+        })).filter(x => x.startISO);
+      }catch{ return []; }
+    }
+
+    function normalizeAgenda(raw){
+      if (!raw) return { lessons:[], notices:[] };
+
+      // gemengde array?
+      const arr =
+        Array.isArray(raw)       ? raw :
+        Array.isArray(raw.items) ? raw.items :
+        Array.isArray(raw.data)  ? raw.data : null;
+      if (arr){
+        const lessons=[], notices=[];
+        for(const it of arr){
+          const t = S(it.type||it.kind).toLowerCase();
+          if (t === 'mededeling' || t === 'notice') notices.push(it);
+          else lessons.push(it);
+        }
+        return { lessons, notices };
+      }
+      return {
+        lessons: Array.isArray(raw.lessons) ? raw.lessons : [],
+        notices: Array.isArray(raw.notices) ? raw.notices : []
+      };
+    }
+
+    function normalizeLessons(list){
+      return (list||[]).map(x => ({
+        id: S(x.id||''),
+        title: S(x.title||x.name||'Les'),
+        startISO: S(x.startISO||x.start||x.startDate||x.begin||''),
+        endISO:   S(x.endISO  ||x.end  ||x.endDate  ||x.einde||'')
+      })).filter(x => x.startISO);
+    }
+
+    function mergeLessons(ext=[], loc=[]){
+      const key = x => S(x.id) || (S(x.startISO)+'|'+S(x.title));
+      const map = new Map();
+      for (const e of ext) map.set(key(e), e);
+      for (const l of loc) if (!map.has(key(l))) map.set(key(l), l);
+      return [...map.values()];
+    }
+
+    function isThisWeek(startISO){
+      if (!startISO) return false;
+      const s = new Date(String(startISO).replace(' ','T'));
+      if (isNaN(s)) return false;
+      const now = new Date();
+      const day = (now.getDay()+6)%7; // ma=0..zo=6
+      const ws = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      ws.setDate(ws.getDate()-day);
+      const we = new Date(ws); we.setDate(we.getDate()+7);
+      return s>=ws && s<we;
+    }
+
+    function loadDBSeries(){
+      try{
+        const raw = localStorage.getItem('superhond-db');
+        const db  = raw ? JSON.parse(raw) : {};
+        return Array.isArray(db.series) ? db.series : [];
+      }catch{ return []; }
+    }
+
+    function normalizeSeries(raw){
+      const arr =
+        Array.isArray(raw) ? raw :
+        Array.isArray(raw?.reeksen) ? raw.reeksen :
+        Array.isArray(raw?.series)  ? raw.series :
+        Array.isArray(raw?.items)   ? raw.items :
+        Array.isArray(raw?.data)    ? raw.data : [];
+      return arr.map(r => ({
+        id: r.id ?? r.reeksId ?? r.seriesId ?? null,
+        status: (S(r.status||'actief').toLowerCase())
+      }));
+    }
+
+    async function updateBadges(){
+      // agenda → lessons/notices
+      const extRaw = await fetchJson(['../api/agenda','/api/agenda','../data/agenda.json','/data/agenda.json']);
+      const ag = normalizeAgenda(extRaw);
+      const extLessons = normalizeLessons(ag.lessons);
+      const locLessons = loadLocalLessons();
+      const allLessons = mergeLessons(extLessons, locLessons);
+
+      const weekCount = allLessons.filter(x => isThisWeek(x.startISO)).length;
+      const allCount  = allLessons.length;
+      const noteCount = (ag.notices||[]).length;
+
+      // tegel: lessen
+      const lwSub   = document.getElementById('lessen-week-sub');
+      const lwBadge = document.getElementById('lessen-week-badge');
+      if (lwSub)   lwSub.textContent   = `${weekCount} deze week`;
+      if (lwBadge) lwBadge.textContent = String(weekCount);
+      if (lwBadge){
+        if (weekCount===0){ lwBadge.style.background='#fee2e2'; lwBadge.style.color='#b91c1c'; }
+        else { lwBadge.style.background=''; lwBadge.style.color=''; }
+      }
+<!-- 📚 Klassen met teller (actief) -->
+<a class="tile badged" href="../klassen/">
+  <span>📚</span>
+  <div class="tile-body">
+    <span class="tile-title">Klassen</span>
+    <span class="tile-sub" id="klassen-sub">—</span>
+  </div>
+  <span class="badge-dot" id="klassen-badge">0</span>
+</a>
+      // tegel: mededelingen
+      const mSub   = document.getElementById('mededeling-sub');
+      const mBadge = document.getElementById('mededeling-badge');
+      if (mSub)   mSub.textContent   = `${noteCount} mededeling${noteCount===1?'':'en'}`;
+      if (mBadge) mBadge.textContent = String(noteCount);
+      if (mBadge){
+        if (noteCount===0){ mBadge.style.background='#fee2e2'; mBadge.style.color='#b91c1c'; }
+        else { mBadge.style.background=''; mBadge.style.color=''; }
+      }
+
+      // tab-dots
+      const tdWeek = document.getElementById('tab-week-dot');
+      const tdAll  = document.getElementById('tab-all-dot');
+      const tdNot  = document.getElementById('tab-notes-dot');
+      if (tdWeek) tdWeek.textContent = String(weekCount);
+      if (tdAll)  tdAll.textContent  = String(allCount);
+      if (tdNot)  tdNot.textContent  = String(noteCount);
+
+      // reeksen → extern + local
+      const extSeries = normalizeSeries(await fetchJson(['../data/lessenreeksen.json','/data/lessenreeksen.json']));
+      const locSeries = normalizeSeries({ series: loadDBSeries() });
+      const map = new Map();
+      [...locSeries, ...extSeries].forEach(r => map.set(String(r.id||Math.random()), r));
+      const activeSeries = [...map.values()].filter(r => r.status !== 'inactief').length;
+
+      const rsSub   = document.getElementById('reeksen-sub');
+      const rsBadge = document.getElementById('reeksen-badge');
+      if (rsSub)   rsSub.textContent   = `${activeSeries} actief`;
+      if (rsBadge) rsBadge.textContent = String(activeSeries);
+      if (rsBadge){
+        if (activeSeries===0){ rsBadge.style.background='#fee2e2'; rsBadge.style.color='#b91c1c'; }
+        else { rsBadge.style.background=''; rsBadge.style.color=''; }
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', updateBadges);
+  })();
+  </script>
+
+  <!-- Topbar mount -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.SuperhondUI?.mount) {
+        SuperhondUI.mount({ title: 'Superhond', icon: '🐾', home: true });
+      }
+    });
+  </script>
+</body>
+</html>
 
   <!-- Footer -->
   <footer id="footer" class="footer"></footer>
