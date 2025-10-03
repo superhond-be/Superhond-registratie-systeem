@@ -3,11 +3,19 @@
     {
       "id": "klas-001",
       "naam": "Puppy",
-      "type": "Basis",
-      "thema": "Opvoeding",
+      "type": "Basisklas",
+      "thema": "Basis",
       "strippen": 10,
       "geldigheid_weken": 12,
-      "beschrijving": "Basisklas voor pups.",
+      "status": "actief"
+    },
+    {
+      "id": "klas-002",
+      "naam": "Agility",
+      "type": "Sport",
+      "thema": "Agility",
+      "strippen": 8,
+      "geldigheid_weken": 10,
       "status": "actief"
     }
   ]
