@@ -26,6 +26,43 @@
   <form id="formReeks" class="card">
     <div class="grid">
       <!-- 1) KLAS KIEZEN -->
+      
+      
+      <form id="formReeks" class="card">
+  <!-- KLAS KIEZEN -->
+  <fieldset style="border:1px solid #eee;padding:10px;border-radius:8px;margin-bottom:12px">
+    <legend style="padding:0 6px">Klas selecteren</legend>
+    <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+      <label>Klas
+        <select class="select" id="selKlas">
+          <option value="">— Kies een klas —</option>
+        </select>
+      </label>
+
+      <label>Type
+        <input class="input" id="type" type="text" placeholder="(uit klas)" />
+      </label>
+
+      <label>Thema
+        <input class="input" id="thema" type="text" placeholder="(uit klas)" />
+      </label>
+
+      <label>Aantal strippen (klant)
+        <input class="input input-nr" id="strippen" type="number" min="0" value="0" />
+      </label>
+
+      <label>Geldigheidsduur (weken, klant)
+        <input class="input input-nr" id="geldigheid" type="number" min="0" value="0" />
+      </label>
+    </div>
+    <p class="muted" style="margin:.5rem 0 0">
+      Kies een klas om velden automatisch in te vullen. <em>Strippen</em> en <em>Geldigheid</em> komen uit de klas.
+    </p>
+  </fieldset>
+
+  <!-- …hier je bestaande velden (pakNaam, reeksNaam, prijs, startDatum, startTijd, duur, trainers, locatie, …) … -->
+</form>
+      
       <label>Klas (bron)
         <select id="selKlas" class="select">
           <option value="">— Kies een klas —</option>
