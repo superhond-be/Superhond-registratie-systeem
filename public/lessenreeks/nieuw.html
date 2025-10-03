@@ -23,71 +23,52 @@
 <main class="container">
   <h1 class="page-title">Nieuwe lessenreeks</h1>
 
+  <!-- ENKEL DIT ENE FORMULIER -->
   <form id="formReeks" class="card">
     <div class="grid">
-      <!-- 1) KLAS KIEZEN -->
-      
-      
-      <form id="formReeks" class="card">
-  <!-- KLAS KIEZEN -->
-  <fieldset style="border:1px solid #eee;padding:10px;border-radius:8px;margin-bottom:12px">
-    <legend style="padding:0 6px">Klas selecteren</legend>
-    <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
-      <label>Klas
-        <select class="select" id="selKlas">
-          <option value="">— Kies een klas —</option>
-        </select>
-      </label>
 
-      <label>Type
-        <input class="input" id="type" type="text" placeholder="(uit klas)" />
-      </label>
+      <!-- 1) KLAS KIEZEN + AUTO-INVUL -->
+      <fieldset style="border:1px solid #eee;padding:10px;border-radius:8px;margin-bottom:12px">
+        <legend style="padding:0 6px">Klas selecteren</legend>
 
-      <label>Thema
-        <input class="input" id="thema" type="text" placeholder="(uit klas)" />
-      </label>
+        <div class="grid">
+          <label>Klas
+            <select class="select" id="selKlas">
+              <option value="">— Kies een klas —</option>
+            </select>
+          </label>
 
-      <label>Aantal strippen (klant)
-        <input class="input input-nr" id="strippen" type="number" min="0" value="0" />
-      </label>
+          <label>Type
+            <input class="input" id="type" type="text" placeholder="(uit klas)" />
+          </label>
 
-      <label>Geldigheidsduur (weken, klant)
-        <input class="input input-nr" id="geldigheid" type="number" min="0" value="0" />
-      </label>
-    </div>
-    <p class="muted" style="margin:.5rem 0 0">
-      Kies een klas om velden automatisch in te vullen. <em>Strippen</em> en <em>Geldigheid</em> komen uit de klas.
-    </p>
-  </fieldset>
+          <label>Thema
+            <input class="input" id="thema" type="text" placeholder="(uit klas)" />
+          </label>
 
-  <!-- …hier je bestaande velden (pakNaam, reeksNaam, prijs, startDatum, startTijd, duur, trainers, locatie, …) … -->
-</form>
-      
-      <label>Klas (bron)
-        <select id="selKlas" class="select">
-          <option value="">— Kies een klas —</option>
-        </select>
-      </label>
-      <div>
-        <span class="hint">Info uit gekozen klas (alleen ter info):</span>
-        <div class="inline">
-          <span class="badge">Strippen: <strong id="infoStrippen">—</strong></span>
-          <span class="badge">Geldigheid: <strong id="infoGeldigheid">—</strong></span>
-          <span class="badge">Type: <strong id="infoType">—</strong></span>
-          <span class="badge">Thema: <strong id="infoThema">—</strong></span>
+          <label>Aantal strippen (klant)
+            <input class="input input-nr" id="strippen" type="number" min="0" value="0" />
+          </label>
+
+          <label>Geldigheidsduur (weken, klant)
+            <input class="input input-nr" id="geldigheid" type="number" min="0" value="0" />
+          </label>
         </div>
-      </div>
+
+        <p class="hint" style="margin:.5rem 0 0">
+          Kies een klas om velden automatisch in te vullen. <em>Strippen</em> en <em>Geldigheid</em> komen standaard uit de klas maar kun je hier nog aanpassen.
+        </p>
+      </fieldset>
 
       <!-- 2) BASIS REEKS -->
       <label>Pakket-naam
         <input class="input" id="pakNaam" type="text" placeholder="Puppy Voorjaar 2026" required />
       </label>
+
       <label>Reeks-naam
         <input class="input" id="reeksNaam" type="text" placeholder="Maandag 18u" required />
       </label>
-      <label>Thema
-        <input class="input" id="thema" type="text" placeholder="Puppy / Agility / ..." />
-      </label>
+
       <label>Prijs (€)
         <input class="input input-nr" id="prijs" type="number" min="0" step="1" placeholder="0" />
       </label>
@@ -96,15 +77,19 @@
       <label>Start-datum
         <input class="input" id="startDatum" type="date" required />
       </label>
+
       <label>Starttijd
         <input class="input" id="startTijd" type="time" value="18:00" required />
       </label>
+
       <label>Aantal lessen
         <input class="input input-nr" id="aantal" type="number" min="1" value="5" required />
       </label>
+
       <label>Duur (min.)
         <input class="input input-nr" id="duur" type="number" min="5" step="5" value="60" required />
       </label>
+
       <label>Interval (dagen)
         <select class="select" id="interval">
           <option value="7">Wekelijks (7)</option>
@@ -118,9 +103,11 @@
       <label>Trainers (voornaam, komma-gescheiden)
         <input class="input" id="trainers" type="text" placeholder="Sofie, Paul" />
       </label>
+
       <label>Locatie-naam
         <input class="input" id="locNaam" type="text" placeholder="Superhond Club" />
       </label>
+
       <label>Google Maps (URL)
         <input class="input" id="locMaps" type="url" placeholder="https://maps.google.com/?q=..." />
       </label>
