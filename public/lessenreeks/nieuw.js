@@ -35,7 +35,48 @@ import {
     x.setDate(x.getDate() + n);
     return x;
   }
+async function loadClassesFromGoogle() {
+  const url = window.SUPERHOND_DATA?.CLASSES_URL;
+  if (!url) return [];
 
+  const r = await fetch(url, { cache: 'no-store' });
+  const j = await r.json();
+  const arr = Array.isArray(j.klassen) ? j.klassen : [];
+
+  // normaliseer naar intern model
+  return arr.map(k => ({
+    id: String(k.id ?? k.ID ?? k.Naam ?? ''),
+    naam: String(k.Naam ?? k.naam ?? '').trim(),
+    type: String(k.Type ?? k.type ?? '').trim(),
+    thema: String(k.Thema ?? k.thema ?? '').trim(),
+    strippen: Number(k.Strippen ?? k.strippen ?? 0) || 0,
+    geldigheid_weken: Number(k['Geldigheid (weken)'] ?? k.geldigheid_weken ?? k.geldigheid ?? 0) || 0,
+    status: String(k.Status ?? k.status ?? '').trim().toLowerCase(),
+  }));
+}
+
+async function populateClassSelect(){
+  const sel = document.querySelector('#selKlas');
+  if (!sel) return;
+
+  const all = (await loadClassesFromGoogle())
+    .filter(k => k.status === 'actief')
+    .sort((a,b) => a.naam.localeCompare(b.naam));
+
+  sel.innerHTML = '<option value="">— Kies een klas —</option>';
+  for (const k of all){
+    const opt = document.createElement('option');
+    const parts = [k.type, k.thema].filter(Boolean).join(' · ');
+    opt.value = k.id || k.naam;
+    opt.textContent = parts ? `${k.naam} (${parts})` : k.naam;
+    opt.dataset.type  = k.type;
+    opt.dataset.thema = k.thema;
+    opt.dataset.strip = String(k.strippen);
+    opt.dataset.weken = String(k.geldigheid_weken);
+    sel.appendChild(opt);
+  }
+  sel.disabled = all.length === 0;
+}
   function combineISO(d, hhmm) {
     // Date + "HH:MM" -> "YYYY-MM-DDTHH:MM:00"
     const [H = '00', M = '00'] = String(hhmm || '').split(':');
