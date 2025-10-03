@@ -45,7 +45,7 @@
       <a class="tile" href="../honden/"><span>🐶</span> Honden</a>
       <a class="tile" href="../strippenkaarten/"><span>🎫</span> Strippenkaarten</a>
 
-      <!-- 📅 Lessen (deze week) -->
+      <!-- 📅 Lessen (optionele teller; wordt door agenda.js beheerd als je dat zo hebt) -->
       <a class="tile badged" href="../lessen/">
         <span>📅</span>
         <div class="tile-body">
@@ -75,7 +75,7 @@
         <span class="badge-dot" id="reeksen-badge">0</span>
       </a>
 
-      <!-- 📢 Mededelingen -->
+      <!-- 📢 Mededelingen (optionele teller) -->
       <a class="tile badged" href="../mededeling/">
         <span>📢</span>
         <div class="tile-body">
@@ -136,167 +136,36 @@
   <script src="../js/layout.js?v=0.20.0" defer></script>
   <script src="../js/agenda.js?v=0.20.0" defer></script>
 
-  <!-- Badges voor agenda/tegels (lessen & mededelingen uit agenda + counts op tabs) -->
-  <script>
-  (function(){
-    const S = v => String(v ?? '').trim();
-
-    async function fetchJson(tryUrls){
-      for (const u of tryUrls){
-        try{
-          const url = u + (u.includes('?') ? '&' : '?') + 't=' + Date.now();
-          const r = await fetch(url, { cache:'no-store' });
-          if (r.ok) return r.json();
-        }catch(_){}
-      }
-      return null;
-    }
-
-    function loadLocalLessons(){
-      try{
-        const raw = localStorage.getItem('superhond-db');
-        const db  = raw ? JSON.parse(raw) : {};
-        const lessons = Array.isArray(db.lessons) ? db.lessons : [];
-        return lessons.map(l => ({
-          id: S(l.id),
-          title: S(l.title || l.name || 'Les'),
-          startISO: S(l.startISO || l.start),
-          endISO:   S(l.endISO   || l.end)
-        })).filter(x => x.startISO);
-      }catch{ return []; }
-    }
-
-    function normalizeAgenda(raw){
-      if (!raw) return { lessons:[], notices:[] };
-      const arr =
-        Array.isArray(raw)       ? raw :
-        Array.isArray(raw.items) ? raw.items :
-        Array.isArray(raw.data)  ? raw.data : null;
-      if (arr){
-        const lessons=[], notices=[];
-        for(const it of arr){
-          const t = S(it.type||it.kind).toLowerCase();
-          if (t === 'mededeling' || t === 'notice') notices.push(it);
-          else lessons.push(it);
-        }
-        return { lessons, notices };
-      }
-      return {
-        lessons: Array.isArray(raw.lessons) ? raw.lessons : [],
-        notices: Array.isArray(raw.notices) ? raw.notices : []
-      };
-    }
-
-    function normalizeLessons(list){
-      return (list||[]).map(x => ({
-        id: S(x.id||''),
-        title: S(x.title||x.name||'Les'),
-        startISO: S(x.startISO||x.start||x.startDate||x.begin||''),
-        endISO:   S(x.endISO  ||x.end  ||x.endDate  ||x.einde||'')
-      })).filter(x => x.startISO);
-    }
-
-    function mergeLessons(ext=[], loc=[]){
-      const key = x => S(x.id) || (S(x.startISO)+'|'+S(x.title));
-      const map = new Map();
-      for (const e of ext) map.set(key(e), e);
-      for (const l of loc) if (!map.has(key(l))) map.set(key(l), l);
-      return [...map.values()];
-    }
-
-    function isThisWeek(startISO){
-      if (!startISO) return false;
-      const s = new Date(String(startISO).replace(' ','T'));
-      if (isNaN(s)) return false;
-      const now = new Date();
-      const day = (now.getDay()+6)%7; // ma=0..zo=6
-      const ws = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      ws.setDate(ws.getDate()-day);
-      const we = new Date(ws); we.setDate(we.getDate()+7);
-      return s>=ws && s<we;
-    }
-
-    async function updateAgendaBadges(){
-      const extRaw = await fetchJson(['../api/agenda','/api/agenda','../data/agenda.json','/data/agenda.json']);
-      const ag = normalizeAgenda(extRaw);
-      const extLessons = normalizeLessons(ag.lessons);
-      const locLessons = loadLocalLessons();
-      const allLessons = mergeLessons(extLessons, locLessons);
-
-      const weekCount = allLessons.filter(x => isThisWeek(x.startISO)).length;
-      const allCount  = allLessons.length;
-      const noteCount = (ag.notices||[]).length;
-
-      // Tegel: lessen
-      const lwSub   = document.getElementById('lessen-week-sub');
-      const lwBadge = document.getElementById('lessen-week-badge');
-      if (lwSub)   lwSub.textContent   = `${weekCount} deze week`;
-      if (lwBadge) lwBadge.textContent = String(weekCount);
-      if (lwBadge){
-        if (weekCount===0){ lwBadge.style.background='#fee2e2'; lwBadge.style.color='#b91c1c'; }
-        else { lwBadge.style.background=''; lwBadge.style.color=''; }
-      }
-
-      // Tegel: mededelingen
-      const mSub   = document.getElementById('mededeling-sub');
-      const mBadge = document.getElementById('mededeling-badge');
-      if (mSub)   mSub.textContent   = `${noteCount} mededeling${noteCount===1?'':'en'}`;
-      if (mBadge) mBadge.textContent = String(noteCount);
-      if (mBadge){
-        if (noteCount===0){ mBadge.style.background='#fee2e2'; mBadge.style.color='#b91c1c'; }
-        else { mBadge.style.background=''; mBadge.style.color=''; }
-      }
-
-      // Tabs
-      const tdWeek = document.getElementById('tab-week-dot');
-      const tdAll  = document.getElementById('tab-all-dot');
-      const tdNot  = document.getElementById('tab-notes-dot');
-      if (tdWeek) tdWeek.textContent = String(weekCount);
-      if (tdAll)  tdAll.textContent  = String(allCount);
-      if (tdNot)  tdNot.textContent  = String(noteCount);
-    }
-
-    document.addEventListener('DOMContentLoaded', updateAgendaBadges);
-  })();
-  </script>
-
-  <!-- Badges voor KLASSEN & LESSENREEKSEN via store.js -->
+  <!-- Badges voor KLASSEN en REEKSEN (via store.js met status-normalisatie) -->
   <script type="module">
     import { ensureMigrated, getKlassen, getReeksen, isActiefStatus } from '../js/store.js';
 
+    function updateClassAndSeriesBadges(){
+      try{
+        ensureMigrated();
+
+        const klassens = (getKlassen() || []).filter(k => isActiefStatus(k.status)).length;
+        const reeksen  = (getReeksen() || []).filter(r => isActiefStatus(r.status)).length;
+
+        const kc = document.getElementById('klassen-badge');
+        const ks = document.getElementById('klassen-sub');
+        if (kc) kc.textContent = String(klassens);
+        if (ks) ks.textContent = `${klassens} actief`;
+
+        const rc = document.getElementById('reeksen-badge');
+        const rs = document.getElementById('reeksen-sub');
+        if (rc) rc.textContent = String(reeksen);
+        if (rs) rs.textContent = `${reeksen} actief`;
+      }catch(e){
+        console.error('Badges updaten mislukt:', e);
+      }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
-      ensureMigrated();
-
-      // KLASSEN
-      const classes = (getKlassen() || []).filter(k => isActiefStatus(k.status)).length;
-      const kc = document.getElementById('klassen-badge');
-      const ks = document.getElementById('klassen-sub');
-      if (kc) kc.textContent = String(classes);
-      if (ks) ks.textContent = `${classes} actief`;
-      if (kc){
-        kc.style.background = classes === 0 ? '#fee2e2' : '';
-        kc.style.color      = classes === 0 ? '#b91c1c' : '';
-      }
-
-      // LESSENREEKSEN
-      const series  = (getReeksen() || []).filter(r => isActiefStatus(r.status)).length;
-      const rc = document.getElementById('reeksen-badge');
-      const rs = document.getElementById('reeksen-sub');
-      if (rc) rc.textContent = String(series);
-      if (rs) rs.textContent = `${series} actief`;
-      if (rc){
-        rc.style.background = series === 0 ? '#fee2e2' : '';
-        rc.style.color      = series === 0 ? '#b91c1c' : '';
-      }
-    });
-  </script>
-
-  <!-- Topbar mount -->
-  <script>
-    window.addEventListener('DOMContentLoaded', () => {
       if (window.SuperhondUI?.mount) {
         SuperhondUI.mount({ title: 'Superhond', icon: '🐾', home: true });
       }
+      updateClassAndSeriesBadges();
     });
   </script>
 </body>
