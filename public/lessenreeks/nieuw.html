@@ -11,10 +11,18 @@
   <script type="module" src="./nieuw.js?v=0.20.0" defer></script>
 
   <style>
-    .hint { color:#6b7280; font-size:.9rem }
-    .grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)) }
-    .inline { display:flex; gap:8px; align-items:center; flex-wrap:wrap }
-    .readonly { background:#f9fafb }
+    .page-grid{
+      display:grid; gap:12px;
+      grid-template-columns: repeat(auto-fit,minmax(260px,1fr));
+      align-items:start;
+    }
+    fieldset{border:1px solid #e5e7eb;border-radius:8px;padding:12px}
+    legend{padding:0 6px}
+    .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+    .row{display:flex;gap:12px;flex-wrap:wrap}
+    .muted{color:#6b7280}
+    .error{color:#b91c1c}
+    .sticky-note{background:#fffbe6;border:1px solid #facc15;border-radius:8px;padding:10px}
   </style>
 </head>
 <body class="subpage">
@@ -23,97 +31,104 @@
 <main class="container">
   <h1 class="page-title">Nieuwe lessenreeks</h1>
 
-  <!-- ENKEL DIT ENE FORMULIER -->
   <form id="formReeks" class="card">
-    <div class="grid">
+    <div class="page-grid">
+      <!-- Kolom 1 -->
+      <div class="col">
+        <!-- Klas selecteren -->
+        <fieldset>
+          <legend>Klas</legend>
+          <div class="grid">
+            <label>Klas
+              <select class="select" id="selKlas">
+                <option value="">— Zoeken… —</option>
+              </select>
+            </label>
+            <label>Type
+              <input class="input" id="type" type="text" placeholder="(uit klas)" />
+            </label>
+            <label>Thema
+              <input class="input" id="thema" type="text" placeholder="(uit klas)" />
+            </label>
+            <label>Aantal strippen (klant)
+              <input class="input input-nr" id="strippen" type="number" min="0" value="0" />
+            </label>
+            <label>Geldigheidsduur (weken, klant)
+              <input class="input input-nr" id="geldigheid" type="number" min="0" value="0" />
+            </label>
+          </div>
+          <p class="muted" id="classesHint" style="margin:.5rem 0 0">Kies een klas om velden automatisch in te vullen.</p>
+          <p class="error" id="classesError" style="display:none;margin:.5rem 0 0"></p>
+        </fieldset>
 
-      <!-- 1) KLAS KIEZEN + AUTO-INVUL -->
-      <fieldset style="border:1px solid #eee;padding:10px;border-radius:8px;margin-bottom:12px">
-        <legend style="padding:0 6px">Klas selecteren</legend>
+        <!-- Team & locatie -->
+        <fieldset>
+          <legend>Team & locatie</legend>
+          <div class="grid">
+            <label>Trainers (voornaam, komma-gescheiden)
+              <input class="input" id="trainers" type="text" placeholder="Sofie, Paul" />
+            </label>
+            <label>Locatie-naam
+              <input class="input" id="locNaam" type="text" placeholder="Superhond Club" />
+            </label>
+            <label>Google Maps (URL)
+              <input class="input" id="locMaps" type="url" placeholder="https://maps.google.com/?q=..." />
+            </label>
+          </div>
+        </fieldset>
+      </div>
 
-        <div class="grid">
-          <label>Klas
-            <select class="select" id="selKlas">
-              <option value="">— Kies een klas —</option>
-            </select>
-          </label>
+      <!-- Kolom 2 -->
+      <div class="col">
+        <!-- Basis gegevens -->
+        <fieldset>
+          <legend>Basis</legend>
+          <div class="grid">
+            <label>Pakket-naam
+              <input class="input" id="pakNaam" type="text" placeholder="Puppy Voorjaar 2026" required />
+            </label>
+            <label>Reeks-naam
+              <input class="input" id="reeksNaam" type="text" placeholder="Zondag 09:00" required />
+            </label>
+            <label>Prijs (€)
+              <input class="input input-nr" id="prijs" type="number" min="0" step="1" value="0" />
+            </label>
+          </div>
+        </fieldset>
 
-          <label>Type
-            <input class="input" id="type" type="text" placeholder="(uit klas)" />
-          </label>
-
-          <label>Thema
-            <input class="input" id="thema" type="text" placeholder="(uit klas)" />
-          </label>
-
-          <label>Aantal strippen (klant)
-            <input class="input input-nr" id="strippen" type="number" min="0" value="0" />
-          </label>
-
-          <label>Geldigheidsduur (weken, klant)
-            <input class="input input-nr" id="geldigheid" type="number" min="0" value="0" />
-          </label>
-        </div>
-
-        <p class="hint" style="margin:.5rem 0 0">
-          Kies een klas om velden automatisch in te vullen. <em>Strippen</em> en <em>Geldigheid</em> komen standaard uit de klas maar kun je hier nog aanpassen.
-        </p>
-      </fieldset>
-
-      <!-- 2) BASIS REEKS -->
-      <label>Pakket-naam
-        <input class="input" id="pakNaam" type="text" placeholder="Puppy Voorjaar 2026" required />
-      </label>
-
-      <label>Reeks-naam
-        <input class="input" id="reeksNaam" type="text" placeholder="Maandag 18u" required />
-      </label>
-
-      <label>Prijs (€)
-        <input class="input input-nr" id="prijs" type="number" min="0" step="1" placeholder="0" />
-      </label>
-
-      <!-- 3) TIJD -->
-      <label>Start-datum
-        <input class="input" id="startDatum" type="date" required />
-      </label>
-
-      <label>Starttijd
-        <input class="input" id="startTijd" type="time" value="18:00" required />
-      </label>
-
-      <label>Aantal lessen
-        <input class="input input-nr" id="aantal" type="number" min="1" value="5" required />
-      </label>
-
-      <label>Duur (min.)
-        <input class="input input-nr" id="duur" type="number" min="5" step="5" value="60" required />
-      </label>
-
-      <label>Interval (dagen)
-        <select class="select" id="interval">
-          <option value="7">Wekelijks (7)</option>
-          <option value="14">Tweewekelijks (14)</option>
-          <option value="1">Dagelijks (1)</option>
-          <option value="0">Geen (handmatig)</option>
-        </select>
-      </label>
-
-      <!-- 4) TEAM & LOCATIE -->
-      <label>Trainers (voornaam, komma-gescheiden)
-        <input class="input" id="trainers" type="text" placeholder="Sofie, Paul" />
-      </label>
-
-      <label>Locatie-naam
-        <input class="input" id="locNaam" type="text" placeholder="Superhond Club" />
-      </label>
-
-      <label>Google Maps (URL)
-        <input class="input" id="locMaps" type="url" placeholder="https://maps.google.com/?q=..." />
-      </label>
+        <!-- Tijd & herhaling -->
+        <fieldset>
+          <legend>Tijd & herhaling</legend>
+          <div class="grid">
+            <label>Start-datum
+              <input class="input" id="startDatum" type="date" required />
+            </label>
+            <label>Starttijd
+              <input class="input" id="startTijd" type="time" value="09:00" required />
+            </label>
+            <label>Duur (min.)
+              <input class="input input-nr" id="duur" type="number" min="5" step="5" value="60" required />
+            </label>
+            <label>Aantal lessen
+              <input class="input input-nr" id="aantal" type="number" min="1" value="5" required />
+            </label>
+            <label>Interval (dagen)
+              <select class="select" id="interval">
+                <option value="7">Wekelijks (7)</option>
+                <option value="14">Tweewekelijks (14)</option>
+                <option value="1">Dagelijks (1)</option>
+                <option value="0">Geen (handmatig)</option>
+              </select>
+            </label>
+          </div>
+          <div class="sticky-note" id="timeNote" style="margin-top:8px">
+            Eindtijd wordt automatisch berekend op basis van starttijd + duur.
+          </div>
+        </fieldset>
+      </div>
     </div>
 
-    <div style="margin-top:12px" class="inline">
+    <div class="row" style="margin-top:12px">
       <button class="btn" type="button" id="btnPreview">Preview</button>
       <button class="btn" type="submit">Genereer & Opslaan</button>
       <a class="btn" href="./">Annuleren</a>
