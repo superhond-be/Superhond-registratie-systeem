@@ -7,6 +7,15 @@
 
   <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+  <script src="../js/layout.js?v=0.20.0" defer></script>
+  <script type="module" src="./nieuw.js?v=0.20.0" defer></script>
+
+  <style>
+    .hint { color:#6b7280; font-size:.9rem }
+    .grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)) }
+    .inline { display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+    .readonly { background:#f9fafb }
+  </style>
 </head>
 <body class="subpage">
 <header id="topbar" class="topbar"></header>
@@ -15,7 +24,24 @@
   <h1 class="page-title">Nieuwe lessenreeks</h1>
 
   <form id="formReeks" class="card">
-    <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+    <div class="grid">
+      <!-- 1) KLAS KIEZEN -->
+      <label>Klas (bron)
+        <select id="selKlas" class="select">
+          <option value="">— Kies een klas —</option>
+        </select>
+      </label>
+      <div>
+        <span class="hint">Info uit gekozen klas (alleen ter info):</span>
+        <div class="inline">
+          <span class="badge">Strippen: <strong id="infoStrippen">—</strong></span>
+          <span class="badge">Geldigheid: <strong id="infoGeldigheid">—</strong></span>
+          <span class="badge">Type: <strong id="infoType">—</strong></span>
+          <span class="badge">Thema: <strong id="infoThema">—</strong></span>
+        </div>
+      </div>
+
+      <!-- 2) BASIS REEKS -->
       <label>Pakket-naam
         <input class="input" id="pakNaam" type="text" placeholder="Puppy Voorjaar 2026" required />
       </label>
@@ -29,25 +55,31 @@
         <input class="input input-nr" id="prijs" type="number" min="0" step="1" placeholder="0" />
       </label>
 
+      <!-- 3) TIJD -->
       <label>Start-datum
         <input class="input" id="startDatum" type="date" required />
       </label>
       <label>Starttijd
-        <input class="input" id="startTijd" type="time" value="09:00" required />
+        <input class="input" id="startTijd" type="time" value="18:00" required />
       </label>
-      <label>Eind-datum
-        <input class="input" id="endDatum" type="date" required />
-      </label>
-
-      <label>Interval (dagen)
-        <input class="input input-nr" id="interval" type="number" min="1" step="1" value="7" required />
+      <label>Aantal lessen
+        <input class="input input-nr" id="aantal" type="number" min="1" value="5" required />
       </label>
       <label>Duur (min.)
         <input class="input input-nr" id="duur" type="number" min="5" step="5" value="60" required />
       </label>
+      <label>Interval (dagen)
+        <select class="select" id="interval">
+          <option value="7">Wekelijks (7)</option>
+          <option value="14">Tweewekelijks (14)</option>
+          <option value="1">Dagelijks (1)</option>
+          <option value="0">Geen (handmatig)</option>
+        </select>
+      </label>
 
-      <label>Trainers (voornamen, komma-gescheiden)
-        <input class="input" id="trainers" type="text" placeholder="Paul, Sophie" />
+      <!-- 4) TEAM & LOCATIE -->
+      <label>Trainers (voornaam, komma-gescheiden)
+        <input class="input" id="trainers" type="text" placeholder="Sofie, Paul" />
       </label>
       <label>Locatie-naam
         <input class="input" id="locNaam" type="text" placeholder="Superhond Club" />
@@ -57,7 +89,7 @@
       </label>
     </div>
 
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+    <div style="margin-top:12px" class="inline">
       <button class="btn" type="button" id="btnPreview">Preview</button>
       <button class="btn" type="submit">Genereer & Opslaan</button>
       <a class="btn" href="./">Annuleren</a>
@@ -71,8 +103,5 @@
 </main>
 
 <footer id="footer" class="footer"></footer>
-
-<script src="../js/layout.js?v=0.20.0" defer></script>
-<script type="module" src="./nieuw.js?v=0.20.0" defer></script>
 </body>
 </html>
