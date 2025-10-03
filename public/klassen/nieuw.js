@@ -10,7 +10,15 @@
       SuperhondUI.mount({ title: 'Nieuwe klas', icon: '📦', back: './' });
     }
   });
+import { getKlassen, setKlassen, ensureMigrated } from '../js/store.js';
 
+document.addEventListener('DOMContentLoaded', ensureMigrated);
+
+// ...bij opslaan:
+const items = getKlassen();
+const i = items.findIndex(x => String(x.id) === String(klas.id));
+if (i >= 0) items[i] = klas; else items.push(klas);
+setKlassen(items);   // <-- alleen deze bucket
   // ---- DB helpers ----
   function loadDB() {
     try {
