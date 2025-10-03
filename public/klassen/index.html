@@ -42,6 +42,49 @@
   </div>
 </main>
 
+  <script>
+(async () => {
+  const url = window.SUPERHOND_DATA?.CLASSES_URL;
+  if (!url) return;
+
+  const tbody = document.querySelector('#klassen-tabel tbody'); // pas selector aan
+  if (!tbody) return;
+
+  try {
+    const r = await fetch(url, { cache: 'no-store' });
+    const j = await r.json();
+    const rows = (j.klassen || []).map(k => {
+      const naam   = k.Naam ?? k.naam ?? '';
+      const type   = k.Type ?? k.type ?? '';
+      const thema  = k.Thema ?? k.thema ?? '';
+      const strips = k.Strippen ?? k.strippen ?? '';
+      const geld   = k['Geldigheid (weken)'] ?? k.geldigheid_weken ?? k.geldigheid ?? '';
+      const status = (k.Status ?? k.status ?? '').toString().toLowerCase();
+
+      const pill = status === 'actief'
+        ? '<span class="badge success">actief</span>'
+        : '<span class="badge danger">inactief</span>';
+
+      return `
+        <tr>
+          <td><a href="./detail.html?id=${encodeURIComponent(k.id ?? naam)}">${naam}</a></td>
+          <td>${type}</td>
+          <td>${thema}</td>
+          <td>${strips}</td>
+          <td>${geld} w</td>
+          <td>${pill}</td>
+          <td class="actions">…</td>
+        </tr>`;
+    }).join('');
+
+    tbody.innerHTML = rows || '<tr><td colspan="7" class="muted">Geen klassen</td></tr>';
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="7" class="error">Kon klassen niet laden</td></tr>';
+    console.error(e);
+  }
+})();
+</script>
+
 <footer id="footer" class="footer"></footer>
 </body>
 </html>
