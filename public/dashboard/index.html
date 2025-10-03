@@ -4,7 +4,23 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Superhond — Dashboard</title>
+import { ensureMigrated, getKlassen, getReeksen, isActiefStatus } from '../js/store.js';
 
+document.addEventListener('DOMContentLoaded', () => {
+  ensureMigrated();
+  const classes = getKlassen().filter(k => isActiefStatus(k.status)).length;
+  const series  = getReeksen().filter(r => isActiefStatus(r.status)).length;
+
+  const kc = document.getElementById('klassen-badge');
+  const ks = document.getElementById('klassen-sub');
+  if (kc) kc.textContent = classes;
+  if (ks) ks.textContent = `${classes} actief`;
+
+  const rc = document.getElementById('reeksen-badge');
+  const rs = document.getElementById('reeksen-sub');
+  if (rc) rc.textContent = series;
+  if (rs) rs.textContent = `${series} actief`;
+});
   <!-- Centrale UI (RELATIEF) -->
   <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
