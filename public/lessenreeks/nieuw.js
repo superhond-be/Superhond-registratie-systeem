@@ -1,213 +1,262 @@
-// /public/lessenreeks/nieuw.js
-// Reeks = oneindige recurrence. We bewaren enkel recurrence in db.series.
-// Voor agenda/materialisatie genereren we lessen in een venster:
-// - Als eindDatum is ingevuld: t/m eindDatum (inclusief).
-// - Anders: komende 'horizon' weken (default 12).
+// Nieuwe Lessenreeks – kies eerst een Klas, dan prefills + generator
 (() => {
   const $ = s => document.querySelector(s);
   const S = v => String(v ?? '').trim();
 
-  const form = $('#formReeks');
-  const el = {
-    pakNaam:    $('#pakNaam'),
-    reeksNaam:  $('#reeksNaam'),
-    thema:      $('#thema'),
-    prijs:      $('#prijs'),
-    startDatum: $('#startDatum'),
-    startTijd:  $('#startTijd'),
-    endDatum:   $('#endDatum'),
-    interval:   $('#interval'),
-    duur:       $('#duur'),
-    horizon:    $('#horizon'),
-    trainers:   $('#trainers'),
-    locNaam:    $('#locNaam'),
-    locMaps:    $('#locMaps'),
-    previewBtn: $('#btnPreview'),
-    previewWrap:$('#previewWrap'),
-    previewList:$('#previewList'),
-  };
+  // UI refs
+  const selKlas      = $('#selKlas');
+  const infoStrippen = $('#infoStrippen');
+  const infoGeldigheid = $('#infoGeldigheid');
+  const infoType     = $('#infoType');
+  const infoThema    = $('#infoThema');
 
+  const pakNaam   = $('#pakNaam');
+  const reeksNaam = $('#reeksNaam');
+  const thema     = $('#thema');
+  const prijs     = $('#prijs');
+
+  const startDatum= $('#startDatum');
+  const startTijd = $('#startTijd');
+  const aantal    = $('#aantal');
+  const duur      = $('#duur');
+  const interval  = $('#interval');
+
+  const trainers  = $('#trainers');
+  const locNaam   = $('#locNaam');
+  const locMaps   = $('#locMaps');
+
+  const btnPreview= $('#btnPreview');
+  const previewWrap = $('#previewWrap');
+  const previewList = $('#previewList');
+
+  // Mount topbar
   document.addEventListener('DOMContentLoaded', () => {
     if (window.SuperhondUI?.mount) {
-      SuperhondUI.mount({ title: 'Nieuwe lessenreeks', icon:'📦', back:'../lessenreeks/' });
+      SuperhondUI.mount({ title: 'Nieuwe lessenreeks', icon: '📦', back: './' });
     }
   });
 
-  // ---- Helpers ----
-  const pad2 = n => String(n).padStart(2, '0');
-  const dayNames2 = ['zo','ma','di','wo','do','vr','za'];
+  /* ---------------- helpers ---------------- */
+  const bust = () => '?t=' + Date.now();
 
-  const toISO = (dateYYYYMMDD, timeHHmm) => `${dateYYYYMMDD}T${timeHHmm}`;
-  function addMinutes(iso, minutes){
-    const d = new Date(iso);
-    d.setMinutes(d.getMinutes() + Number(minutes || 0));
-    return d.toISOString().slice(0,16);
+  async function fetchJson(tryUrls){
+    for (const u of tryUrls) {
+      try {
+        const url = u + (u.includes('?')?'&':'?') + 't=' + Date.now();
+        const r = await fetch(url, { cache:'no-store' });
+        if (r.ok) return r.json();
+      } catch(_) {}
+    }
+    return null;
   }
-  function addDays(dateYYYYMMDD, days){
-    const d = new Date(dateYYYYMMDD + 'T00:00');
-    d.setDate(d.getDate() + Number(days || 0));
-    return d.toISOString().slice(0,10);
-  }
-  function cmpDate(a, b){ return a < b ? -1 : a > b ? 1 : 0; }
-  function day2letters(dateYYYYMMDD){
-    const d = new Date(dateYYYYMMDD + 'T00:00');
-    return dayNames2[d.getDay()];
-  }
-  function fmtRange(startISO, endISO){
-    const s = new Date(startISO), e = new Date(endISO);
-    const day = dayNames2[s.getDay()];
-    const date = `${pad2(s.getDate())}/${pad2(s.getMonth()+1)}/${s.getFullYear()}`;
-    const t1 = `${pad2(s.getHours())}:${pad2(s.getMinutes())}`;
-    const t2 = `${pad2(e.getHours())}:${pad2(e.getMinutes())}`;
-    return `${day} ${date} ${t1} — ${t2}`;
-  }
-  function firstNameOnly(name=''){
-    const cleaned = S(name).replace(/\s+/g,' ').trim();
-    return cleaned ? cleaned.split(' ')[0] : '';
-  }
-  const parseTrainers = v => S(v).split(',').map(s=>firstNameOnly(s)).filter(Boolean);
 
-  // ---- DB ----
   function loadDB(){
     try{
       const raw = localStorage.getItem('superhond-db');
       const db  = raw ? JSON.parse(raw) : {};
+      db.classes = Array.isArray(db.classes) ? db.classes : [];
       db.series  = Array.isArray(db.series)  ? db.series  : [];
       db.lessons = Array.isArray(db.lessons) ? db.lessons : [];
       return db;
     }catch{
-      return { series:[], lessons:[] };
+      return { classes:[], series:[], lessons:[] };
     }
   }
   function saveDB(db){ localStorage.setItem('superhond-db', JSON.stringify(db)); }
 
-  // ---- Materialisatie helpers ----
-  function* dateIterator(startDate, endDateExclusive, stepDays){
-    let d = startDate;
-    while (cmpDate(d, endDateExclusive) < 0) {
-      yield d;
-      d = addDays(d, stepDays);
-    }
+  // ---- Klassen normaliseren en samenvoegen (extern + local) ----
+  function normalizeClasses(raw){
+    const arr =
+      Array.isArray(raw) ? raw :
+      Array.isArray(raw?.klassen) ? raw.klassen :
+      Array.isArray(raw?.classes) ? raw.classes :
+      Array.isArray(raw?.items)   ? raw.items :
+      Array.isArray(raw?.data)    ? raw.data : [];
+    return arr.map(k => ({
+      id: k.id ?? k.classId ?? null,
+      naam: S(k.naam || k.name || ''),
+      type: S(k.type || ''),
+      thema: S(k.thema || k.theme || ''),
+      strippen: Number(k.strippen ?? k.aantal_strips ?? 0) || 0,
+      geldigheid_weken: Number(k.geldigheid ?? k.geldigheid_weken ?? 0) || 0,
+      status: S(k.status || 'actief')
+    })).filter(k => k.id);
   }
-  function generateWindow({ startDate, startTime, durationMin, intervalDays }, windowStart, windowEndExclusive, title, trainers, location){
-    const lessons = [];
-    // Startpunt alignen op de reeks-start (als windowStart vóór startDate ligt, start vanaf startDate)
-    const first = cmpDate(windowStart, startDate) < 0 ? startDate : windowStart;
+  function mergeById(primary=[], secondary=[]){
+    const map = new Map(secondary.map(x => [String(x.id), x])); // local eerst
+    for (const p of primary) map.set(String(p.id), p);          // extern overschrijft
+    return [...map.values()];
+  }
 
-    // Vind de eerste datum in het interval-grid >= first
-    const diffDays = Math.round((new Date(first) - new Date(startDate)) / 86400000);
-    const offset   = ((diffDays % intervalDays) + intervalDays) % intervalDays;
-    let firstAligned = first;
-    if (offset !== 0) firstAligned = addDays(first, intervalDays - offset);
+  // ---- Generator helpers ----
+  function addMinutesToTime(hhmm, add){
+    const [h,m] = String(hhmm||'0:0').split(':').map(Number);
+    const t = h*60 + m + Number(add||0);
+    const hh = Math.floor(((t%1440)+1440)%1440/60);
+    const mm = ((t%60)+60)%60;
+    const pad=n=>String(n).padStart(2,'0');
+    return `${pad(hh)}:${pad(mm)}`;
+  }
+  function isoFromDateTime(dateStr, timeStr){
+    if (!dateStr || !timeStr) return '';
+    return `${dateStr}T${timeStr}`;
+  }
 
-    for (const d of dateIterator(firstAligned, windowEndExclusive, intervalDays)){
-      const startISO = toISO(d, startTime);
-      const endISO   = addMinutes(startISO, durationMin);
-      lessons.push({
-        id: `les-${d}-${startTime}-${Math.random().toString(36).slice(2,8)}`,
-        title,
-        startISO,
-        endISO,
-        location: location?.name ? { name: location.name, mapsUrl: location.mapsUrl || null } : null,
-        trainers: Array.isArray(trainers) ? trainers.slice() : []
+  function generateLessons({startDate, startTime, count, minutes, stepDays, title, location, mapsUrl, trainerList, seriesId}){
+    const out = [];
+    let d = new Date(startDate + 'T00:00');
+    for (let i=0;i<count;i++){
+      if (i>0 && stepDays>0) d.setDate(d.getDate()+stepDays);
+      const dateISO = d.toISOString().slice(0,10);
+      const startISO = isoFromDateTime(dateISO, startTime);
+      const endTime  = addMinutesToTime(startTime, minutes);
+      const endISO   = isoFromDateTime(dateISO, endTime);
+      out.push({
+        id: `${seriesId || 'tmp'}-les-${i+1}-${dateISO}-${startTime}`,
+        seriesId: seriesId || null,
+        title: title,
+        startISO, endISO,
+        location: { name: location || '', mapsUrl: mapsUrl || '' },
+        trainers: trainerList || []
       });
     }
-    return lessons;
+    return out;
   }
 
-  function collectConfig(forSave){
-    const meta = {
-      packageName: S(el.pakNaam.value),
-      seriesName:  S(el.reeksNaam.value),
-      thema:       S(el.thema.value),
-      price:       Number(el.prijs.value || 0)
-    };
-    const recurrence = {
-      startDate:   S(el.startDatum.value),
-      startTime:   S(el.startTijd.value || '09:00'),
-      intervalDays:Math.max(1, Number(el.interval.value || 7)),
-      durationMin: Math.max(5, Number(el.duur.value || 60))
-    };
-    const endDateOpt = S(el.endDatum.value); // optioneel
-    const horizonWk  = Math.max(1, Number(el.horizon?.value || 12));
-
-    if (!meta.packageName || !meta.seriesName || !recurrence.startDate) {
-      alert('Gelieve pakket-naam, reeks-naam en startdatum in te vullen.');
-      return null;
+  function renderPreview(lessons){
+    if (!lessons.length){
+      previewList.innerHTML = '';
+      previewWrap.open = true;
+      previewList.innerHTML = `<li class="muted">Niets te tonen.</li>`;
+      return;
     }
-
-    const trainers = parseTrainers(el.trainers.value);
-    const location = S(el.locNaam.value)
-      ? { name: S(el.locNaam.value), mapsUrl: S(el.locMaps.value) || null }
-      : null;
-
-    const title = `${meta.packageName}${meta.seriesName ? ' — ' + meta.seriesName : ''}`;
-
-    return { meta, recurrence, endDateOpt, horizonWk, trainers, location, title, forSave };
+    const items = lessons.map((l,i) => {
+      const d = new Date(l.startISO);
+      const pad = n=>String(n).padStart(2,'0');
+      const dd = `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+      const t1 = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      const e  = new Date(l.endISO);
+      const t2 = `${pad(e.getHours())}:${pad(e.getMinutes())}`;
+      return `<li>${i+1}. ${dd} ${t1} — ${t2} — ${S(l.title)}</li>`;
+    }).join('');
+    previewList.innerHTML = items;
+    previewWrap.open = true;
   }
 
-  function renderPreview(cfg){
-    // Preview: als eind-datum is opgegeven, toon t/m die datum; anders t/m (start + horizon weken)
-    const windowStart = cfg.recurrence.startDate;
-    const windowEndExclusive = cfg.endDateOpt
-      ? addDays(cfg.endDateOpt, 1)
-      : addDays(cfg.recurrence.startDate, cfg.horizonWk * 7);
+  /* ---------------- klas → prefills ---------------- */
+  let KLASSEN = [];
+  function fillKlasInfo(klass){
+    infoStrippen.textContent   = klass ? String(klass.strippen) : '—';
+    infoGeldigheid.textContent = klass ? `${klass.geldigheid_weken} weken` : '—';
+    infoType.textContent       = klass ? (klass.type || '—') : '—';
+    infoThema.textContent      = klass ? (klass.thema || '—') : '—';
 
-    const items = generateWindow(cfg.recurrence, windowStart, windowEndExclusive, cfg.title, cfg.trainers, cfg.location)
-      .map(l => `${fmtRange(l.startISO, l.endISO)} — ${cfg.title}`);
-
-    el.previewList.innerHTML = items.map(li => `<li>${li}</li>`).join('');
-    el.previewWrap.open = true;
+    // Prefills voor formulier
+    if (klass){
+      if (!pakNaam.value)   pakNaam.value   = klass.naam || '';
+      if (!thema.value)     thema.value     = klass.thema || '';
+      // Reeks-naam laten de gebruiker kiezen (bv. "Maandag 18u")
+    }
   }
 
-  function saveSeriesAndMaterialize(cfg){
+  selKlas?.addEventListener('change', () => {
+    const id = selKlas.value;
+    const k = KLASSEN.find(x => String(x.id) === String(id)) || null;
+    fillKlasInfo(k);
+  });
+
+  /* ---------------- INIT ---------------- */
+  async function init(){
+    // Load klassen: extern + local
+    const [extRaw, db] = await Promise.all([
+      fetchJson(['../data/klassen.json','/data/klassen.json']),
+      Promise.resolve(loadDB())
+    ]);
+
+    const ext = normalizeClasses(extRaw);
+    const loc = normalizeClasses({ classes: db.classes });
+    KLASSEN = mergeById(ext, loc).filter(k => k.status !== 'inactief');
+
+    // Vul select
+    for (const k of KLASSEN.sort((a,b)=>S(a.naam).localeCompare(S(b.naam)))){
+      const opt = document.createElement('option');
+      opt.value = k.id;
+      opt.textContent = `${k.naam} — ${k.type || k.thema || ''}`.replace(/\s—\s$/, '');
+      selKlas.appendChild(opt);
+    }
+  }
+
+  /* ---------------- PREVIEW ---------------- */
+  btnPreview?.addEventListener('click', () => {
+    const title = `${S(pakNaam.value)} — ${S(reeksNaam.value)}`.replace(/\s—\s$/,'');
+    const lessons = generateLessons({
+      startDate: S(startDatum.value),
+      startTime: S(startTijd.value),
+      count: Number(aantal.value||0),
+      minutes: Number(duur.value||0),
+      stepDays: Number(interval.value||7),
+      title,
+      location: S(locNaam.value),
+      mapsUrl: S(locMaps.value),
+      trainerList: S(trainers.value).split(',').map(s=>S(s)).filter(Boolean),
+      seriesId: null
+    });
+    renderPreview(lessons);
+  });
+
+  /* ---------------- SUBMIT: opslaan ---------------- */
+  document.getElementById('formReeks')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+
     const db = loadDB();
 
-    // 1) Reeks opslaan (oneindig, dus enkel recurrence)
-    const id = `reeks-${cfg.meta.packageName.toLowerCase().replace(/\s+/g,'-')}-${cfg.meta.seriesName.toLowerCase().replace(/\s+/g,'-')}-${Math.random().toString(36).slice(2,6)}`;
-    db.series.push({
+    // Bewaar reeks
+    const id = 'reeks-' + Math.random().toString(36).slice(2,8);
+    const rec = {
       id,
-      packageName: cfg.meta.packageName,
-      seriesName:  cfg.meta.seriesName,
-      thema:       cfg.meta.thema,
-      price:       cfg.meta.price,
-      recurrence:  { ...cfg.recurrence }, // startDate,startTime,intervalDays,durationMin
-      status:      'actief'
+      packageName: S(pakNaam.value),
+      seriesName:  S(reeksNaam.value),
+      thema:       S(thema.value),
+      prijs_excl:  Number(prijs.value||0) || 0,
+      status:      'actief',
+      // info uit klas (alleen referentie; klantregels zelf blijven bij de Klas)
+      classRef: selKlas.value || null,
+      classInfo: (() => {
+        const k = KLASSEN.find(x => String(x.id) === String(selKlas.value));
+        return k ? { id:k.id, naam:k.naam, strippen:k.strippen, geldigheid_weken:k.geldigheid_weken, type:k.type, thema:k.thema } : null;
+      })(),
+      recurrence: {
+        startTime: S(startTijd.value),
+        durationMin: Number(duur.value||0) || 0,
+        intervalDays: Number(interval.value||7) || 7
+      },
+      startISO: S(startDatum.value) ? S(startDatum.value)+'T00:00' : null,
+      locatie: { name:S(locNaam.value), mapsUrl:S(locMaps.value) },
+      trainers: S(trainers.value).split(',').map(S).filter(Boolean)
+    };
+
+    db.series.push(rec);
+
+    // Genereer & bewaar lessen
+    const title = `${S(pakNaam.value)} — ${S(reeksNaam.value)}`.replace(/\s—\s$/,'');
+    const gen = generateLessons({
+      startDate: S(startDatum.value),
+      startTime: S(startTijd.value),
+      count: Number(aantal.value||0),
+      minutes: Number(duur.value||0),
+      stepDays: Number(interval.value||7),
+      title,
+      location: S(locNaam.value),
+      mapsUrl: S(locMaps.value),
+      trainerList: S(trainers.value).split(',').map(s=>S(s)).filter(Boolean),
+      seriesId: id
     });
-
-    // 2) Eerste venster materialiseren in db.lessons
-    const windowStart = cfg.recurrence.startDate;
-    const windowEndExclusive = cfg.endDateOpt
-      ? addDays(cfg.endDateOpt, 1)
-      : addDays(cfg.recurrence.startDate, cfg.horizonWk * 7);
-
-    const lessons = generateWindow(cfg.recurrence, windowStart, windowEndExclusive, cfg.title, cfg.trainers, cfg.location)
-      .map(l => ({ ...l, seriesId: id }));
-
-    db.lessons.push(...lessons);
+    db.lessons.push(...gen);
 
     saveDB(db);
-
-    renderPreview(cfg); // optioneel laten openklappen
-
-    alert(`Lessenreeks opgeslagen.\n${lessons.length} lessen gematerialiseerd voor het startvenster.\nDe reeks zelf blijft oneindig (recurrence).`);
+    alert('Lessenreeks en lessen opgeslagen.');
     location.href = './';
-  }
-
-  // ---- Events ----
-  document.addEventListener('DOMContentLoaded', () => {
-    el.previewBtn?.addEventListener('click', (e) => {
-      e.preventDefault();
-      const cfg = collectConfig(false);
-      if (!cfg) return;
-      renderPreview(cfg);
-    });
-
-    form?.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const cfg = collectConfig(true);
-      if (!cfg) return;
-      saveSeriesAndMaterialize(cfg);
-    });
   });
+
+  document.addEventListener('DOMContentLoaded', init);
 })();
