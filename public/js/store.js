@@ -17,7 +17,7 @@ function writeBucket(key, arr) {
   try {
     localStorage.setItem(key, JSON.stringify(Array.isArray(arr) ? arr : []));
   } catch {
-    // stil falen: bij storage-quota e.d.
+    // stil falen (quota, private mode, ...)
   }
 }
 
@@ -27,36 +27,37 @@ function S(v) {
 
 /** Normaliseer status naar exact 'actief' of 'inactief'. */
 function normalizeStatus(s) {
-  const v = S(s).toLowerCase();
+  // booleans/nummers eerst
+  if (s === true || s === 1)  return 'actief';
+  if (s === false || s === 0) return 'inactief';
 
-  // Actief varianten
+  const v = S(s).toLowerCase().replace(/\s+/g, ' ').trim();
+
   const ACTIVE_SET = new Set([
     'actief', 'active', 'enabled', 'aan', 'on', 'true', 'waar', 'yes', 'y', '1'
   ]);
 
-  // Inactief varianten
   const INACTIVE_SET = new Set([
     'inactief', 'inactive', 'disabled', 'uit', 'off', 'false', 'niet actief',
     'nee', 'n', '0'
   ]);
 
-  if (ACTIVE_SET.has(v)) return 'actief';
+  if (ACTIVE_SET.has(v))   return 'actief';
   if (INACTIVE_SET.has(v)) return 'inactief';
 
-  // Fallback: als leeg/onbekend -> 'actief' (conservatief, zoals eerder gedrag)
-  return v ? 'actief' : 'actief';
+  // Fallback: onbekend/lege waarden tellen als actief (behoud bestaand gedrag)
+  return 'actief';
 }
 
-/** Pas minimale normalisatie toe op records (trim + status-normalisatie). */
+/** Pas minimale normalisatie toe op records (trim + status). */
 function normalizeArray(arr) {
   return (Array.isArray(arr) ? arr : []).map(item => {
     if (!item || typeof item !== 'object') return item;
     const out = { ...item };
     if ('status' in out) out.status = normalizeStatus(out.status);
-    // Kleine trims voor veelvoorkomende velden
-    if ('id' in out) out.id = S(out.id);
-    if ('naam' in out) out.naam = S(out.naam);
-    if ('name' in out) out.name = S(out.name);
+    if ('id' in out)      out.id    = S(out.id);
+    if ('naam' in out)    out.naam  = S(out.naam);
+    if ('name' in out)    out.name  = S(out.name);
     return out;
   });
 }
@@ -87,23 +88,25 @@ export function ensureMigrated() {
 
     const db = JSON.parse(raw) || {};
 
-    // Let op: alleen migreren als de nieuwe buckets nog leeg zijn
-    if (Array.isArray(db.classes) && !localStorage.getItem('superhond-classes')) {
-      writeBucket('superhond-classes', db.classes);
-    }
-    // fallback key 'klassen'
-    if (Array.isArray(db.klassen) && !localStorage.getItem('superhond-classes')) {
-      writeBucket('superhond-classes', db.klassen);
+    // Migreer KLASSEN: merge db.classes + db.klassen als target nog leeg is
+    if (!localStorage.getItem('superhond-classes')) {
+      const legacyClasses = []
+        .concat(Array.isArray(db.classes) ? db.classes : [])
+        .concat(Array.isArray(db.klassen) ? db.klassen : []);
+      if (legacyClasses.length) writeBucket('superhond-classes', legacyClasses);
     }
 
+    // Migreer REEKSEN
     if (Array.isArray(db.series) && !localStorage.getItem('superhond-series')) {
       writeBucket('superhond-series', db.series);
     }
+
+    // Migreer LESSEN
     if (Array.isArray(db.lessons) && !localStorage.getItem('superhond-lessons')) {
       writeBucket('superhond-lessons', db.lessons);
     }
 
-    // Optioneel: opruimen van legacy blob om duplicatie te vermijden:
+    // Optioneel: opruimen van legacy blob
     // localStorage.removeItem('superhond-db');
   } catch {
     // negeer migratiefouten
