@@ -169,5 +169,52 @@
       updateBadges();
     });
   </script>
+<script type="module">
+  import { fetchSheet, normStatus } from '../js/sheets.js';
+  import { ensureMigrated, getKlassen, getReeksen, isActiefStatus } from '../js/store.js';
+
+  async function updateBadges() {
+    // 1) Probeer Google Sheets
+    try {
+      const [klassen, reeksen] = await Promise.all([
+        fetchSheet('Klassen'),
+        fetchSheet('Reeksen'),
+      ]);
+      const actKl = klassen.filter(k => normStatus(k.status) === 'actief').length;
+      const actRs = reeksen.filter(r => normStatus(r.status) === 'actief').length;
+      setBadges(actKl, actRs);
+      return;
+    } catch (_) { /* ga naar fallback */ }
+
+    // 2) Fallback: lokale buckets
+    try {
+      ensureMigrated();
+      const actKl = (getKlassen() || []).filter(k => isActiefStatus(k.status)).length;
+      const actRs = (getReeksen() || []).filter(r => isActiefStatus(r.status)).length;
+      setBadges(actKl, actRs);
+    } catch (e) {
+      console.error('Badges updaten mislukt:', e);
+    }
+  }
+
+  function setBadges(klCount, rsCount){
+    const kc = document.getElementById('klassen-badge');
+    const ks = document.getElementById('klassen-sub');
+    const rc = document.getElementById('reeksen-badge');
+    const rs = document.getElementById('reeksen-sub');
+    if (kc) kc.textContent = String(klCount);
+    if (ks) ks.textContent = `${klCount} actief`;
+    if (rc) rc.textContent = String(rsCount);
+    if (rs) rs.textContent = `${rsCount} actief`;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.SuperhondUI?.mount) {
+      SuperhondUI.mount({ title: 'Superhond', icon: '🐾', home: true });
+    }
+    updateBadges();
+  });
+</script>
+  
 </body>
 </html>
