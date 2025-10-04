@@ -1,19 +1,19 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Honden</title>
+  <title>Honden – Superhond</title>
 
-  <!-- Centrale UI (standaard mappen) -->
-  <link rel="stylesheet" href="/css/style.css?v=0.19.3" />
-  <link rel="stylesheet" href="/css/superhond.css?v=0.19.3" />
+  <!-- Centrale UI (relatief tov /honden/) -->
+  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
 
-  <!-- Layout (topbar/footer + versie/buildtijd) -->
-  <script src="/js/layout.js?v=0.19.3" defer></script>
+  <!-- Layout (topbar/footer) -->
+  <script src="../js/layout.js?v=0.20.0" defer></script>
 
-  <!-- Pagina-logic (absoluut pad voorkomt path-issues) -->
-  <script type="module" src="/honden/index.js" defer></script>
+  <!-- Pagina-logic -->
+  <script type="module" src="./index.js" defer></script>
 </head>
 <body>
   <!-- Topbar -->
@@ -22,7 +22,7 @@
   <main class="container">
     <h1 class="page-title">Honden</h1>
 
-    <p><a class="btn" href="/">⬅️ Terug naar dashboard</a></p>
+    <p><a class="btn" href="../">⬅️ Terug naar dashboard</a></p>
 
     <!-- Toolbar -->
     <div class="toolbar" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
@@ -57,36 +57,38 @@
   <!-- Footer -->
   <footer id="footer" class="footer"></footer>
 
-  <!-- Modal: iPad/Safari-proof (expliciete knoppen) -->
+  <!-- Modal (iPad/Safari-proof) -->
   <dialog id="modal">
-    <form id="form">
+    <form id="form" method="dialog">
       <h3 id="modal-title">Hond</h3>
 
       <input type="hidden" name="id" />
 
       <div class="row">
-        <label>Naam</label>
-        <input name="naam" required />
+        <label for="fld-naam">Naam</label>
+        <input id="fld-naam" name="naam" required />
       </div>
 
       <div class="row">
-        <label>Ras</label>
-        <input name="ras" />
+        <label for="fld-ras">Ras</label>
+        <input id="fld-ras" name="ras" />
       </div>
 
       <div class="row">
-        <label>Geboortedatum</label>
-        <input name="geboortedatum" type="date" />
+        <label for="fld-geboorte">Geboortedatum</label>
+        <input id="fld-geboorte" name="geboortedatum" type="date" />
       </div>
 
       <div class="row">
-        <label>Chip</label>
-        <input name="chip" />
+        <label for="fld-chip">Chip</label>
+        <input id="fld-chip" name="chip" />
       </div>
 
       <div class="row">
-        <label>Eigenaar</label>
-        <select name="eigenaarId" id="sel-eigenaar" required></select>
+        <label for="sel-eigenaar">Eigenaar</label>
+        <select id="sel-eigenaar" name="eigenaarId" required>
+          <option value="">— Kies eigenaar —</option>
+        </select>
       </div>
 
       <menu>
@@ -100,7 +102,7 @@
   <script>
     window.addEventListener('DOMContentLoaded', () => {
       if (window.SuperhondUI?.mount) {
-        SuperhondUI.mount({ title: 'Honden', icon: '🐶', version: 'v0.19.3', back: '/' });
+        SuperhondUI.mount({ title: 'Honden', icon: '🐶', version: 'v0.20.0', back: '../' });
       }
     });
   </script>
