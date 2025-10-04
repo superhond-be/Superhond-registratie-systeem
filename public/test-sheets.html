@@ -10,18 +10,15 @@
       max-width: 960px; margin: 2rem auto; padding: 0 1rem;
       background:#fafafa;
     }
-    h1 {margin-bottom: .5rem;}
+    h1 {margin-bottom:.5rem;}
     .card {
       background:#fff; border:1px solid #e5e7eb; border-radius:10px;
       padding:12px; margin:12px 0;
     }
-    .ok{color:#047857}
-    .err{color:#b91c1c}
-    .muted{color:#6b7280}
+    .ok{color:#047857} .err{color:#b91c1c} .muted{color:#6b7280}
     pre {
-      background:#0b1220; color:#d1e7ff;
-      border-radius:8px; padding:10px; overflow:auto;
-      max-height:240px;
+      background:#0b1220; color:#d1e7ff; border-radius:8px;
+      padding:10px; overflow:auto; max-height:240px;
     }
     .btn {
       border:1px solid #d1d5db; background:#fff;
@@ -30,7 +27,10 @@
     input[type=text] {
       width:100%; padding:.4rem; border:1px solid #d1d5db; border-radius:6px;
     }
-    #statusbar {margin-top:1rem; padding:.5rem .7rem; border-radius:6px; background:#f9fafb; border:1px solid #e5e7eb;}
+    #statusbar {
+      margin-top:1rem; padding:.5rem .7rem; border-radius:6px;
+      background:#f9fafb; border:1px solid #e5e7eb;
+    }
     #logArea {
       background:#0b1220; color:#d1e7ff;
       border-radius:8px; padding:8px; height:160px; overflow:auto; margin:0;
@@ -61,7 +61,7 @@
     <label><input type="checkbox" id="chk-empty" checked> Controleer op lege cellen</label><br>
     <label><input type="checkbox" id="chk-cols" checked> Controleer op ontbrekende kolommen</label>
 
-    <div id="statusbar" style="margin-top:1rem">
+    <div id="statusbar">
       <span id="statusText" class="muted">Nog geen controle uitgevoerd.</span>
     </div>
   </section>
@@ -72,11 +72,14 @@
   <section class="card" id="console">
     <h2>🪵 Logboek</h2>
     <pre id="logArea"></pre>
-    <button class="btn" id="btn-clear-log">🧹 Wissen</button>
+    <div style="display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap">
+      <button class="btn" id="btn-clear-log">🧹 Wissen</button>
+      <button class="btn" id="btn-download-log">💾 Download log</button>
+    </div>
   </section>
 
   <script>
-    // ========== BASISINSTELLING ==========
+    // ===== BASISINSTELLING =====
     const SHEETS = ["Klassen","Klanten","Honden","Lessenreeksen","Lessen"];
     const root = document.getElementById('root');
     const inputUrl = document.getElementById("inputUrl");
@@ -85,81 +88,90 @@
     const logArea = document.getElementById("logArea");
 
     let BASE = "";
-    let cache = new Map();
+    const cache = new Map();
 
-    function log(msg, type="info") {
-      const time = new Date().toLocaleTimeString("nl-BE", {hour12:false});
-      const prefix = type==="error"?"❌":type==="warn"?"⚠️":"ℹ️";
-      logArea.textContent += `[${time}] ${prefix} ${msg}\n`;
+    // ===== LOGFUNCTIES =====
+    function log(msg,type="info"){
+      const t=new Date().toLocaleTimeString("nl-BE",{hour12:false});
+      const p=type==="error"?"❌":type==="warn"?"⚠️":"ℹ️";
+      logArea.textContent += `[${t}] ${p} ${msg}\n`;
       logArea.scrollTop = logArea.scrollHeight;
     }
-    document.getElementById("btn-clear-log").onclick = () => logArea.textContent="";
+    document.getElementById("btn-clear-log").onclick=()=>logArea.textContent="";
+    document.getElementById("btn-download-log").onclick=()=>{
+      const blob=new Blob([logArea.textContent||""],{type:"text/plain;charset=utf-8"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      const stamp=new Date().toISOString().replace(/[:.]/g,"-").slice(0,19);
+      a.href=url; a.download=`superhond-log-${stamp}.txt`;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      log("Logboek gedownload als superhond-log.txt");
+    };
 
-    function setBaseUrl(url){ BASE = url.replace(/\/$/,""); }
-
-    // ========== URL OPSLAAN / LADEN ==========
-    const saved = localStorage.getItem("superhond_exec_url");
-    if(saved){ inputUrl.value=saved; setBaseUrl(saved); log(`Web-app URL geladen uit opslag`); }
-    document.getElementById("btn-save-url").onclick = ()=>{
-      const val = inputUrl.value.trim();
-      if(!val.startsWith("https://script.google.com/macros/")){ saveMsg.textContent="⚠️ Ongeldige URL"; return;}
-      localStorage.setItem("superhond_exec_url", val);
+    // ===== URL OPSLAAN / LADEN =====
+    function setBaseUrl(url){ BASE=url.replace(/\/$/,""); }
+    const saved=localStorage.getItem("superhond_exec_url");
+    if(saved){ inputUrl.value=saved; setBaseUrl(saved); log("Web-app URL geladen uit opslag"); }
+    document.getElementById("btn-save-url").onclick=()=>{
+      const val=inputUrl.value.trim();
+      if(!val.startsWith("https://script.google.com/macros/")){
+        saveMsg.textContent="⚠️ Ongeldige URL"; return;
+      }
+      localStorage.setItem("superhond_exec_url",val);
       setBaseUrl(val);
       saveMsg.textContent="✅ Opgeslagen!";
       log("Nieuwe Web-app URL opgeslagen");
       setTimeout(()=>saveMsg.textContent="",2500);
     };
 
-    // ========== VERBINDING TESTEN ==========
-    document.getElementById("btn-test-url").onclick = async ()=>{
-      const val = inputUrl.value.trim();
-      if(!val){ saveMsg.textContent="⚠️ Geen URL ingevuld"; return;}
-      saveMsg.textContent="🔄 Testen...";
-      log("Verbindingstest gestart…");
+    // ===== VERBINDING TESTEN =====
+    document.getElementById("btn-test-url").onclick=async()=>{
+      const val=inputUrl.value.trim();
+      if(!val){ saveMsg.textContent="⚠️ Geen URL ingevuld"; return; }
+      saveMsg.textContent="🔄 Testen…"; log("Verbindingstest gestart…");
       try{
-        const r = await fetch(val+"?ping=1");
-        const j = await r.json();
-        if(j.ok && j.pong){
-          saveMsg.textContent="✅ Verbinding OK";
-          log("Verbinding OK");
-        } else {
-          saveMsg.textContent="⚠️ Ongeldig antwoord";
-          log("Verbinding gaf ongeldig antwoord","warn");
-        }
+        const r=await fetch(val+"?ping=1");
+        const j=await r.json();
+        if(j.ok&&j.pong){ saveMsg.textContent="✅ Verbinding OK"; log("Verbinding OK"); }
+        else { saveMsg.textContent="⚠️ Ongeldig antwoord"; log("Verbinding gaf ongeldig antwoord","warn"); }
       }catch(e){
-        saveMsg.textContent="❌ Geen verbinding";
-        log("Geen verbinding met Web App","error");
+        saveMsg.textContent="❌ Geen verbinding"; log("Geen verbinding met Web App","error");
       }
       setTimeout(()=>saveMsg.textContent="",5000);
     };
 
-    // ========== HULPFUNCTIES ==========
-    function card(title, html){
-      const div=document.createElement('div');
-      div.className='card';
+    // ===== HULPFUNCTIES =====
+    function card(title,html){
+      const div=document.createElement("div");
+      div.className="card";
       div.innerHTML=`<h3 style="margin:0 0 .5rem">${title}</h3>${html}`;
       root.appendChild(div);
     }
-
     function updateStatusbar(results){
-      if(!results||!results.length){ statusText.textContent="Nog geen controle uitgevoerd."; statusText.style.color="#6b7280"; return; }
+      if(!results||!results.length){
+        statusText.textContent="Nog geen controle uitgevoerd.";
+        statusText.style.color="#6b7280"; return;
+      }
       const total=results.length;
       const ok=results.filter(m=>m.startsWith("✅")).length;
       const warn=total-ok;
       statusText.textContent=`📊 ${total} tabbladen gecontroleerd — ✅ ${ok} OK • ⚠️ ${warn} waarschuwing(en)`;
       statusText.style.color=warn?"#b91c1c":"#047857";
     }
-
-    function validateSheet(name, items, requiredCols=[]){
+    function validateSheet(name,items,requiredCols=[]){
       const msgs=[];
-      if(!Array.isArray(items)||items.length===0){ msgs.push(`⚠️ Geen rijen gevonden in ${name}`); return msgs; }
+      if(!Array.isArray(items)||items.length===0){
+        msgs.push(`⚠️ Geen rijen gevonden in ${name}`); return msgs;
+      }
       const first=items[0];
-      for(const col of requiredCols){ if(!(col in first)) msgs.push(`⚠️ Kolom '${col}' ontbreekt in ${name}`);}
+      for(const col of requiredCols)
+        if(!(col in first)) msgs.push(`⚠️ Kolom '${col}' ontbreekt in ${name}`);
       if(msgs.length===0) msgs.push(`✅ ${name} ok`);
       return msgs;
     }
 
-    // ========== DATA LADEN ==========
+    // ===== DATA LADEN =====
     async function loadAll(){
       root.innerHTML="";
       if(!BASE){ alert("Geen Web-app URL ingesteld."); return; }
@@ -168,7 +180,7 @@
         const url=`${BASE}?sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
         log(`Laden van ${name}…`);
         try{
-          const r=await fetch(url,{cache:'no-store'});
+          const r=await fetch(url,{cache:"no-store"});
           const j=await r.json();
           const items=Array.isArray(j?.items)?j.items:[];
           cache.set(name,items);
@@ -176,10 +188,12 @@
           results.push(...msgs);
           const cnt=items.length;
           card(`Sheet: ${name} <span class="ok">(${cnt} records)</span>`,
-               cnt ? `<pre>${JSON.stringify(items.slice(0,3),null,2)}</pre>` : `<div class="muted">Leeg of geen records</div>`);
+               cnt?`<pre>${JSON.stringify(items.slice(0,3),null,2)}</pre>`:
+               `<div class="muted">Leeg of geen records</div>`);
           log(`${name}: ${cnt} records geladen`);
         }catch(e){
-          card(`Sheet: ${name} <span class="err">(fout)</span>`,`<div class="err">Fout: ${e.message}</div>`);
+          card(`Sheet: ${name} <span class="err">(fout)</span>`,
+               `<div class="err">Fout: ${e.message}</div>`);
           log(`${name}: fout ${e.message}`,"error");
         }
       }
@@ -187,7 +201,7 @@
       log("Alle tabbladen verwerkt ✅");
     }
 
-    // ========== CONTROLE OPNIEUW ==========
+    // ===== CONTROLE OPNIEUW =====
     async function recheckAll(){
       const chkCols=document.getElementById("chk-cols").checked;
       const results=[];
@@ -204,11 +218,6 @@
     // knoppen
     document.getElementById("btn-reload").onclick=()=>{ log("Opnieuw laden gestart…"); loadAll(); };
     document.getElementById("btn-recheck").onclick=recheckAll;
-    
-<div style="display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap">
-  <button class="btn" id="btn-clear-log">🧹 Wissen</button>
-  <button class="btn" id="btn-download-log">💾 Download log</button>
-</div>
   </script>
 </body>
 </html>
