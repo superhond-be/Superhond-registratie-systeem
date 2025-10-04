@@ -3,57 +3,208 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Test Sheets</title>
+  <title>Superhond – Google Sheets test</title>
   <style>
-    body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:2rem}
-    .ok{color:#065f46} .err{color:#b91c1c}
-    pre{background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px;overflow:auto}
-    .card{border:1px solid #e5e7eb;border-radius:10px;margin:12px 0;padding:12px}
+    body {
+      font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      max-width: 960px; margin: 2rem auto; padding: 0 1rem;
+      background:#fafafa;
+    }
+    h1 {margin-bottom: .5rem;}
+    .card {
+      background:#fff; border:1px solid #e5e7eb; border-radius:10px;
+      padding:12px; margin:12px 0;
+    }
+    .ok{color:#047857}
+    .err{color:#b91c1c}
     .muted{color:#6b7280}
+    pre {
+      background:#0b1220; color:#d1e7ff;
+      border-radius:8px; padding:10px; overflow:auto;
+      max-height:240px;
+    }
+    .btn {
+      border:1px solid #d1d5db; background:#fff;
+      border-radius:6px; padding:.4rem .8rem; cursor:pointer;
+    }
+    input[type=text] {
+      width:100%; padding:.4rem; border:1px solid #d1d5db; border-radius:6px;
+    }
+    #statusbar {margin-top:1rem; padding:.5rem .7rem; border-radius:6px; background:#f9fafb; border:1px solid #e5e7eb;}
+    #logArea {
+      background:#0b1220; color:#d1e7ff;
+      border-radius:8px; padding:8px; height:160px; overflow:auto; margin:0;
+    }
   </style>
 </head>
 <body>
-  <h1>Google Sheets web-app test</h1>
-  <p class="muted">We vragen elk tabblad op via je Apps Script web-app en tonen de eerste records.</p>
+  <h1>🐶 Superhond – Google Sheets web-app test</h1>
+  <p class="muted">Verifieer of je Apps Script Web App goed werkt en alle tabbladen bereikbaar zijn.</p>
+
+  <!-- 📡 Instellingen -->
+  <section class="card" id="settings">
+    <h2>⚙️ Instellingen & Controle</h2>
+
+    <div style="margin-bottom:1rem">
+      <label for="inputUrl"><strong>📡 Web-app URL</strong></label><br>
+      <input id="inputUrl" type="text" placeholder="https://script.google.com/macros/s/.../exec" />
+      <button class="btn" id="btn-save-url">💾 Opslaan</button>
+      <button class="btn" id="btn-test-url">🔍 Verbinding testen</button>
+      <span id="pingMsg" class="muted"></span>
+    </div>
+
+    <div style="margin-bottom:1rem">
+      <button class="btn" id="btn-reload">🔄 Opnieuw laden (via Sheets)</button>
+      <button class="btn" id="btn-recheck">✅ Controle opnieuw uitvoeren</button>
+    </div>
+
+    <label><input type="checkbox" id="chk-empty" checked> Controleer op lege cellen</label><br>
+    <label><input type="checkbox" id="chk-cols" checked> Controleer op ontbrekende kolommen</label>
+
+    <div id="statusbar" style="margin-top:1rem">
+      <span id="statusText" class="muted">Nog geen controle uitgevoerd.</span>
+    </div>
+  </section>
 
   <div id="root"></div>
 
+  <!-- 🪵 Logboek -->
+  <section class="card" id="console">
+    <h2>🪵 Logboek</h2>
+    <pre id="logArea"></pre>
+    <button class="btn" id="btn-clear-log">🧹 Wissen</button>
+  </section>
+
   <script>
-    // ⬇️ VERVANG door jouw /exec URL
-    const BASE = "https://script.google.com/macros/s/AKfycbw6LieWdIM9B3ldTSnnJjCRkL33iI-Y7mloRUKWTcCr_puCb7k7_7369O6s6EljrbXMjA/exec";
-
-    const SHEETS = ["Klassen","Klanten","Honden","Lessenreeksen","Lessen"]; // pas aan indien nodig
+    // ========== BASISINSTELLING ==========
+    const SHEETS = ["Klassen","Klanten","Honden","Lessenreeksen","Lessen"];
     const root = document.getElementById('root');
+    const inputUrl = document.getElementById("inputUrl");
+    const saveMsg = document.getElementById("pingMsg");
+    const statusText = document.getElementById("statusText");
+    const logArea = document.getElementById("logArea");
 
-    function card(title, html){ 
-      const div = document.createElement('div');
-      div.className = 'card';
-      div.innerHTML = `<h3 style="margin:0 0 .5rem">${title}</h3>${html}`;
+    let BASE = "";
+    let cache = new Map();
+
+    function log(msg, type="info") {
+      const time = new Date().toLocaleTimeString("nl-BE", {hour12:false});
+      const prefix = type==="error"?"❌":type==="warn"?"⚠️":"ℹ️";
+      logArea.textContent += `[${time}] ${prefix} ${msg}\n`;
+      logArea.scrollTop = logArea.scrollHeight;
+    }
+    document.getElementById("btn-clear-log").onclick = () => logArea.textContent="";
+
+    function setBaseUrl(url){ BASE = url.replace(/\/$/,""); }
+
+    // ========== URL OPSLAAN / LADEN ==========
+    const saved = localStorage.getItem("superhond_exec_url");
+    if(saved){ inputUrl.value=saved; setBaseUrl(saved); log(`Web-app URL geladen uit opslag`); }
+    document.getElementById("btn-save-url").onclick = ()=>{
+      const val = inputUrl.value.trim();
+      if(!val.startsWith("https://script.google.com/macros/")){ saveMsg.textContent="⚠️ Ongeldige URL"; return;}
+      localStorage.setItem("superhond_exec_url", val);
+      setBaseUrl(val);
+      saveMsg.textContent="✅ Opgeslagen!";
+      log("Nieuwe Web-app URL opgeslagen");
+      setTimeout(()=>saveMsg.textContent="",2500);
+    };
+
+    // ========== VERBINDING TESTEN ==========
+    document.getElementById("btn-test-url").onclick = async ()=>{
+      const val = inputUrl.value.trim();
+      if(!val){ saveMsg.textContent="⚠️ Geen URL ingevuld"; return;}
+      saveMsg.textContent="🔄 Testen...";
+      log("Verbindingstest gestart…");
+      try{
+        const r = await fetch(val+"?ping=1");
+        const j = await r.json();
+        if(j.ok && j.pong){
+          saveMsg.textContent="✅ Verbinding OK";
+          log("Verbinding OK");
+        } else {
+          saveMsg.textContent="⚠️ Ongeldig antwoord";
+          log("Verbinding gaf ongeldig antwoord","warn");
+        }
+      }catch(e){
+        saveMsg.textContent="❌ Geen verbinding";
+        log("Geen verbinding met Web App","error");
+      }
+      setTimeout(()=>saveMsg.textContent="",5000);
+    };
+
+    // ========== HULPFUNCTIES ==========
+    function card(title, html){
+      const div=document.createElement('div');
+      div.className='card';
+      div.innerHTML=`<h3 style="margin:0 0 .5rem">${title}</h3>${html}`;
       root.appendChild(div);
     }
 
-    async function go(){
-      for (const name of SHEETS){
-        const url = `${BASE}?sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
-        try{
-          const r = await fetch(url, { cache:'no-store' });
-          const j = await r.json();
-          const items = Array.isArray(j?.items) ? j.items : [];
-          const cnt = items.length;
+    function updateStatusbar(results){
+      if(!results||!results.length){ statusText.textContent="Nog geen controle uitgevoerd."; statusText.style.color="#6b7280"; return; }
+      const total=results.length;
+      const ok=results.filter(m=>m.startsWith("✅")).length;
+      const warn=total-ok;
+      statusText.textContent=`📊 ${total} tabbladen gecontroleerd — ✅ ${ok} OK • ⚠️ ${warn} waarschuwing(en)`;
+      statusText.style.color=warn?"#b91c1c":"#047857";
+    }
 
-          card(
-            `Sheet: ${name} <span class="ok">(${cnt} records)</span>`,
-            cnt
-              ? `<pre>${JSON.stringify(items.slice(0,3), null, 2)}</pre>`
-              : `<div class="muted">Geen records of lege response.</div><pre>${JSON.stringify(j, null, 2)}</pre>`
-          );
-        }catch(err){
-          card(`Sheet: ${name} <span class="err">(fout)</span>`,
-               `<div class="err">Kon niet laden: ${String(err)}</div>`);
+    function validateSheet(name, items, requiredCols=[]){
+      const msgs=[];
+      if(!Array.isArray(items)||items.length===0){ msgs.push(`⚠️ Geen rijen gevonden in ${name}`); return msgs; }
+      const first=items[0];
+      for(const col of requiredCols){ if(!(col in first)) msgs.push(`⚠️ Kolom '${col}' ontbreekt in ${name}`);}
+      if(msgs.length===0) msgs.push(`✅ ${name} ok`);
+      return msgs;
+    }
+
+    // ========== DATA LADEN ==========
+    async function loadAll(){
+      root.innerHTML="";
+      if(!BASE){ alert("Geen Web-app URL ingesteld."); return; }
+      const results=[];
+      for(const name of SHEETS){
+        const url=`${BASE}?sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
+        log(`Laden van ${name}…`);
+        try{
+          const r=await fetch(url,{cache:'no-store'});
+          const j=await r.json();
+          const items=Array.isArray(j?.items)?j.items:[];
+          cache.set(name,items);
+          const msgs=validateSheet(name,items,["id","naam","status"]);
+          results.push(...msgs);
+          const cnt=items.length;
+          card(`Sheet: ${name} <span class="ok">(${cnt} records)</span>`,
+               cnt ? `<pre>${JSON.stringify(items.slice(0,3),null,2)}</pre>` : `<div class="muted">Leeg of geen records</div>`);
+          log(`${name}: ${cnt} records geladen`);
+        }catch(e){
+          card(`Sheet: ${name} <span class="err">(fout)</span>`,`<div class="err">Fout: ${e.message}</div>`);
+          log(`${name}: fout ${e.message}`,"error");
         }
       }
+      updateStatusbar(results);
+      log("Alle tabbladen verwerkt ✅");
     }
-    go();
+
+    // ========== CONTROLE OPNIEUW ==========
+    async function recheckAll(){
+      const chkCols=document.getElementById("chk-cols").checked;
+      const results=[];
+      for(const name of SHEETS){
+        const items=cache.get(name);
+        if(!items){ log(`Geen cache voor ${name}`,"warn"); continue; }
+        const msgs=validateSheet(name,items,chkCols?["id","naam","status"]:[]);
+        results.push(...msgs);
+      }
+      updateStatusbar(results);
+      log("Controle opnieuw uitgevoerd");
+    }
+
+    // knoppen
+    document.getElementById("btn-reload").onclick=()=>{ log("Opnieuw laden gestart…"); loadAll(); };
+    document.getElementById("btn-recheck").onclick=recheckAll;
+
   </script>
 </body>
 </html>
