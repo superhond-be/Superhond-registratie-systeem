@@ -1,49 +1,59 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Superhond – Test Google Sheets</title>
-
-  <link rel="stylesheet" href="./css/style.css?v=0.20.0" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Test Sheets</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 2rem; }
-    .ok { color: green; }
-    .error { color: #b91c1c; }
-    pre { background: #f3f4f6; padding: 1rem; border-radius: 8px; overflow:auto; }
+    body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:2rem}
+    .ok{color:#065f46} .err{color:#b91c1c}
+    pre{background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:12px;overflow:auto}
+    .card{border:1px solid #e5e7eb;border-radius:10px;margin:12px 0;padding:12px}
+    .muted{color:#6b7280}
   </style>
 </head>
 <body>
-  <h1>🧪 Test Google Sheets-koppeling</h1>
-  <p>Controleert of jouw web-app gegevens uit Google Sheets kan ophalen.</p>
+  <h1>Google Sheets web-app test</h1>
+  <p class="muted">We vragen elk tabblad op via je Apps Script web-app en tonen de eerste records.</p>
 
-  <div id="status">⏳ Bezig met laden…</div>
-  <pre id="output"></pre>
+  <div id="root"></div>
 
-  <script type="module">
-    import { setBaseUrl, fetchSheet } from "./js/sheets.js";
+  <script>
+    // ⬇️ VERVANG door jouw /exec URL
+    const BASE = "https://script.google.com/macros/s/AKfycbw6LieWdIM9B3ldTSnnJjCRkL33iI-Y7mloRUKWTcCr_puCb7k7_7369O6s6EljrbXMjA/exec";
 
-    // 🔗 VUL HIER JE EIGEN GOOGLE SCRIPT-URL IN:
-    setBaseUrl("https://script.google.com/macros/s/AKfycbw6LieWdIM9B3ldTSnnJjCRkL33iI-Y7mloRUKWTcCr_puCb7k7_7369O6s6EljrbXMjA/exec");
+    const SHEETS = ["Klassen","Klanten","Honden","Lessenreeksen","Lessen"]; // pas aan indien nodig
+    const root = document.getElementById('root');
 
-    const status = document.getElementById("status");
-    const output = document.getElementById("output");
-
-    async function test() {
-      try {
-        const klanten = await fetchSheet("Klanten");
-        const honden  = await fetchSheet("Honden");
-        status.innerHTML = "✅ <span class='ok'>Verbinding geslaagd!</span>";
-        output.textContent =
-          "KLANTEN (" + klanten.length + "):\n" + JSON.stringify(klanten.slice(0,5), null, 2) +
-          "\n\nHONDEN (" + honden.length + "):\n" + JSON.stringify(honden.slice(0,5), null, 2);
-      } catch (e) {
-        status.innerHTML = "❌ <span class='error'>Fout:</span> " + e.message;
-        console.error(e);
-      }
+    function card(title, html){ 
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML = `<h3 style="margin:0 0 .5rem">${title}</h3>${html}`;
+      root.appendChild(div);
     }
 
-    test();
+    async function go(){
+      for (const name of SHEETS){
+        const url = `${BASE}?sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
+        try{
+          const r = await fetch(url, { cache:'no-store' });
+          const j = await r.json();
+          const items = Array.isArray(j?.items) ? j.items : [];
+          const cnt = items.length;
+
+          card(
+            `Sheet: ${name} <span class="ok">(${cnt} records)</span>`,
+            cnt
+              ? `<pre>${JSON.stringify(items.slice(0,3), null, 2)}</pre>`
+              : `<div class="muted">Geen records of lege response.</div><pre>${JSON.stringify(j, null, 2)}</pre>`
+          );
+        }catch(err){
+          card(`Sheet: ${name} <span class="err">(fout)</span>`,
+               `<div class="err">Kon niet laden: ${String(err)}</div>`);
+        }
+      }
+    }
+    go();
   </script>
 </body>
 </html>
