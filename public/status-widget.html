@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Superhond – Status</title>
+  <style>
+    body {
+      font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background:#fafafa; max-width:600px; margin:1.5rem auto; padding:0 1rem;
+    }
+    h1 {font-size:1.4rem; margin:0 0 .75rem;}
+    .grid {display:grid; gap:8px;}
+    .card {
+      display:flex; align-items:center; justify-content:space-between;
+      border:1px solid #e5e7eb; border-radius:8px;
+      padding:.6rem .8rem; background:#fff;
+    }
+    .ok {color:#047857; font-weight:600;}
+    .err {color:#b91c1c; font-weight:600;}
+    .muted {color:#6b7280; font-size:.9rem;}
+    #footer {text-align:right; font-size:.8rem; color:#6b7280; margin-top:.75rem;}
+    #controls {display:flex; align-items:center; gap:.5rem; margin-bottom:.75rem; flex-wrap:wrap;}
+    .btn {
+      border:1px solid #d1d5db; background:#fff; border-radius:6px;
+      padding:.3rem .6rem; cursor:pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>🐶 Superhond – Sheetstatus</h1>
+  <div id="controls">
+    <button class="btn" id="btn-refresh">🔄 Nu verversen</button>
+    <label class="muted">
+      <input type="checkbox" id="autoRefresh" checked>
+      Auto-ververs elke <input type="number" id="interval" value="60" min="10" style="width:4em"> s
+    </label>
+  </div>
+  <div class="muted" id="note">Laden…</div>
+  <div class="grid" id="grid"></div>
+  <div id="footer">v1.1 – status-widget</div>
+
+  <script>
+    const SHEETS = ["Klassen","Klanten","Honden","Lessenreeksen","Lessen"];
+    const grid = document.getElementById("grid");
+    const note = document.getElementById("note");
+    const btnRefresh = document.getElementById("btn-refresh");
+    const chkAuto = document.getElementById("autoRefresh");
+    const intervalInput = document.getElementById("interval");
+
+    const BASE = localStorage.getItem("superhond_exec_url") || "";
+    if(!BASE){
+      note.textContent = "⚠️ Geen Web-App URL gevonden. Open eerst test-pagina en sla de URL op.";
+    } else {
+      loadStatus();
+    }
+
+    async function loadStatus(){
+      note.textContent = "📡 Ophalen van status…";
+      grid.innerHTML = "";
+      let okCount = 0, failCount = 0;
+      for(const name of SHEETS){
+        const el = document.createElement("div");
+        el.className = "card";
+        el.innerHTML = `<span>${name}</span><span class="muted">laden…</span>`;
+        grid.appendChild(el);
+        try {
+          const url = `${BASE}?sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
+          const r = await fetch(url, {cache:"no-store"});
+          const j = await r.json();
+          if(j.ok && Array.isArray(j.items)){
+            const count = j.items.length;
+            el.innerHTML = `<span>${name}</span><span class="ok">✅ ${count}</span>`;
+            okCount++;
+          } else {
+            el.innerHTML = `<span>${name}</span><span class="err">❌ fout</span>`;
+            failCount++;
+          }
+        } catch(e){
+          el.innerHTML = `<span>${name}</span><span class="err">❌ ${e.message}</span>`;
+          failCount++;
+        }
+      }
+      note.textContent =
+        `📊 ${okCount} OK • ${failCount} fout(en) — laatste update: ` +
+        new Date().toLocaleTimeString("nl-BE",{hour12:false});
+    }
+
+    // handmatig verversen
+    btnRefresh.addEventListener("click", loadStatus);
+
+    // auto-ververs logica
+    let timer = null;
+    function startAutoRefresh(){
+      clearInterval(timer);
+      const sec = Math.max(10, parseInt(intervalInput.value,10) || 60);
+      timer = setInterval(loadStatus, sec * 1000);
+    }
+    chkAuto.addEventListener("change", ()=> {
+      if(chkAuto.checked){ startAutoRefresh(); }
+      else { clearInterval(timer); }
+    });
+    intervalInput.addEventListener("change", ()=> {
+      if(chkAuto.checked){ startAutoRefresh(); }
+    });
+
+    if(chkAuto.checked){ startAutoRefresh(); }
+  </script>
+</body>
+</html>
