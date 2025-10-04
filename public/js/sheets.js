@@ -3,6 +3,8 @@ const DEFAULT_TIMEOUT_MS = 12000;
 const DEFAULT_TTL_MS = 60_000;
 const MAX_RETRIES = 2;
 
+<button class="btn" id="btn-recheck">Controle opnieuw uitvoeren</button>
+
 let BASE_URL = "";
 let cache = new Map();
 
