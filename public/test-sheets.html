@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Superhond – Test Google Sheets</title>
+
+  <link rel="stylesheet" href="./css/style.css?v=0.20.0" />
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; }
+    .ok { color: green; }
+    .error { color: #b91c1c; }
+    pre { background: #f3f4f6; padding: 1rem; border-radius: 8px; overflow:auto; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Test Google Sheets-koppeling</h1>
+  <p>Controleert of jouw web-app gegevens uit Google Sheets kan ophalen.</p>
+
+  <div id="status">⏳ Bezig met laden…</div>
+  <pre id="output"></pre>
+
+  <script type="module">
+    import { setBaseUrl, fetchSheet } from "./js/sheets.js";
+
+    // 🔗 VUL HIER JE EIGEN GOOGLE SCRIPT-URL IN:
+    setBaseUrl("https://script.google.com/macros/s/AKfycbw6LieWdIM9B3ldTSnnJjCRkL33iI-Y7mloRUKWTcCr_puCb7k7_7369O6s6EljrbXMjA/exec");
+
+    const status = document.getElementById("status");
+    const output = document.getElementById("output");
+
+    async function test() {
+      try {
+        const klanten = await fetchSheet("Klanten");
+        const honden  = await fetchSheet("Honden");
+        status.innerHTML = "✅ <span class='ok'>Verbinding geslaagd!</span>";
+        output.textContent =
+          "KLANTEN (" + klanten.length + "):\n" + JSON.stringify(klanten.slice(0,5), null, 2) +
+          "\n\nHONDEN (" + honden.length + "):\n" + JSON.stringify(honden.slice(0,5), null, 2);
+      } catch (e) {
+        status.innerHTML = "❌ <span class='error'>Fout:</span> " + e.message;
+        console.error(e);
+      }
+    }
+
+    test();
+  </script>
+</body>
+</html>
