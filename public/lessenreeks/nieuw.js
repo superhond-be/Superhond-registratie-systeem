@@ -1,3 +1,35 @@
+<script type="module">
+  import { fetchSheet, normStatus } from '../js/sheets.js';
+
+  document.addEventListener('DOMContentLoaded', init);
+
+  async function init(){
+    try{
+      // Klassen & Reeksen uit Google Sheets
+      const [klassen, reeksen] = await Promise.all([
+        fetchSheet('Klassen'),
+        fetchSheet('Reeksen')
+      ]);
+
+      const actKlassen = klassen.filter(k => normStatus(k.status) === 'actief').length;
+      const actReeksen = reeksen.filter(r => normStatus(r.status) === 'actief').length;
+
+      const kc = document.getElementById('klassen-badge');
+      const ks = document.getElementById('klassen-sub');
+      if (kc) kc.textContent = actKlassen;
+      if (ks) ks.textContent = `${actKlassen} actief`;
+
+      const rc = document.getElementById('reeksen-badge');
+      const rs = document.getElementById('reeksen-sub');
+      if (rc) rc.textContent = actReeksen;
+      if (rs) rs.textContent = `${actReeksen} actief`;
+    }catch(err){
+      console.error('Sheets teller fout:', err);
+    }
+  }
+</script>
+
+
 // Nieuwe lessenreeks – snelle klassen-lader + autofill + veilig opslaan
 import {
   ensureMigrated,
