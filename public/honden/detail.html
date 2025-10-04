@@ -1,77 +1,51 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Hond detail – Superhond</title>
-  <!-- RELATIEF naar css -->
-  <link rel="stylesheet" href="../css/style.css?v=0.19.2" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.19.2" />
+
+  <!-- Stijlen (absoluut pad om pad-issues te vermijden) -->
+  <link rel="stylesheet" href="/css/style.css?v=0.20.0" />
+  <link rel="stylesheet" href="/css/superhond.css?v=0.20.0" />
 </head>
 <body>
+  <!-- Topbar -->
   <header id="topbar" class="topbar"></header>
 
   <main class="container">
     <h2 class="page-title">Hond detail</h2>
-    <div id="box" class="card">⏳ Bezig met laden…</div>
-    <!-- RELATIEVE link naar honden-overzicht -->
-    <p><a href="./" class="btn">← Terug naar honden</a></p>
+
+    <div id="loader" class="muted">⏳ Bezig met laden…</div>
+    <div id="error"  class="error" style="display:none"></div>
+
+    <section id="hond" class="card" style="display:none">
+      <h3 id="d-naam" style="margin-top:0">—</h3>
+
+      <div class="grid" style="display:grid; gap:12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+        <div>
+          <ul>
+            <li><strong>Ras:</strong> <span id="d-ras">—</span></li>
+            <li><strong>Geboortedatum:</strong> <span id="d-geboortedatum">—</span></li>
+            <li><strong>Chip:</strong> <span id="d-chip">—</span></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 style="margin:.2rem 0 .5rem">Eigenaar</h4>
+          <div id="d-eigenaar">—</div>
+        </div>
+      </div>
+    </section>
+
+    <p><a href="/honden/" class="btn">← Terug naar honden</a></p>
   </main>
 
+  <!-- Footer -->
   <footer id="footer" class="footer"></footer>
-  <!-- RELATIEF naar js -->
-  <script src="../js/layout.js?v=0.19.2"></script>
-  <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      if (window.SuperhondUI?.mount) {
-        SuperhondUI.mount({ title:'Hond detail', icon:'🐶', back:'./' });
-      }
-    });
 
-    const S = v => String(v ?? '');
-    const params = new URLSearchParams(location.search);
-    const id = params.get('id');
-    const target = document.getElementById('box');
-    const bust = () => '?t=' + Date.now();
-
-    async function fetchJson(tryUrls) {
-      for (const u of tryUrls) {
-        const r = await fetch(u + bust(), { cache:'no-store' });
-        if (r.ok) return r.json();
-      }
-      throw new Error('Geen data-bron bereikbaar ('+ tryUrls.join(', ') +')');
-    }
-
-    async function load(){
-      if (!id) { target.innerHTML = '<p class="error">Geen <code>id</code> opgegeven.</p>'; return; }
-      try {
-        const [honden, klanten] = await Promise.all([
-          fetchJson(['../api/honden',  '../data/honden.json']),
-          fetchJson(['../api/klanten', '../data/klanten.json'])
-        ]);
-
-        const hond = (honden || []).find(h => String(h.id) === String(id));
-        if (!hond) { target.innerHTML = `<p class="error">Hond met id <code>${S(id)}</code> niet gevonden.</p>`; return; }
-
-        const eigenaar = (klanten || []).find(k => String(k.id) === String(hond.eigenaarId ?? hond.klantId ?? hond.ownerId));
-
-        target.innerHTML = `
-          <h3 style="margin-top:0">${S(hond.naam) || '(zonder naam)'}</h3>
-          <ul>
-            <li><strong>Ras:</strong> ${S(hond.ras) || '—'}</li>
-            <li><strong>Geboortedatum:</strong> ${S(hond.geboortedatum) || '—'}</li>
-            <li><strong>Chip:</strong> ${S(hond.chip) || '—'}</li>
-            <li><strong>Eigenaar:</strong>
-              ${eigenaar ? `<a href="../klanten/detail.html?id=${encodeURIComponent(eigenaar.id)}">${S(eigenaar.naam || (eigenaar.voornaam + ' ' + (eigenaar.achternaam||'')))}</a>` : '—'}
-            </li>
-          </ul>
-        `;
-      } catch (e) {
-        console.error(e);
-        target.innerHTML = `<p class="error">⚠️ Kon hondgegevens niet laden. ${S(e.message)}</p>`;
-      }
-    }
-    load();
-  </script>
+  <!-- Scripts -->
+  <script src="/js/layout.js?v=0.20.0" defer></script>
+  <script type="module" src="/honden/detail.js" defer></script>
 </body>
 </html>
