@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Klant detail – Superhond</title>
 
-  <!-- RELATIEF naar css -->
-  <link rel="stylesheet" href="../css/style.css?v=0.19.2" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.19.2" />
+  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
 </head>
 <body>
   <!-- Topbar -->
@@ -16,102 +15,146 @@
   <main class="container">
     <h2 class="page-title">Klant detail</h2>
     <div id="box" class="card">⏳ Bezig met laden…</div>
-    <!-- RELATIEVE teruglink -->
     <p><a href="./" class="btn">← Terug naar klanten</a></p>
   </main>
 
   <!-- Footer -->
   <footer id="footer" class="footer"></footer>
 
-  <!-- Layout (RELATIEF) -->
-  <script src="../js/layout.js?v=0.19.2"></script>
-  <script>
-    // Topbar/footer
-    window.addEventListener('DOMContentLoaded', () => {
-      if (window.SuperhondUI?.mount) {
-        // back wijst naar de map zelf
-        SuperhondUI.mount({ title:'Klant detail', icon:'👤', back:'./' });
-      }
-    });
+  <!-- Layout -->
+  <script src="../js/layout.js?v=0.20.0" defer></script>
 
-    const S = v => String(v ?? '');
+  <!-- Paginalogica -->
+  <script type="module">
+    import { ensureMigrated, getKlanten, getHonden } from "../js/store.js";
+
+    /* ---------- helpers ---------- */
+    const S = v => String(v ?? "");
+    const T = v => S(v).trim();
+    const esc = s => S(s)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+
     const params = new URLSearchParams(location.search);
-    const id = params.get('id');
-    const target = document.getElementById('box');
+    const id     = params.get("id");
+    const target = document.getElementById("box");
 
-    const bust = () => '?t=' + Date.now();
+    const bust = () => "?t=" + Date.now();
 
     function fmtAdres(k = {}) {
-      const p1 = [k.straat, [k.huisnr, k.bus].filter(Boolean).join('')].filter(Boolean).join(' ');
-      const p2 = [k.postcode, k.gemeente].filter(Boolean).join(' ');
-      return [p1, p2].filter(Boolean).join(', ') || '—';
+      const p1 = [T(k.straat), [T(k.huisnr), T(k.bus)].filter(Boolean).join("")].filter(Boolean).join(" ");
+      const p2 = [T(k.postcode), T(k.gemeente)].filter(Boolean).join(" ");
+      const out = [p1, p2].filter(Boolean).join(", ");
+      return esc(out || "—");
     }
+
     function naamVan(k = {}) {
-      const comb = [k.voornaam, k.achternaam].filter(Boolean).join(' ').trim();
-      return comb || k.naam || S(k.email).split('@')[0] || '(zonder naam)';
+      const comb = [T(k.voornaam), T(k.achternaam)].filter(Boolean).join(" ").trim();
+      if (comb) return esc(comb);
+      if (T(k.naam)) return esc(k.naam);
+      const fromMail = T(k.email).split("@")[0] || "";
+      return esc(fromMail || "(zonder naam)");
     }
 
     async function fetchJson(tryUrls) {
       for (const u of tryUrls) {
-        const r = await fetch(u + bust(), { cache: 'no-store' });
-        if (r.ok) return r.json();
+        try {
+          const r = await fetch(u + bust(), { cache: "no-store" });
+          if (r.ok) return r.json();
+        } catch (_) {}
       }
-      throw new Error('Geen data-bron bereikbaar ('+ tryUrls.join(', ') +')');
+      return null;
+    }
+
+    function findById(list, id){
+      return (list || []).find(x => String(x?.id) === String(id));
+    }
+
+    function hondenVanKlant(honden, klantId){
+      return (honden || [])
+        .filter(h => String(h.eigenaarId ?? h.klantId ?? h.ownerId) === String(klantId))
+        .sort((a,b) => T(a.naam).localeCompare(T(b.naam)));
+    }
+
+    function renderDetail(klant, hondenList){
+      const naam = naamVan(klant);
+      const dogs = hondenVanKlant(hondenList, klant.id);
+
+      target.innerHTML = `
+        <h3 style="margin-top:0">${naam}</h3>
+        <div class="grid" style="display:grid;gap:1rem;grid-template-columns:1fr">
+          <section>
+            <ul>
+              <li><strong>E-mail:</strong> ${esc(T(klant.email)) || "—"}</li>
+              <li><strong>Telefoon:</strong> ${esc(T(klant.telefoon)) || "—"}</li>
+              <li><strong>Adres:</strong> ${fmtAdres(klant)}</li>
+              <li><strong>Land:</strong> ${esc(T(klant.land)) || "—"}</li>
+            </ul>
+          </section>
+
+          <section>
+            <h4>Honden van deze klant</h4>
+            ${
+              dogs.length
+                ? `<ul>${
+                    dogs.map(h => `
+                      <li>
+                        <a href="../honden/detail.html?id=${encodeURIComponent(h.id)}">
+                          ${esc(T(h.naam) || "Hond")}
+                        </a>
+                      </li>`).join("")
+                  }</ul>`
+                : '<p class="muted">Geen honden gekoppeld.</p>'
+            }
+          </section>
+        </div>
+      `;
     }
 
     async function load() {
+      // Topbar/footer mount
+      if (window.SuperhondUI?.mount) {
+        SuperhondUI.mount({ title: "Klant detail", icon: "👤", back: "./" });
+      }
+
       if (!id) {
         target.innerHTML = '<p class="error">Geen <code>id</code> opgegeven.</p>';
         return;
       }
-      try {
-        // API → fallback data (RELATIEF)
-        const [klanten, honden] = await Promise.all([
-          fetchJson(['../api/klanten', '../data/klanten.json']),
-          fetchJson(['../api/honden',  '../data/honden.json'])
-        ]);
 
-        const klant = (klanten || []).find(k => String(k.id) === String(id));
+      try {
+        // 1) Snelpad: buckets (localStorage)
+        ensureMigrated();
+        let klanten = getKlanten() || [];
+        let honden  = getHonden()  || [];
+
+        // 2) Fallback naar API/JSON als buckets leeg zijn
+        if (!klanten.length) {
+          const js = await fetchJson(["../api/klanten","../data/klanten.json"]);
+          if (Array.isArray(js)) klanten = js;
+          else if (Array.isArray(js?.items)) klanten = js.items;
+        }
+        if (!honden.length) {
+          const jh = await fetchJson(["../api/honden","../data/honden.json"]);
+          if (Array.isArray(jh)) honden = jh;
+          else if (Array.isArray(jh?.items)) honden = jh.items;
+        }
+
+        const klant = findById(klanten, id);
         if (!klant) {
-          target.innerHTML = `<p class="error">Klant met id <code>${S(id)}</code> niet gevonden.</p>`;
+          target.innerHTML = `<p class="error">Klant met id <code>${esc(id)}</code> niet gevonden.</p>`;
           return;
         }
 
-        const naam = naamVan(klant);
-        const hondenVanKlant = (honden || [])
-          .filter(h => String(h.eigenaarId ?? h.klantId ?? h.ownerId) === String(klant.id))
-          .sort((a,b) => S(a.naam).localeCompare(S(b.naam)));
+        renderDetail(klant, honden);
 
-        target.innerHTML = `
-          <h3 style="margin-top:0">${naam}</h3>
-          <div class="grid" style="display:grid;gap:1rem;grid-template-columns:1fr">
-            <section>
-              <ul>
-                <li><strong>E-mail:</strong> ${S(klant.email) || '—'}</li>
-                <li><strong>Telefoon:</strong> ${S(klant.telefoon) || '—'}</li>
-                <li><strong>Adres:</strong> ${fmtAdres(klant)}</li>
-                <li><strong>Land:</strong> ${S(klant.land) || '—'}</li>
-              </ul>
-            </section>
-            <section>
-              <h4>Honden van deze klant</h4>
-              ${
-                hondenVanKlant.length
-                  ? `<ul>${hondenVanKlant.map(h => `
-                       <li><a href="../honden/detail.html?id=${encodeURIComponent(h.id)}">${S(h.naam)}</a></li>
-                     `).join('')}</ul>`
-                  : '<p class="muted">Geen honden gekoppeld.</p>'
-              }
-            </section>
-          </div>
-        `;
       } catch (e) {
         console.error(e);
-        target.innerHTML = `<p class="error">⚠️ Kon klantgegevens niet laden. ${S(e.message)}</p>`;
+        target.innerHTML = `<p class="error">⚠️ Kon klantgegevens niet laden. ${esc(e.message || e)}</p>`;
       }
     }
 
-    load();
+    document.addEventListener("DOMContentLoaded", load);
   </script>
 </body>
 </html>
