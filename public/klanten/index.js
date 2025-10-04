@@ -1,10 +1,52 @@
 // /klanten/index.js
-import { ensureData, getKlanten, setKlanten, getHonden, debounce } from "../js/store.js";
+import { ensureMigrated, getKlanten, setKlanten, getHonden } from "../js/store.js";
 
+/* ---------------- kleine helpers ---------------- */
+const S  = v => String(v ?? "");
+const T  = v => S(v).trim();
+const esc = s => S(s)
+  .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+  .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+
+const debounce = (fn, ms=300) => {
+  let t; return (...args) => { clearTimeout(t); t=setTimeout(() => fn(...args), ms); };
+};
+
+const cmpBy = key => (a,b) => T(a?.[key]).localeCompare(T(b?.[key]));
+const byId  = (list, id) => (list || []).find(x => String(x?.id) === String(id));
+
+function guessNameFromEmail(email){
+  const local = T(email).split("@")[0];
+  return local.split(/[._-]+/).map(s => s ? s[0].toUpperCase()+s.slice(1) : "").join(" ").trim();
+}
+function buildFullName(vn, an, fallbackEmail){
+  const full = T(`${T(vn)} ${T(an)}`.replace(/\s+/g, " "));
+  if (full) return full;
+  const fromMail = guessNameFromEmail(fallbackEmail);
+  return fromMail || "";
+}
+function ensureNaam(k){
+  const n = T(k.naam);
+  if (n) return n;
+  const built = buildFullName(k.voornaam, k.achternaam, k.email);
+  return built || `Klant #${k.id || ""}`.trim();
+}
+function dogsOf(klantId, honden){
+  return (honden || []).filter(h => String(h?.eigenaarId ?? h?.ownerId ?? h?.klantId) === String(klantId));
+}
+function validatePostcode(val, land) {
+  const v = T(val);
+  if (!v) return true;
+  if (land === "BE") return /^[0-9]{4}$/.test(v);                // 1000
+  if (land === "NL") return /^[0-9]{4}\s?[A-Za-z]{2}$/.test(v);  // 1234 AB
+  return true;
+}
+
+/* ---------------- DOM refs ---------------- */
 const loader   = document.getElementById("loader");
 const error    = document.getElementById("error");
 const tabel    = document.getElementById("tabel");
-const tbody    = tabel.querySelector("tbody");
+const tbody    = tabel?.querySelector("tbody");
 const wrap     = document.getElementById("wrap");
 const zoek     = document.getElementById("zoek");
 const btnNieuw = document.getElementById("btn-nieuw");
@@ -16,111 +58,88 @@ const btnCancel = document.getElementById("btn-cancel");
 const btnSave   = document.getElementById("btn-save");
 const fldLand   = document.getElementById("fld-land");
 
-const fldVoornaam  = form?.elements?.voornaam;
-const fldAchternaam= form?.elements?.achternaam;
-const fldNaam      = form?.elements?.naam;
-const fldEmail     = form?.elements?.email;
-const fldTelefoon  = form?.elements?.telefoon;
-const fldStraat    = document.getElementById("fld-straat") || form?.elements?.straat;
-const fldHuisnr    = document.getElementById("fld-huisnr") || form?.elements?.huisnr;
-const fldBus       = document.getElementById("fld-bus") || form?.elements?.bus;
-const fldPostcode  = document.getElementById("fld-postcode") || form?.elements?.postcode;
-const fldGemeente  = document.getElementById("fld-gemeente") || form?.elements?.gemeente;
+const fldVoornaam   = form?.elements?.voornaam;
+const fldAchternaam = form?.elements?.achternaam;
+const fldNaam       = form?.elements?.naam;
+const fldEmail      = form?.elements?.email;
+const fldTelefoon   = form?.elements?.telefoon;
+const fldStraat     = document.getElementById("fld-straat")   || form?.elements?.straat;
+const fldHuisnr     = document.getElementById("fld-huisnr")   || form?.elements?.huisnr;
+const fldBus        = document.getElementById("fld-bus")      || form?.elements?.bus;
+const fldPostcode   = document.getElementById("fld-postcode") || form?.elements?.postcode;
+const fldGemeente   = document.getElementById("fld-gemeente") || form?.elements?.gemeente;
 
 let klantCache = [];
 let hondCache  = [];
 
-/* ---------------- helpers ---------------- */
-const S = v => String(v ?? "");
-const T = v => S(v).trim();
-const cmpBy = key => (a,b) => T(a?.[key]).localeCompare(T(b?.[key]));
-const byId = (list, id) => (list || []).find(x => String(x?.id) === String(id));
-
-function guessNameFromEmail(email){
-  const local = T(email).split("@")[0];
-  return local.split(/[._-]+/).map(s=>s? s[0].toUpperCase()+s.slice(1):"").join(" ").trim();
-}
-
-function buildFullName(vn, an, fallbackEmail){
-  const full = T(`${T(vn)} ${T(an)}`.replace(/\s+/g, " "));
-  if (full) return full;
-  const fromMail = guessNameFromEmail(fallbackEmail);
-  return fromMail || "";
-}
-
-function ensureNaam(k){
-  const n = T(k.naam);
-  if (n) return n;
-  const built = buildFullName(k.voornaam, k.achternaam, k.email);
-  return built || `Klant #${k.id || ""}`.trim();
-}
-
-function dogsOf(klantId){
-  return (hondCache || []).filter(h => String(h?.eigenaarId ?? h?.ownerId ?? h?.klantId) === String(klantId));
-}
-
-function validatePostcode(val, land) {
-  const v = T(val);
-  if (!v) return true;
-  if (land === "BE") return /^[0-9]{4}$/.test(v);                // 1000
-  if (land === "NL") return /^[0-9]{4}\s?[A-Za-z]{2}$/.test(v);  // 1234 AB
-  return true;
-}
-
+/* ---------------- UI helpers ---------------- */
 function updateAddressLabels(){
   const land = fldLand?.value || "BE";
   const lblGemeente = document.getElementById("lbl-gemeente");
   const lblPostcode = document.getElementById("lbl-postcode");
   if (lblGemeente) lblGemeente.textContent = land === "NL" ? "Plaats" : "Gemeente";
   if (fldPostcode) fldPostcode.placeholder = land === "NL" ? "1234 AB" : "1000";
-  if (lblPostcode && land === "NL") lblPostcode.textContent = "Postcode (NL)";
-  else if (lblPostcode) lblPostcode.textContent = "Postcode";
+  if (lblPostcode) lblPostcode.textContent = land === "NL" ? "Postcode (NL)" : "Postcode";
 }
 
 /* ---------------- render ---------------- */
 function rowHtml(k) {
   const naam = ensureNaam(k);
-  const dogs = dogsOf(k.id);
+  const dogs = dogsOf(k.id, hondCache);
   const maxChips = 3;
 
   const chips = dogs.slice(0, maxChips).map(h => `
-    <span class="chip"><a href="../honden/detail.html?id=${h.id}" title="Open ${T(h.naam)}">${T(h.naam)}</a></span>
+    <span class="chip"><a href="../honden/detail.html?id=${encodeURIComponent(h.id)}" title="Open ${esc(T(h.naam))}">${esc(T(h.naam))}</a></span>
   `).join("");
 
   const more = dogs.length > maxChips
-    ? `<span class="chip more" title="${dogs.slice(maxChips).map(h=>T(h.naam)).join(', ')}">+${dogs.length - maxChips}</span>`
-    : (dogs.length === 0 ? `<a class="chip more" href="../honden/index.html?owner=${k.id}" title="Nieuwe hond">+ Hond</a>` : "");
+    ? `<span class="chip more" title="${esc(dogs.slice(maxChips).map(h=>T(h.naam)).join(', '))}">+${dogs.length - maxChips}</span>`
+    : (dogs.length === 0 ? `<a class="chip more" href="../honden/index.html?owner=${encodeURIComponent(k.id)}" title="Nieuwe hond">+ Hond</a>` : "");
 
   return `
-    <tr data-id="${k.id ?? ''}">
-      <td><a href="./detail.html?id=${k.id}">${naam}</a></td>
-      <td>${T(k.email) || "—"}</td>
-      <td>${T(k.telefoon) || "—"}</td>
+    <tr data-id="${esc(k.id ?? '')}">
+      <td><a href="./detail.html?id=${encodeURIComponent(k.id)}">${esc(naam)}</a></td>
+      <td>${esc(T(k.email)) || "—"}</td>
+      <td>${esc(T(k.telefoon)) || "—"}</td>
       <td><div class="chips">${chips}${more}</div></td>
       <td class="right nowrap">
-        <button class="btn btn-xs" data-act="edit" data-id="${k.id}" title="Wijzig">Bewerken</button>
-        <button class="btn btn-xs" data-act="del"  data-id="${k.id}" title="Verwijder">Verwijderen</button>
+        <button class="btn btn-xs" data-act="edit" data-id="${esc(k.id)}" title="Wijzig">Bewerken</button>
+        <button class="btn btn-xs" data-act="del"  data-id="${esc(k.id)}" title="Verwijder">Verwijderen</button>
       </td>
     </tr>`;
 }
 
 function render(filter="") {
+  if (!tbody || !loader || !wrap) return;
+
   const f = T(filter).toLowerCase();
   const lijst = (klantCache || [])
     .filter(Boolean)
     .map(k => ({ ...k, naam: ensureNaam(k) }))
-    .filter(k => !f || T(k.naam).toLowerCase().includes(f) || T(k.email).toLowerCase().includes(f))
+    .filter(k =>
+      !f ||
+      T(k.naam).toLowerCase().includes(f) ||
+      T(k.email).toLowerCase().includes(f) ||
+      T(k.telefoon).toLowerCase().includes(f)
+    )
     .sort(cmpBy("naam"));
 
-  tbody.innerHTML = lijst.map(rowHtml).join("");
+  tbody.innerHTML = lijst.map(rowHtml).join("") || `<tr><td colspan="5" class="muted">Geen klanten gevonden.</td></tr>`;
   loader.style.display = "none";
   wrap.style.display = "";
 }
 
-/* ---------------- load/init ---------------- */
+/* ---------------- init ---------------- */
 async function init() {
   try {
-    await ensureData();
+    if (loader) loader.style.display = "";
+    if (wrap)   wrap.style.display = "none";
+    if (error)  error.style.display = "none";
+
+    // migratie (legacy -> buckets)
+    ensureMigrated();
+
+    // laad uit buckets
     klantCache = getKlanten() || [];
     hondCache  = getHonden()  || [];
 
@@ -133,19 +152,22 @@ async function init() {
     });
     if (changed) setKlanten(klantCache);
 
-    // UI
     updateAddressLabels();
     render();
 
   } catch (e) {
-    loader.style.display = "none";
-    error.style.display = "block";
-    error.textContent = "⚠️ " + (e.message || e);
+    if (loader) loader.style.display = "none";
+    if (error){
+      error.style.display = "block";
+      error.textContent = "⚠️ " + (e.message || e);
+    }
   }
 }
 
 /* ---------------- modal helpers ---------------- */
 function openEdit(id) {
+  if (!modal || !form) return;
+
   const isNew = !id;
   const k = isNew
     ? { id:"", naam:"", voornaam:"", achternaam:"", email:"", telefoon:"", land:"BE",
@@ -155,19 +177,18 @@ function openEdit(id) {
   form.reset();
 
   form.id.value         = k.id || "";
-  fldVoornaam.value     = T(k.voornaam);
-  fldAchternaam.value   = T(k.achternaam);
-  fldEmail.value        = T(k.email);
-  fldTelefoon.value     = T(k.telefoon);
-  if (fldLand) fldLand.value = T(k.land || "BE");
-  if (fldStraat)   fldStraat.value   = T(k.straat);
-  if (fldHuisnr)   fldHuisnr.value   = T(k.huisnr);
-  if (fldBus)      fldBus.value      = T(k.bus);
-  if (fldPostcode) fldPostcode.value = T(k.postcode);
-  if (fldGemeente) fldGemeente.value = T(k.gemeente);
+  if (fldVoornaam)   fldVoornaam.value   = T(k.voornaam);
+  if (fldAchternaam) fldAchternaam.value = T(k.achternaam);
+  if (fldEmail)      fldEmail.value      = T(k.email);
+  if (fldTelefoon)   fldTelefoon.value   = T(k.telefoon);
+  if (fldLand)       fldLand.value       = T(k.land || "BE");
+  if (fldStraat)     fldStraat.value     = T(k.straat);
+  if (fldHuisnr)     fldHuisnr.value     = T(k.huisnr);
+  if (fldBus)        fldBus.value        = T(k.bus);
+  if (fldPostcode)   fldPostcode.value   = T(k.postcode);
+  if (fldGemeente)   fldGemeente.value   = T(k.gemeente);
 
-  // naam automatisch opbouwen (readonly veld)
-  if (fldNaam) fldNaam.value = buildFullName(fldVoornaam.value, fldAchternaam.value, fldEmail.value);
+  if (fldNaam) fldNaam.value = buildFullName(fldVoornaam?.value, fldAchternaam?.value, fldEmail?.value);
 
   const title = document.getElementById("modal-title");
   if (title) title.textContent = isNew ? "Nieuwe klant" : "Klant bewerken";
@@ -177,15 +198,14 @@ function openEdit(id) {
 }
 
 function closeEdit() {
-  modal.close();
+  modal?.close();
 }
 
 function collectFormData() {
+  if (!form) return {};
   const obj = Object.fromEntries(new FormData(form).entries());
-  // Zorg dat naam consistent is met voornaam/achternaam of e-mail
   obj.naam = buildFullName(obj.voornaam, obj.achternaam, obj.email) || obj.naam || "";
-  // Maak id indien nieuw
-  if (!T(obj.id)) obj.id = "kl" + Math.random().toString(36).slice(2,8);
+  if (!T(obj.id)) obj.id = "kl" + Math.random().toString(36).slice(2, 8);
   return obj;
 }
 
@@ -196,12 +216,12 @@ function tryDelete(id) {
 
   klantCache = klantCache.filter(k => String(k.id) !== String(id));
   setKlanten(klantCache);
-  render(zoek.value);
+  render(zoek?.value);
 }
 
 /* ---------------- events ---------------- */
-tbody.addEventListener("click", e => {
-  const btn = e.target.closest("button[data-act]");
+tbody?.addEventListener("click", e => {
+  const btn = e.target.closest?.("button[data-act]");
   if (!btn) return;
   const id = btn.getAttribute("data-id");
   if (btn.dataset.act === "edit") openEdit(id);
@@ -212,34 +232,29 @@ btnNieuw?.addEventListener("click", () => openEdit(null));
 zoek?.addEventListener("input", debounce(() => render(zoek.value), 300));
 fldLand?.addEventListener("change", updateAddressLabels);
 
-// Bewaar via submit; #btn-save triggert submit indien nodig
+// Bewaren
 btnSave?.addEventListener("click", () => {
-  // als het geen echte submit-knop is:
+  if (!form) return;
   if (btnSave.type !== "submit") {
     form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event("submit", {cancelable:true}));
   }
 });
 btnCancel?.addEventListener("click", closeEdit);
 
-// Live: naam aanvullen bij typen
 [fldVoornaam, fldAchternaam, fldEmail].forEach(el => {
   el?.addEventListener("input", () => {
     if (fldNaam) fldNaam.value = buildFullName(fldVoornaam?.value, fldAchternaam?.value, fldEmail?.value);
   });
 });
 
-// Submit handler (valideer postcode + opslaan)
-form.addEventListener("submit", (e) => {
+form?.addEventListener("submit", (e) => {
   e.preventDefault();
-
-  // Validatie postcode
   const land = fldLand?.value || "BE";
   if (fldPostcode && !validatePostcode(fldPostcode.value, land)) {
     alert(land === "NL" ? "Postcode (NL) ongeldig. Voorbeeld: 1234 AB" : "Postcode (BE) ongeldig. Voorbeeld: 1000");
     fldPostcode.focus();
     return;
   }
-
   const obj = collectFormData();
 
   // upsert
@@ -249,7 +264,7 @@ form.addEventListener("submit", (e) => {
 
   setKlanten(klantCache);
   closeEdit();
-  render(zoek.value);
+  render(zoek?.value);
 });
 
 /* ---------------- go ---------------- */
