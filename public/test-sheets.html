@@ -204,7 +204,11 @@
     // knoppen
     document.getElementById("btn-reload").onclick=()=>{ log("Opnieuw laden gestart…"); loadAll(); };
     document.getElementById("btn-recheck").onclick=recheckAll;
-
+    
+<div style="display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap">
+  <button class="btn" id="btn-clear-log">🧹 Wissen</button>
+  <button class="btn" id="btn-download-log">💾 Download log</button>
+</div>
   </script>
 </body>
 </html>
