@@ -5,10 +5,15 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Nieuwe lessenreeks – Superhond</title>
 
+  <!-- Centrale UI -->
   <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
-  <script src="../js/layout.js?v=0.20.0" defer></script>
-  <script type="module" src="./nieuw.js?v=0.20.0" defer></script>
+
+  <!-- (Optioneel) Sheets-config: zet je Apps Script /exec-URL als je klassen uit Sheets laadt -->
+  <script>
+    // Voorbeeld: 'https://script.google.com/macros/s/AKfycb.../exec'
+    window.SUPERHOND_SHEETS_URL = window.SUPERHOND_SHEETS_URL || '';
+  </script>
 
   <style>
     .page-grid{
@@ -31,7 +36,7 @@
 <main class="container">
   <h1 class="page-title">Nieuwe lessenreeks</h1>
 
-  <form id="formReeks" class="card">
+  <form id="formReeks" class="card" novalidate>
     <div class="page-grid">
       <!-- Kolom 1 -->
       <div class="col">
@@ -40,7 +45,7 @@
           <legend>Klas</legend>
           <div class="grid">
             <label>Klas
-              <select class="select" id="selKlas">
+              <select class="select" id="selKlas" autocomplete="off">
                 <option value="">— Zoeken… —</option>
               </select>
             </label>
@@ -130,7 +135,7 @@
 
     <div class="row" style="margin-top:12px">
       <button class="btn" type="button" id="btnPreview">Preview</button>
-      <button class="btn" type="submit">Genereer & Opslaan</button>
+      <button class="btn" type="submit">Genereer &amp; Opslaan</button>
       <a class="btn" href="./">Annuleren</a>
     </div>
 
@@ -142,5 +147,9 @@
 </main>
 
 <footer id="footer" class="footer"></footer>
+
+<!-- Scripts -->
+<script src="../js/layout.js?v=0.20.0" defer></script>
+<script type="module" src="./nieuw.js?v=0.20.0" defer></script>
 </body>
 </html>
