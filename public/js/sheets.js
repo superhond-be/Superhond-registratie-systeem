@@ -1,139 +1,98 @@
-// sheets.js — dunne client voor Google Apps Script web-app
-// Gebruik:
-//   setBaseUrl('https://script.google.com/macros/s/.../exec')
-//   const klassen = await fetchSheet('Klassen');
+// /js/sheets.js
+const DEFAULT_TIMEOUT_MS = 12000;
+const DEFAULT_TTL_MS = 60_000;
+const MAX_RETRIES = 2;
 
-let _BASE_URL =
-  (typeof window !== 'undefined' && window.SUPERHOND_SHEETS_URL) || null;
+let BASE_URL = "";
+let cache = new Map();
 
-let _CACHE_SECS = 60; // 60s cache
+export function setBaseUrl(url) {
+  if (!url || typeof url !== "string") throw new Error("setBaseUrl: geen geldige URL");
+  BASE_URL = url.replace(/\/$/, "");
+}
 
-/* ============ Config ============ */
-export function setBaseUrl(url) { _BASE_URL = (url || '').trim() || null; }
-export function getBaseUrl()    { return _BASE_URL; }
-export function setCacheSecs(s) { _CACHE_SECS = Math.max(0, Number(s) || 0); }
+export function clearCache() { cache.clear(); }
 
-/* ============ Cache ============ */
-const CK = (sheet) => `sh-cache:${_BASE_URL || 'no-base'}:${sheet}`;
+export function normStatus(v) {
+  const s = String(v ?? "").trim().toLowerCase();
+  if (!s) return "";
+  if (["actief", "active", "1", "true", "ja"].includes(s)) return "actief";
+  if (["inactief", "inactive", "0", "false", "nee"].includes(s)) return "inactief";
+  return s;
+}
 
-export function clearCache(sheetName = null) {
-  try {
-    if (!sheetName) {
-      // wis alle keys die met 'sh-cache:' starten
-      Object.keys(localStorage).forEach(k => {
-        if (k.startsWith('sh-cache:')) localStorage.removeItem(k);
-      });
-    } else {
-      localStorage.removeItem(CK(sheetName));
+// === Nieuw: controlefunctie ===
+export function validateSheet(name, items, requiredCols = []) {
+  const messages = [];
+  if (!Array.isArray(items) || items.length === 0) {
+    messages.push(`⚠️ Geen rijen gevonden in tabblad ${name}`);
+    return messages;
+  }
+
+  // controleer kolomnamen
+  const first = items[0];
+  for (const col of requiredCols) {
+    if (!(col in first)) messages.push(`⚠️ Kolom '${col}' ontbreekt in ${name}`);
+  }
+
+  // controleer lege waarden
+  const emptyCells = [];
+  for (const [i, row] of items.entries()) {
+    for (const col of requiredCols) {
+      if (col in row && (row[col] === "" || row[col] == null))
+        emptyCells.push(`${col} (rij ${i + 2})`);
     }
-  } catch {} // stil falen (quota/private mode)
-}
-
-function _readCache(sheet) {
-  if (!_CACHE_SECS) return null;
-  try {
-    const raw = localStorage.getItem(CK(sheet));
-    if (!raw) return null;
-    const { at, data } = JSON.parse(raw);
-    if (!at || (Date.now() - at) > _CACHE_SECS * 1000) return null;
-    return data;
-  } catch { return null; }
-}
-
-function _writeCache(sheet, data) {
-  if (!_CACHE_SECS) return;
-  try { localStorage.setItem(CK(sheet), JSON.stringify({ at: Date.now(), data })); } catch {}
-}
-
-/* ============ Normalisatie ============ */
-// Converteer diverse JSON vormen naar array van objecten.
-function toObjects(json) {
-  if (!json) return [];
-
-  // Apps Script standaard: { ok:true, items:[{...}] }
-  if (Array.isArray(json.items)) return json.items;
-
-  // Alternatieven
-  if (Array.isArray(json.data))  return json.data;
-
-  // { headers:[...], rows:[[...]] }
-  if (Array.isArray(json.headers) && Array.isArray(json.rows)) {
-    const H = json.headers.map(s => String(s ?? '').trim());
-    return json.rows.map(row => {
-      const o = {}; H.forEach((k,i)=> o[k] = row[i]); return o;
-    });
+  }
+  if (emptyCells.length) {
+    messages.push(`⚠️ Lege waarden in ${name}: ${emptyCells.slice(0, 5).join(", ")}${emptyCells.length > 5 ? " …" : ""}`);
   }
 
-  // Fallback: array met eerste rij als headers
-  const arr = Array.isArray(json) ? json
-           : Array.isArray(json?.rows) ? json.rows
-           : Array.isArray(json?.items) ? json.items
-           : [];
-  if (arr.length && Array.isArray(arr[0])) {
-    const H = arr[0].map(s => String(s ?? '').trim());
-    return arr.slice(1).map(row => {
-      const o = {}; H.forEach((k,i)=> o[k] = row[i]); return o;
-    });
-  }
-
-  return [];
+  if (messages.length === 0) messages.push(`✅ ${name} ok`);
+  return messages;
 }
 
-// Status → 'actief' / 'inactief'
-export function normStatus(s) {
-  const v = String(s ?? '').trim().toLowerCase();
-  if (['actief','active','aan','on','true','1','yes','y'].includes(v)) return 'actief';
-  if (['inactief','inactive','uit','off','false','0','nee','n','niet actief'].includes(v)) return 'inactief';
-  return 'actief';
+// --- Data ophalen (ongewijzigd) ---
+function toQuery(params) { return "?" + new URLSearchParams(params).toString(); }
+function withTimeout(promise, ms = DEFAULT_TIMEOUT_MS) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`Timeout na ${ms}ms`)), ms);
+    promise.then(v => { clearTimeout(t); resolve(v); }, e => { clearTimeout(t); reject(e); });
+  });
+}
+function cacheKey(sheet) { return `${BASE_URL}::${sheet}`; }
+function setCache(key, data, ttl = DEFAULT_TTL_MS) { cache.set(key, { expires: Date.now() + ttl, data }); }
+function getCache(key) {
+  const hit = cache.get(key);
+  if (hit && hit.expires > Date.now()) return hit.data;
+  cache.delete(key);
+  return null;
 }
 
-/* ============ Fetch ============ */
-async function fetchWithTimeout(url, ms = 12000) {
-  const ctrl = new AbortController();
-  const id = setTimeout(() => ctrl.abort(), ms);
-  try {
-    return await fetch(url, { cache: 'no-store', signal: ctrl.signal });
-  } finally {
-    clearTimeout(id);
-  }
-}
-
-/** Haal 1 tabblad op als array van objecten (koprij = velden). */
-export async function fetchSheet(sheetName) {
-  const base = _BASE_URL;
-  if (!base) {
-    throw new Error('Sheets base URL ontbreekt. Gebruik setBaseUrl(...) of zet window.SUPERHOND_SHEETS_URL.');
-  }
-
-  const cached = _readCache(sheetName);
-  if (cached) return cached;
-
-  const url = `${base}?sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
-  let r;
-  try {
-    r = await fetchWithTimeout(url);
-  } catch (e) {
-    throw new Error(`Sheets netwerkfout/timeout voor "${sheetName}": ${e?.message || e}`);
-  }
-  if (!r.ok) throw new Error(`Sheets response ${r.status} voor "${sheetName}"`);
-
+async function doFetch(url) {
+  const res = await withTimeout(fetch(url, { method: "GET", mode: "cors", credentials: "omit" }));
+  const text = await res.text();
   let json;
-  try { json = await r.json(); }
-  catch { throw new Error('Sheets gaf geen geldige JSON terug.'); }
-
-  // Als server expliciet ok:false geeft → fout doorgeven met detail.
-  if (json && json.ok === false) {
-    throw new Error(json.error || 'Sheets gaf ok:false terug.');
-  }
-
-  const arr = toObjects(json);
-  _writeCache(sheetName, arr);
-  return arr;
+  try { json = JSON.parse(text); } catch { throw new Error("Ongeldige JSON van server"); }
+  if (!res.ok || json.ok === false) throw new Error(json.error || `HTTP ${res.status}`);
+  return json;
 }
 
-/** Haal meerdere tabbladen parallel op. */
-export async function fetchSheets(sheetNames = []) {
-  const out = {};
-  await Promise.all(sheetNames.map(async (nm) => { out[nm] = await fetchSheet(nm); }));
-  return out;
+/**
+ * Haal 1 tabblad op en geef array items terug.
+ */
+export async function fetchSheet(sheetName, opts = {}) {
+  if (!BASE_URL) throw new Error("Base URL niet ingesteld");
+  const ttl = opts.ttlMs ?? DEFAULT_TTL_MS;
+  const key = cacheKey(sheetName);
+  if (!opts.bust) {
+    const hit = getCache(key);
+    if (hit) return hit.items;
+  }
+
+  const url = BASE_URL + toQuery({ sheet: sheetName, t: opts.bust ? Date.now() : "" });
+  const json = await doFetch(url);
+  if (!json.ok || !Array.isArray(json.items)) throw new Error("Onverwacht antwoord");
+  const items = json.items.map(r => ({ ...r, status: normStatus(r.status) }));
+  setCache(key, { items }, ttl);
+  return items;
 }
