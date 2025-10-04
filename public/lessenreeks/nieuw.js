@@ -1,4 +1,5 @@
 // Nieuwe lessenreeks – snelle klassen-lader (Sheets met fallback) + autofill + veilig opslaan
+
 import {
   ensureMigrated,
   getKlassen,
@@ -12,11 +13,19 @@ import {
 import { fetchSheet, normStatus } from '../js/sheets.js';
 
 (() => {
-  const $ = s => document.querySelector(s);
-  const S = v => String(v ?? '').trim();
+  /* ---------------- util ---------------- */
+  const $  = s => document.querySelector(s);
+  const S  = v => String(v ?? '').trim();
   const pad = n => String(n).padStart(2, '0');
 
-  /* ---------- Mount ---------- */
+  const ui = {
+    hint:  () => $('#classesHint'),
+    error: () => $('#classesError'),
+    setHint(msg){ const el = this.hint(); if (el){ el.textContent = msg; el.style.display = ''; } },
+    setError(msg){ const el = this.error(); if (el){ el.textContent = msg; el.style.display = msg ? '' : 'none'; } }
+  };
+
+  /* ---------------- mount ---------------- */
   document.addEventListener('DOMContentLoaded', () => {
     if (window.SuperhondUI?.mount) {
       SuperhondUI.mount({ title: 'Nieuwe lessenreeks', icon: '📦', back: './' });
@@ -24,7 +33,7 @@ import { fetchSheet, normStatus } from '../js/sheets.js';
     init();
   });
 
-  /* ---------- Datum/tijd helpers ---------- */
+  /* ---------------- datum/tijd helpers ---------------- */
   function parseYMD(ymd){
     const [y,m,d] = (ymd || '').split('-').map(Number);
     return new Date(y, (m||1)-1, d||1);
@@ -42,14 +51,14 @@ import { fetchSheet, normStatus } from '../js/sheets.js';
     return `${pad(H)}:${pad(M)}`;
   }
 
-  /* ---------- Externe JSON fallback (oude /data/*.json of legacy store) ---------- */
+  /* ---------------- externe JSON fallback ---------------- */
   async function fetchJson(tryUrls){
     for (const u of tryUrls){
       try{
         const url = u + (u.includes('?') ? '&' : '?') + 't=' + Date.now();
         const r = await fetch(url, { cache:'no-store' });
         if (r.ok) return r.json();
-      }catch(_){}
+      }catch(_){/* noop */}
     }
     return null;
   }
@@ -79,7 +88,7 @@ import { fetchSheet, normStatus } from '../js/sheets.js';
     return [...map.values()];
   }
 
-  /* ---------- Klassen laden (Sheets → fallback) ---------- */
+  /* ---------------- klassen laden (Sheets → fallback) ---------------- */
   async function loadClasses(){
     // 1) Google Sheets (primair)
     try{
@@ -93,11 +102,16 @@ import { fetchSheet, normStatus } from '../js/sheets.js';
         geldigheid_weken: Number(k.geldigheid_weken ?? k['Geldigheid (weken)'] ?? 0) || 0,
         status: normStatus(k.status),
       }));
-      return viaSheets.filter(k => (k.id || k.naam) && k.status === 'actief')
-                      .sort((a,b) => a.naam.localeCompare(b.naam));
-    }catch(_){}
+      return viaSheets
+        .filter(k => (k.id || k.naam) && k.status === 'actief')
+        .sort((a,b) => a.naam.localeCompare(b.naam));
+    }catch(_){/* val terug op JSON + local */ }
+
     // 2) Fallback: statische JSON + lokale bucket
-    const extRaw = await fetchJson(['../data/klassen.json','/data/klassen.json','../data/classes.json','/data/classes.json']);
+    const extRaw = await fetchJson([
+      '../data/klassen.json','/data/klassen.json',
+      '../data/classes.json','/data/classes.json'
+    ]);
     const ext = normalizeClasses(extRaw);
     const loc = normalizeClasses({ classes: getKlassen() });
     return merge(ext, loc)
@@ -105,36 +119,44 @@ import { fetchSheet, normStatus } from '../js/sheets.js';
       .sort((a,b) => a.naam.localeCompare(b.naam));
   }
 
-  /* ---------- Init UI ---------- */
+  /* ---------------- init UI ---------------- */
   async function init(){
     ensureMigrated();
 
-    // Klassen selecteren
     const sel = $('#selKlas');
     if (sel){
-      const classes = await loadClasses();
-      sel.innerHTML = '<option value="">— Kies een klas —</option>';
-      for (const k of classes){
-        const parts = [k.type, k.thema].filter(Boolean).join(' · ');
-        const o = document.createElement('option');
-        o.value = S(k.id || k.naam);
-        o.textContent = parts ? `${k.naam} (${parts})` : k.naam;
-        o.dataset.type  = k.type;
-        o.dataset.thema = k.thema;
-        o.dataset.strip = String(k.strippen);
-        o.dataset.weken = String(k.geldigheid_weken);
-        sel.appendChild(o);
+      ui.setHint('Klassen laden…'); ui.setError('');
+      try{
+        const classes = await loadClasses();
+        sel.innerHTML = '<option value="">— Kies een klas —</option>';
+        for (const k of classes){
+          const parts = [k.type, k.thema].filter(Boolean).join(' · ');
+          const o = document.createElement('option');
+          o.value = S(k.id || k.naam);
+          o.textContent = parts ? `${k.naam} (${parts})` : k.naam;
+          o.dataset.type  = k.type;
+          o.dataset.thema = k.thema;
+          o.dataset.strip = String(k.strippen);
+          o.dataset.weken = String(k.geldigheid_weken);
+          sel.appendChild(o);
+        }
+        sel.disabled = classes.length === 0;
+        ui.setHint(classes.length ? `${classes.length} klas(sen) gevonden.` : 'Geen actieve klassen gevonden.');
+        bindAutofill(sel);
+      }catch(err){
+        console.error('Klassen laden faalde:', err);
+        ui.setError('Kon klassen niet laden. Controleer verbinding of Sheets-config.');
+        sel.innerHTML = '<option value="">— Geen klassen —</option>';
+        sel.disabled = true;
       }
-      sel.disabled = classes.length === 0;
-      bindAutofill(sel);
     }
 
     // Knoppen
     $('#btnPreview')?.addEventListener('click', e => { e.preventDefault(); renderPreview(); });
-    $('#formReeks')?.addEventListener('submit', e => { e.preventDefault(); saveReeksAndLessons(); });
+    $('#formReeks')?.addEventListener('submit',  onSubmitSave);
   }
 
-  /* ---------- Autofill bij klas-keuze ---------- */
+  /* ---------------- autofill ---------------- */
   function bindAutofill(sel){
     sel.addEventListener('change', () => {
       const o = sel.selectedOptions?.[0]; if (!o) return;
@@ -148,7 +170,7 @@ import { fetchSheet, normStatus } from '../js/sheets.js';
     });
   }
 
-  /* ---------- Preview ---------- */
+  /* ---------------- preview ---------------- */
   function collectForm(){
     return {
       pakNaam:   S($('#pakNaam')?.value),
@@ -165,6 +187,7 @@ import { fetchSheet, normStatus } from '../js/sheets.js';
       locNaam:  S($('#locNaam')?.value),
       locMaps:  S($('#locMaps')?.value),
 
+      // uit klas
       type:       S($('#type')?.value),
       thema:      S($('#thema')?.value),
       strippen:   Number($('#strippen')?.value || 0),
@@ -186,7 +209,7 @@ import { fetchSheet, normStatus } from '../js/sheets.js';
       const eindTijd = addMinutesToHHmm(m.startTijd, m.duurMin || 60);
       const endISO   = combineISO(d, eindTijd);
       out.push({
-        id: `les_${Date.now()}_${i}`,
+        id: `les_${(crypto?.randomUUID?.() || Date.now())}_${i}`,
         title: `${m.pakNaam} — ${m.reeksNaam}`,
         startISO, endISO,
         location: m.locNaam ? { name:m.locNaam, mapsUrl:m.locMaps||'' } : null,
@@ -221,7 +244,23 @@ import { fetchSheet, normStatus } from '../js/sheets.js';
     det.open = true;
   }
 
-  /* ---------- Opslaan reeks + lessen (lokale buckets) ---------- */
+  /* ---------------- opslaan ---------------- */
+  function onSubmitSave(e){
+    e.preventDefault();
+
+    // dubbele submit voorkomen
+    const form = $('#formReeks');
+    const btns = form?.querySelectorAll('button, a.btn');
+    btns?.forEach(b => b.disabled = true);
+
+    try {
+      saveReeksAndLessons();
+    } finally {
+      // bij redirect merk je dit niet; bij fout worden knoppen her-enaabled
+      btns?.forEach(b => b.disabled = false);
+    }
+  }
+
   function saveReeksAndLessons(){
     const m = collectForm();
     if (!m.pakNaam || !m.reeksNaam || !m.startDatum){
