@@ -1,7 +1,6 @@
 // public/js/api.js  (nieuw of vervang je huidige helper)
-const API_BASE = "https://script.google.com/macros/s/AKfycbzZP5jnYyjzOzrXaZfg1KL5UMqBFXVfIyyC14YYsyCaVbREPdAQPm_cxVvagM-0nP3cWg/exec";
-
-https://script.google.com/macros/s/AKfycbzprHaU1ukJT03YLQ6I5EzR1LOq_45tzWNLo-d92rJuwtRat6Qf_b8Ydt-0qoZBIctVNA/exec
+const API_BASE = 
+"https://script.google.com/macros/s/AKfycbzprHaU1ukJT03YLQ6I5EzR1LOq_45tzWNLo-d92rJuwtRat6Qf_b8Ydt-0qoZBIctVNA/exec";
 async function apiGet(mode, params = {}) {
   const usp = new URLSearchParams({ mode, t: Date.now(), ...params });
   const r = await fetch(`${API_BASE}?${usp.toString()}`, { method: "GET" });
