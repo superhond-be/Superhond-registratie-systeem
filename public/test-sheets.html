@@ -47,7 +47,7 @@
 
     <div style="margin-bottom:1rem">
       <label for="inputUrl"><strong>📡 Web-app URL</strong></label><br>
-      <input id="inputUrl" type="text" placeholder="https://script.google.com/macros/s/.../exec" />
+      <input id="inputUrl" type="text" placeholder="https://script.googleusercontent.com/... of https://script.google.com/.../exec" />
       <button class="btn" id="btn-save-url">💾 Opslaan</button>
       <button class="btn" id="btn-test-url">🔍 Verbinding testen</button>
       <span id="pingMsg" class="muted"></span>
@@ -113,14 +113,20 @@
     function setBaseUrl(url){ BASE=url.replace(/\/$/,""); }
     const saved=localStorage.getItem("superhond_exec_url");
     if(saved){ inputUrl.value=saved; setBaseUrl(saved); log("Web-app URL geladen uit opslag"); }
+
     document.getElementById("btn-save-url").onclick=()=>{
       const val=inputUrl.value.trim();
-      if(!val.startsWith("https://script.google.com/macros/")){
-        saveMsg.textContent="⚠️ Ongeldige URL"; return;
+      // ✅ accepteer beide varianten
+      if(!val.startsWith("https://script.google.com/macros/") &&
+         !val.startsWith("https://script.googleusercontent.com/")){
+        saveMsg.textContent="⚠️ Ongeldige URL"; 
+        saveMsg.style.color="#b91c1c";
+        return;
       }
       localStorage.setItem("superhond_exec_url",val);
       setBaseUrl(val);
       saveMsg.textContent="✅ Opgeslagen!";
+      saveMsg.style.color="#047857";
       log("Nieuwe Web-app URL opgeslagen");
       setTimeout(()=>saveMsg.textContent="",2500);
     };
@@ -128,15 +134,15 @@
     // ===== VERBINDING TESTEN =====
     document.getElementById("btn-test-url").onclick=async()=>{
       const val=inputUrl.value.trim();
-      if(!val){ saveMsg.textContent="⚠️ Geen URL ingevuld"; return; }
-      saveMsg.textContent="🔄 Testen…"; log("Verbindingstest gestart…");
+      if(!val){ saveMsg.textContent="⚠️ Geen URL ingevuld"; saveMsg.style.color="#b91c1c"; return; }
+      saveMsg.textContent="🔄 Testen…"; saveMsg.style.color="#6b7280"; log("Verbindingstest gestart…");
       try{
-        const r=await fetch(val+"?ping=1");
+        const r=await fetch(val+(val.includes("?")?"&":"?")+"ping=1",{method:"GET",mode:"cors"});
         const j=await r.json();
-        if(j.ok&&j.pong){ saveMsg.textContent="✅ Verbinding OK"; log("Verbinding OK"); }
-        else { saveMsg.textContent="⚠️ Ongeldig antwoord"; log("Verbinding gaf ongeldig antwoord","warn"); }
+        if(j.ok&&j.pong){ saveMsg.textContent="✅ Verbinding OK"; saveMsg.style.color="#047857"; log("Verbinding OK"); }
+        else { saveMsg.textContent="⚠️ Ongeldig antwoord"; saveMsg.style.color="#b45309"; log("Verbinding gaf ongeldig antwoord","warn"); }
       }catch(e){
-        saveMsg.textContent="❌ Geen verbinding"; log("Geen verbinding met Web App","error");
+        saveMsg.textContent="❌ Geen verbinding"; saveMsg.style.color="#b91c1c"; log("Geen verbinding met Web App","error");
       }
       setTimeout(()=>saveMsg.textContent="",5000);
     };
@@ -180,7 +186,7 @@
         const url=`${BASE}?sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
         log(`Laden van ${name}…`);
         try{
-          const r=await fetch(url,{cache:"no-store"});
+          const r=await fetch(url,{cache:"no-store",mode:"cors"});
           const j=await r.json();
           const items=Array.isArray(j?.items)?j.items:[];
           cache.set(name,items);
@@ -193,8 +199,8 @@
           log(`${name}: ${cnt} records geladen`);
         }catch(e){
           card(`Sheet: ${name} <span class="err">(fout)</span>`,
-               `<div class="err">Fout: ${e.message}</div>`);
-          log(`${name}: fout ${e.message}`,"error");
+               `<div class="err">Fout: ${e.message || "Load failed"}</div>`);
+          log(`${name}: fout ${e.message || "Load failed"}`,"error");
         }
       }
       updateStatusbar(results);
