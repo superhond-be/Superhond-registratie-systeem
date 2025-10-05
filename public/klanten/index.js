@@ -1,8 +1,9 @@
-/* v0.20.1 – Klantenpagina (Apps Script API, opgeschoond & stabiel) */
+/* v0.21.0 – Klantenpagina (Apps Script API, stabiele release) */
 (() => {
 
   // === 🔗 Google Apps Script Web App URL ===
-  const API_BASE = "https://script.google.com/macros/s/AKfycbzZP5jnYyjzOzrXaZfg1KL5UMqBFXVfIyyC14YYsyCaVbREPdAQPm_cxVvagM-0nP3cWg/exec";
+  const API_BASE =
+    "https://script.google.com/macros/s/AKfycbzprHaU1ukJT03YLQ6I5EzR1LOq_45tzWNLo-d92rJuwtRat6Qf_b8Ydt-0qoZBIctVNA/exec";
 
   // === 🧩 DOM-elementen ===
   const els = {
@@ -17,7 +18,7 @@
     btnSave: document.querySelector("#btn-save")
   };
 
-  // === 🔧 State ===
+  // === ⚙️ State ===
   const state = {
     klanten: [],
     hondenByOwner: new Map(),
@@ -27,20 +28,40 @@
   // === 🌐 API helpers ===
   async function apiGet(mode, params = {}) {
     const usp = new URLSearchParams({ mode, t: Date.now(), ...params });
-    const res = await fetch(`${API_BASE}?${usp}`, { cache: "no-store" });
+    let res;
+    try {
+      res = await fetch(`${API_BASE}?${usp.toString()}`, { cache: "no-store" });
+    } catch {
+      throw new Error("Geen verbinding met de API");
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json().catch(() => { throw new Error("Ongeldige JSON van API"); });
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error("Ongeldige JSON van API");
+    }
     if (!data.ok) throw new Error(data.error || "Onbekende API-fout");
     return data.data;
   }
 
   async function apiPost(mode, payload) {
-    const res = await fetch(`${API_BASE}?mode=${encodeURIComponent(mode)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload || {})
-    });
-    const data = await res.json().catch(() => { throw new Error("Ongeldige JSON van API"); });
+    let res;
+    try {
+      res = await fetch(`${API_BASE}?mode=${encodeURIComponent(mode)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload || {})
+      });
+    } catch {
+      throw new Error("Geen verbinding met de API");
+    }
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error("Ongeldige JSON van API");
+    }
     if (!data.ok) throw new Error(data.error || "Onbekende API-fout");
     return data.data;
   }
@@ -76,9 +97,10 @@
 
   // === 🎛️ UI helpers ===
   function showLoader(show = true) {
-    if (els.loader) els.loader.style.display = show ? "" : "none";
-    if (els.wrap) els.wrap.style.display = show ? "none" : "";
+    if (els.loader) els.loader.hidden = !show;
+    if (els.wrap) els.wrap.hidden = show;
   }
+
   function showError(msg = "") {
     if (!els.error) return;
     els.error.textContent = msg;
@@ -106,7 +128,7 @@
       render();
     } catch (err) {
       console.error("Fout bij laden:", err);
-      showError("Fout bij laden van klanten/honden: " + err.message);
+      showError("⚠️ " + err.message);
     } finally {
       showLoader(false);
     }
@@ -114,10 +136,16 @@
 
   // === 🧾 Render tabel ===
   function render() {
+    if (!els.tbody) return;
     els.tbody.innerHTML = state.klanten.map(k => {
       const dogs = state.hondenByOwner.get(k.id) || [];
       const dogChips = dogs.length
-        ? dogs.map(d => `<a class="chip btn btn-xs" href="../honden/detail.html?id=${d.id}" title="Bekijk ${d.naam}">${d.naam}</a>`).join(" ")
+        ? dogs
+            .map(
+              d =>
+                `<a class="chip btn btn-xs" href="../honden/detail.html?id=${d.id}" title="Bekijk ${d.naam}">${d.naam}</a>`
+            )
+            .join(" ")
         : '<span class="muted">0</span>';
       return `
         <tr data-id="${k.id}">
@@ -128,8 +156,7 @@
           <td class="right">
             <button class="btn btn-xs" data-action="edit" title="Bewerken">✏️</button>
           </td>
-        </tr>
-      `;
+        </tr>`;
     }).join("");
   }
 
@@ -138,7 +165,11 @@
     try {
       els.btnSave.disabled = true;
       showError("");
-      const naam = (els.form.elements["naam"].value || `${els.form.elements["voornaam"].value} ${els.form.elements["achternaam"].value}`).trim();
+
+      const naam = (
+        els.form.elements["naam"].value ||
+        `${els.form.elements["voornaam"].value} ${els.form.elements["achternaam"].value}`
+      ).trim();
       const email = els.form.elements["email"].value.trim();
       const telefoon = els.form.elements["telefoon"].value.trim();
       const straat = els.form.elements["straat"]?.value.trim() || "";
@@ -150,8 +181,13 @@
 
       if (!naam || !email) throw new Error("Naam en e-mail zijn verplicht.");
 
-      const adres = [ `${straat} ${nr}${bus ? ' bus ' + bus : ''}`.trim(), `${postcode} ${gemeente}`.trim(), land ]
-        .filter(Boolean).join(", ");
+      const adres = [
+        `${straat} ${nr}${bus ? " bus " + bus : ""}`.trim(),
+        `${postcode} ${gemeente}`.trim(),
+        land
+      ]
+        .filter(Boolean)
+        .join(", ");
 
       const payload = { naam, email, telefoon, adres, status: "actief" };
       await apiPost("saveKlant", payload);
@@ -159,7 +195,7 @@
       closeModal();
     } catch (err) {
       console.error("Bewaren mislukt:", err);
-      showError("Bewaren mislukt: " + err.message);
+      showError("❌ Bewaren mislukt: " + err.message);
     } finally {
       els.btnSave.disabled = false;
     }
@@ -167,6 +203,7 @@
 
   // === 🪟 Modal ===
   function openModal(data = null) {
+    if (!els.modal) return;
     els.form.reset();
     if (data) {
       els.form.elements["id"].value = data.id || "";
@@ -176,18 +213,21 @@
       els.form.elements["email"].value = data.email || "";
       els.form.elements["telefoon"].value = data.telefoon || "";
     }
-    els.modal?.showModal?.();
+    if (typeof els.modal.showModal === "function") els.modal.showModal();
+    else els.modal.setAttribute("open", "true");
   }
 
   function closeModal() {
-    els.modal?.close?.();
+    if (typeof els.modal.close === "function") els.modal.close();
+    els.modal.removeAttribute("open");
   }
 
   // === ⚡ Events ===
   els.btnNieuw?.addEventListener("click", () => openModal());
-  els.btnCancel?.addEventListener("click", () => closeModal());
+  els.btnCancel?.addEventListener("click", closeModal);
   els.btnSave?.addEventListener("click", onSave);
-  els.tbody.addEventListener("click", (ev) => {
+
+  els.tbody?.addEventListener("click", ev => {
     const btn = ev.target.closest("button[data-action='edit']");
     if (!btn) return;
     const id = btn.closest("tr")?.dataset.id;
@@ -195,7 +235,7 @@
     if (klant) openModal(klant);
   });
 
-  // === 🚀 Start ===
+  // === 🚀 Init ===
   loadAll();
 
 })();
