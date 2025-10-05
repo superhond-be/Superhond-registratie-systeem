@@ -1,0 +1,62 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Superhond API Test</title>
+<style>
+  body{font-family:system-ui;margin:2rem;max-width:900px}
+  button{padding:.6rem 1rem;margin:.25rem}
+  table{border-collapse:collapse;width:100%;margin-top:1rem}
+  th,td{border:1px solid #ddd;padding:.5rem}
+  pre{background:#f6f6f6;padding:1rem;border-radius:8px}
+</style>
+
+<h1>🐶 Superhond – API Test</h1>
+<div>
+  <button id="btnPing">Ping</button>
+  <button id="btnKlanten">Klanten</button>
+  <button id="btnHonden">Honden</button>
+  <button id="btnSave">Dummy klant opslaan</button>
+</div>
+<pre id="out">Klaar…</pre>
+<table id="tbl" hidden>
+  <thead><tr><th>id</th><th>naam</th><th>email</th><th>telefoon</th><th>status</th><th>aangemaakt</th></tr></thead>
+  <tbody></tbody>
+</table>
+
+<script type="module">
+  import { getKlanten, getHonden, saveKlant } from "./js/api.js";
+  const out = document.getElementById("out");
+  const tbl = document.getElementById("tbl");
+  const tb  = tbl.querySelector("tbody");
+  const show = x => out.textContent = typeof x === "string" ? x : JSON.stringify(x, null, 2);
+
+  document.getElementById("btnPing").onclick = async () => {
+    try { const d = await fetch("./js/api.js"); show("API helper geladen ✔️"); }
+    catch (e) { show("FOUT helper: " + e.message); }
+  };
+
+  document.getElementById("btnKlanten").onclick = async () => {
+    try {
+      show("Laden klanten…");
+      const list = await getKlanten();
+      show(list);
+      tb.innerHTML = list.map(k => `
+        <tr><td>${k.id||""}</td><td>${k.naam||""}</td><td>${k.email||""}</td>
+            <td>${k.telefoon||""}</td><td>${k.status||""}</td><td>${k.aangemaakt||""}</td></tr>`).join("");
+      tbl.hidden = false;
+    } catch (e) { show("FOUT: " + e.message); }
+  };
+
+  document.getElementById("btnHonden").onclick = async () => {
+    try { show(await getHonden()); }
+    catch (e) { show("FOUT: " + e.message); }
+  };
+
+  document.getElementById("btnSave").onclick = async () => {
+    try {
+      show("Opslaan…");
+      const row = await saveKlant({ naam: "Testklant " + Math.floor(Math.random()*1000),
+                                    email: `test${Date.now()}@example.com` });
+      show(["OK", row]);
+    } catch (e) { show("FOUT: " + e.message); }
+  };
+</script>
