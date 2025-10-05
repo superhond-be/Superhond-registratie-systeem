@@ -1,134 +1,128 @@
-/* v0.20.0 – Hondenpagina (Apps Script API) */
+/* v0.20.1 – Hondenpagina (Apps Script API, opgeschoond & robuuster) */
 (() => {
-  // 👇 jouw Apps Script Web-App URL (/exec)
+
+  // === 🔗 Google Apps Script Web App URL ===
   const API_BASE = "https://script.google.com/macros/s/AKfycbzZP5jnYyjzOzrXaZfg1KL5UMqBFXVfIyyC14YYsyCaVbREPdAQPm_cxVvagM-0nP3cWg/exec";
 
-  // ----- DOM -----
+  // === 🧩 DOM-elementen ===
   const els = {
-    loader: document.getElementById("loader"),
-    error: document.getElementById("error"),
-    wrap: document.getElementById("wrap"),
-    tabel: document.getElementById("tabel"),
+    loader: document.querySelector("#loader"),
+    error: document.querySelector("#error"),
+    wrap: document.querySelector("#wrap"),
     tbody: document.querySelector("#tabel tbody"),
-    zoek: document.getElementById("zoek"),
-    ownerFilter: document.getElementById("ownerFilter"),
-    btnNieuw: document.getElementById("btn-nieuw"),
-    modal: document.getElementById("modal"),
-    form: document.getElementById("form"),
-    btnCancel: document.getElementById("btn-cancel"),
-    btnSave: document.getElementById("btn-save"),
-    selEigenaar: document.getElementById("sel-eigenaar")
+    zoek: document.querySelector("#zoek"),
+    ownerFilter: document.querySelector("#ownerFilter"),
+    btnNieuw: document.querySelector("#btn-nieuw"),
+    modal: document.querySelector("#modal"),
+    form: document.querySelector("#form"),
+    btnCancel: document.querySelector("#btn-cancel"),
+    btnSave: document.querySelector("#btn-save"),
+    selEigenaar: document.querySelector("#sel-eigenaar")
   };
 
+  // === 🔧 State ===
   const state = {
     honden: [],
     klanten: [],
     kById: {},
-    filterOwner: "",
-    q: ""
+    q: "",
+    filterOwner: ""
   };
 
-  // ----- API helpers -----
+  // === 🌐 API helpers ===
   async function apiGet(mode, params = {}) {
     const usp = new URLSearchParams({ mode, t: Date.now(), ...params });
-    const res = await fetch(`${API_BASE}?${usp.toString()}`, { method: "GET" });
-    const txt = await res.text();
+    const res = await fetch(`${API_BASE}?${usp}`, { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    let j; try { j = JSON.parse(txt); } catch { throw new Error("Geen geldige JSON (check ?mode)"); }
-    if (!j.ok) throw new Error(j.error || "Onbekende fout");
-    return j.data;
+    const data = await res.json().catch(() => { throw new Error("Geen geldige JSON van API"); });
+    if (!data.ok) throw new Error(data.error || "Onbekende API-fout");
+    return data.data;
   }
+
   async function apiPost(mode, payload) {
     const res = await fetch(`${API_BASE}?mode=${encodeURIComponent(mode)}`, {
       method: "POST",
-      headers: { "Content-Type": "text/plain" }, // geen preflight
-      body: JSON.stringify(payload ?? {})
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload || {})
     });
-    const j = await res.json();
-    if (!j.ok) throw new Error(j.error || "Onbekende fout");
-    return j.data;
+    const data = await res.json().catch(() => { throw new Error("Geen geldige JSON van API"); });
+    if (!data.ok) throw new Error(data.error || "Onbekende API-fout");
+    return data.data;
   }
 
-  // ----- Normalisatie (Sheet → UI) -----
-  function normKlant(k) {
-    const full = String(k.naam || "").trim();
-    const [voornaam, ...rest] = full.split(/\s+/);
-    const achternaam = rest.join(" ");
-    return { id: k.id || "", naam: full || "(naam onbekend)", voornaam, achternaam };
-  }
-  function normHond(h) {
-    return {
-      id: h.id || "",
-      eigenaarId: h.eigenaar_id || h.eigenaarId || "",
-      naam: h.naam || "",
-      ras: h.ras || "",
-      geboortedatum: h.geboortedatum || "",
-      chip: h.chip || ""
-    };
+  // === 🧠 Normalisatie ===
+  const normKlant = k => ({
+    id: k.id || "",
+    naam: k.naam?.trim() || "(naam onbekend)"
+  });
+
+  const normHond = h => ({
+    id: h.id || "",
+    eigenaarId: h.eigenaar_id || h.eigenaarId || "",
+    naam: h.naam || "",
+    ras: h.ras || "",
+    geboortedatum: h.geboortedatum || "",
+    chip: h.chip || ""
+  });
+
+  // === 🎛️ UI helpers ===
+  function showLoader(show = true) {
+    if (els.loader) els.loader.style.display = show ? "" : "none";
+    if (els.wrap) els.wrap.style.display = show ? "none" : "";
   }
 
-  // ----- UI helpers -----
-  function showLoader(on) {
-    if (els.loader) els.loader.style.display = on ? "" : "none";
-    if (els.wrap) els.wrap.style.display = on ? "none" : "";
-  }
-  function showError(msg) {
+  function showError(msg = "") {
     if (!els.error) return;
-    els.error.textContent = msg || "";
+    els.error.textContent = msg;
     els.error.style.display = msg ? "" : "none";
   }
 
-  // ----- Data laden -----
+  // === 📦 Data laden ===
   async function loadAll() {
-    showError("");
     showLoader(true);
+    showError("");
     try {
-      const [hRaw, kRaw] = await Promise.all([apiGet("honden"), apiGet("klanten")]);
-      state.honden = hRaw.map(normHond);
-      state.klanten = kRaw.map(normKlant);
+      const [honden, klanten] = await Promise.all([
+        apiGet("honden"),
+        apiGet("klanten")
+      ]);
+      state.honden = honden.map(normHond);
+      state.klanten = klanten.map(normKlant);
       state.kById = Object.fromEntries(state.klanten.map(k => [k.id, k]));
       fillOwnerFilter();
       fillOwnerSelect();
       render();
-    } catch (e) {
-      console.error(e);
-      showError("Fout bij laden van honden/klanten. " + e.message);
+    } catch (err) {
+      console.error("Fout bij laden:", err);
+      showError("Fout bij laden van honden/klanten: " + err.message);
     } finally {
       showLoader(false);
     }
   }
 
-  // ----- Filters -----
+  // === 🔍 Filtering & rendering ===
   function applyFilters(rows) {
     const q = state.q.toLowerCase();
     const owner = state.filterOwner;
     return rows.filter(h => {
-      const matchOwner = !owner || h.eigenaarId === owner;
-      const matchQ = !q || [h.naam, h.ras, h.geboortedatum]
-        .concat(state.kById[h.eigenaarId]?.naam || "")
-        .join(" ")
-        .toLowerCase()
-        .includes(q);
-      return matchOwner && matchQ;
+      const eigenaarNaam = state.kById[h.eigenaarId]?.naam?.toLowerCase() || "";
+      return (
+        (!owner || h.eigenaarId === owner) &&
+        (!q || `${h.naam} ${h.ras} ${h.geboortedatum} ${eigenaarNaam}`.toLowerCase().includes(q))
+      );
     });
   }
 
-  // ----- Render -----
   function render() {
     const rows = applyFilters([...state.honden]);
     els.tbody.innerHTML = rows.map(h => {
       const e = state.kById[h.eigenaarId];
-      const ownerName = e?.naam || "—";
       return `
         <tr data-id="${h.id}">
           <td><a href="./detail.html?id=${h.id}"><strong>${h.naam || "—"}</strong></a></td>
           <td>${h.ras || "—"}</td>
           <td>${h.geboortedatum || "—"}</td>
-          <td>${
-            e
-              ? `<a href="../klanten/detail.html?id=${e.id}">${ownerName}</a>`
-              : "—"
-          }</td>
+          <td>${e ? `<a href="../klanten/detail.html?id=${e.id}">${e.naam}</a>` : "—"}</td>
           <td class="right">
             <button class="btn btn-xs" data-action="edit" title="Bewerken">✏️</button>
           </td>
@@ -137,24 +131,46 @@
     }).join("");
   }
 
-  // ----- Owner filter dropdown (boven de tabel) -----
+  // === 🧾 Dropdowns ===
   function fillOwnerFilter() {
-    if (!els.ownerFilter) return;
-    const opts = ['<option value="">— Filter op eigenaar —</option>']
-      .concat(state.klanten.map(k => `<option value="${k.id}">${k.naam}</option>`));
-    els.ownerFilter.innerHTML = opts.join("");
-    els.ownerFilter.value = state.filterOwner || "";
+    els.ownerFilter.innerHTML = [
+      '<option value="">— Filter op eigenaar —</option>',
+      ...state.klanten.map(k => `<option value="${k.id}">${k.naam}</option>`)
+    ].join("");
   }
 
-  // ----- Owner select in modal (bij aanmaken/bewerken) -----
   function fillOwnerSelect() {
-    if (!els.selEigenaar) return;
-    const opts = ['<option value="">— Kies eigenaar —</option>']
-      .concat(state.klanten.map(k => `<option value="${k.id}">${k.naam}</option>`));
-    els.selEigenaar.innerHTML = opts.join("");
+    els.selEigenaar.innerHTML = [
+      '<option value="">— Kies eigenaar —</option>',
+      ...state.klanten.map(k => `<option value="${k.id}">${k.naam}</option>`)
+    ].join("");
   }
 
-  // ----- Modal open/close -----
+  // === 💾 Opslaan ===
+  async function onSave() {
+    try {
+      els.btnSave.disabled = true;
+      const payload = {
+        eigenaar_id: els.selEigenaar.value.trim(),
+        naam: els.form.elements["naam"].value.trim(),
+        ras: els.form.elements["ras"].value.trim(),
+        chip: els.form.elements["chip"].value.trim(),
+        geboortedatum: els.form.elements["geboortedatum"].value
+      };
+      if (!payload.eigenaar_id) throw new Error("Kies een eigenaar");
+      if (!payload.naam) throw new Error("Naam is verplicht");
+      await apiPost("saveHond", payload);
+      await loadAll();
+      closeModal();
+    } catch (err) {
+      console.error("Bewaren mislukt:", err);
+      showError("Bewaren mislukt: " + err.message);
+    } finally {
+      els.btnSave.disabled = false;
+    }
+  }
+
+  // === 🪟 Modal ===
   function openModal(data = null) {
     els.form.reset();
     if (data) {
@@ -164,70 +180,28 @@
       els.form.elements["geboortedatum"].value = data.geboortedatum || "";
       els.form.elements["chip"].value = data.chip || "";
       els.selEigenaar.value = data.eigenaarId || "";
-    } else {
-      els.selEigenaar.value = state.filterOwner || "";
     }
-    if (typeof els.modal.showModal === "function") els.modal.showModal();
-    else els.modal.setAttribute("open", "open");
+    els.modal?.showModal?.();
   }
   function closeModal() {
-    if (typeof els.modal.close === "function") els.modal.close();
-    els.modal.removeAttribute("open");
+    els.modal?.close?.();
   }
 
-  // ----- Opslaan -----
-  async function onSave() {
-    try {
-      els.btnSave.disabled = true;
-      showError("");
-
-      const payload = {
-        // id laat je weg voor create (API maakt Hxxxx)
-        eigenaar_id: els.selEigenaar.value.trim(),
-        naam: els.form.elements["naam"].value.trim(),
-        ras: els.form.elements["ras"].value.trim(),
-        chip: els.form.elements["chip"].value.trim(),
-        geboortedatum: els.form.elements["geboortedatum"].value
-      };
-
-      if (!payload.eigenaar_id) throw new Error("Kies een eigenaar.");
-      if (!payload.naam) throw new Error("Naam is verplicht.");
-
-      await apiPost("saveHond", payload);
-      await loadAll();
-      closeModal();
-    } catch (e) {
-      console.error(e);
-      showError("Bewaren mislukt: " + e.message);
-    } finally {
-      els.btnSave.disabled = false;
-    }
-  }
-
-  // ----- Events -----
-  els.zoek?.addEventListener("input", (e) => {
-    state.q = e.target.value || "";
-    render();
-  });
-  els.ownerFilter?.addEventListener("change", (e) => {
-    state.filterOwner = e.target.value || "";
-    render();
-  });
+  // === ⚡ Events ===
+  els.zoek?.addEventListener("input", e => { state.q = e.target.value; render(); });
+  els.ownerFilter?.addEventListener("change", e => { state.filterOwner = e.target.value; render(); });
   els.btnNieuw?.addEventListener("click", () => openModal());
   els.btnCancel?.addEventListener("click", () => closeModal());
   els.btnSave?.addEventListener("click", onSave);
-
-  els.tbody.addEventListener("click", (ev) => {
-    const btn = ev.target.closest("button[data-action]");
+  els.tbody.addEventListener("click", ev => {
+    const btn = ev.target.closest("[data-action='edit']");
     if (!btn) return;
-    const tr = btn.closest("tr");
-    const id = tr?.dataset.id;
-    if (!id) return;
-    const h = state.honden.find(x => x.id === id);
-    if (!h) return;
-    if (btn.dataset.action === "edit") openModal(h);
+    const id = btn.closest("tr")?.dataset.id;
+    const hond = state.honden.find(h => h.id === id);
+    if (hond) openModal(hond);
   });
 
-  // ----- Go! -----
+  // === 🚀 Start ===
   loadAll();
+
 })();
