@@ -1,14 +1,45 @@
 {
   "name": "superhond-registratie-systeem",
   "version": "1.0.0",
+  "description": "Superhond Registratie Systeem – Node.js API proxy + frontend",
   "type": "module",
+
   "scripts": {
+    "start": "node server/index.js",
+    "dev": "nodemon server/index.js",
+
     "bump": "node tools/bump-version.js",
     "bump:minor": "node tools/bump-version.js minor",
     "bump:major": "node tools/bump-version.js major",
     "verify": "node tools/verify.js",
     "split-seed": "node tools/split-seed.js"
   },
-  "dependencies": {},
-  "devDependencies": {}
+
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "node-fetch": "^3.3.2",
+    "dotenv": "^16.4.5"
+  },
+
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
+
+  "engines": {
+    "node": ">=18"
+  },
+
+  "keywords": [
+    "superhond",
+    "dogschool",
+    "registratie",
+    "node",
+    "express",
+    "google-sheets",
+    "api-proxy"
+  ],
+
+  "author": "Paul Thijs",
+  "license": "MIT"
 }
