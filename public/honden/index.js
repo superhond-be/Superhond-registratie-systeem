@@ -1,8 +1,9 @@
-/* v0.20.1 – Hondenpagina (Apps Script API, opgeschoond & robuuster) */
+/* v0.21.0 – Hondenpagina (Apps Script API, stabiele release) */
 (() => {
 
   // === 🔗 Google Apps Script Web App URL ===
-  const API_BASE = "https://script.google.com/macros/s/AKfycbzZP5jnYyjzOzrXaZfg1KL5UMqBFXVfIyyC14YYsyCaVbREPdAQPm_cxVvagM-0nP3cWg/exec";
+  const API_BASE =
+    "https://script.google.com/macros/s/AKfycbzprHaU1ukJT03YLQ6I5EzR1LOq_45tzWNLo-d92rJuwtRat6Qf_b8Ydt-0qoZBIctVNA/exec";
 
   // === 🧩 DOM-elementen ===
   const els = {
@@ -20,7 +21,7 @@
     selEigenaar: document.querySelector("#sel-eigenaar")
   };
 
-  // === 🔧 State ===
+  // === ⚙️ State ===
   const state = {
     honden: [],
     klanten: [],
@@ -32,20 +33,40 @@
   // === 🌐 API helpers ===
   async function apiGet(mode, params = {}) {
     const usp = new URLSearchParams({ mode, t: Date.now(), ...params });
-    const res = await fetch(`${API_BASE}?${usp}`, { cache: "no-store" });
+    let res;
+    try {
+      res = await fetch(`${API_BASE}?${usp.toString()}`, { cache: "no-store" });
+    } catch {
+      throw new Error("Geen verbinding met de API");
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json().catch(() => { throw new Error("Geen geldige JSON van API"); });
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error("Ongeldige JSON van API");
+    }
     if (!data.ok) throw new Error(data.error || "Onbekende API-fout");
     return data.data;
   }
 
   async function apiPost(mode, payload) {
-    const res = await fetch(`${API_BASE}?mode=${encodeURIComponent(mode)}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload || {})
-    });
-    const data = await res.json().catch(() => { throw new Error("Geen geldige JSON van API"); });
+    let res;
+    try {
+      res = await fetch(`${API_BASE}?mode=${encodeURIComponent(mode)}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload || {})
+      });
+    } catch {
+      throw new Error("Geen verbinding met de API");
+    }
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error("Ongeldige JSON van API");
+    }
     if (!data.ok) throw new Error(data.error || "Onbekende API-fout");
     return data.data;
   }
@@ -53,7 +74,7 @@
   // === 🧠 Normalisatie ===
   const normKlant = k => ({
     id: k.id || "",
-    naam: k.naam?.trim() || "(naam onbekend)"
+    naam: String(k.naam || "").trim() || "(naam onbekend)"
   });
 
   const normHond = h => ({
@@ -67,8 +88,8 @@
 
   // === 🎛️ UI helpers ===
   function showLoader(show = true) {
-    if (els.loader) els.loader.style.display = show ? "" : "none";
-    if (els.wrap) els.wrap.style.display = show ? "none" : "";
+    if (els.loader) els.loader.hidden = !show;
+    if (els.wrap) els.wrap.hidden = show;
   }
 
   function showError(msg = "") {
@@ -94,62 +115,67 @@
       render();
     } catch (err) {
       console.error("Fout bij laden:", err);
-      showError("Fout bij laden van honden/klanten: " + err.message);
+      showError("⚠️ " + err.message);
     } finally {
       showLoader(false);
     }
   }
 
-  // === 🔍 Filtering & rendering ===
+  // === 🔍 Filtering ===
   function applyFilters(rows) {
     const q = state.q.toLowerCase();
     const owner = state.filterOwner;
     return rows.filter(h => {
       const eigenaarNaam = state.kById[h.eigenaarId]?.naam?.toLowerCase() || "";
-      return (
-        (!owner || h.eigenaarId === owner) &&
-        (!q || `${h.naam} ${h.ras} ${h.geboortedatum} ${eigenaarNaam}`.toLowerCase().includes(q))
-      );
+      const text = `${h.naam} ${h.ras} ${h.geboortedatum} ${eigenaarNaam}`.toLowerCase();
+      return (!owner || h.eigenaarId === owner) && (!q || text.includes(q));
     });
   }
 
+  // === 🧾 Render tabel ===
   function render() {
+    if (!els.tbody) return;
     const rows = applyFilters([...state.honden]);
     els.tbody.innerHTML = rows.map(h => {
       const e = state.kById[h.eigenaarId];
+      const eigenaarCell = e
+        ? `<a href="../klanten/detail.html?id=${e.id}">${e.naam}</a>`
+        : "—";
       return `
         <tr data-id="${h.id}">
           <td><a href="./detail.html?id=${h.id}"><strong>${h.naam || "—"}</strong></a></td>
           <td>${h.ras || "—"}</td>
           <td>${h.geboortedatum || "—"}</td>
-          <td>${e ? `<a href="../klanten/detail.html?id=${e.id}">${e.naam}</a>` : "—"}</td>
+          <td>${eigenaarCell}</td>
           <td class="right">
             <button class="btn btn-xs" data-action="edit" title="Bewerken">✏️</button>
           </td>
-        </tr>
-      `;
+        </tr>`;
     }).join("");
   }
 
   // === 🧾 Dropdowns ===
   function fillOwnerFilter() {
-    els.ownerFilter.innerHTML = [
-      '<option value="">— Filter op eigenaar —</option>',
-      ...state.klanten.map(k => `<option value="${k.id}">${k.naam}</option>`)
-    ].join("");
+    if (!els.ownerFilter) return;
+    els.ownerFilter.innerHTML =
+      ['<option value="">— Filter op eigenaar —</option>']
+        .concat(state.klanten.map(k => `<option value="${k.id}">${k.naam}</option>`))
+        .join("");
   }
 
   function fillOwnerSelect() {
-    els.selEigenaar.innerHTML = [
-      '<option value="">— Kies eigenaar —</option>',
-      ...state.klanten.map(k => `<option value="${k.id}">${k.naam}</option>`)
-    ].join("");
+    if (!els.selEigenaar) return;
+    els.selEigenaar.innerHTML =
+      ['<option value="">— Kies eigenaar —</option>']
+        .concat(state.klanten.map(k => `<option value="${k.id}">${k.naam}</option>`))
+        .join("");
   }
 
   // === 💾 Opslaan ===
   async function onSave() {
     try {
       els.btnSave.disabled = true;
+      showError("");
       const payload = {
         eigenaar_id: els.selEigenaar.value.trim(),
         naam: els.form.elements["naam"].value.trim(),
@@ -164,7 +190,7 @@
       closeModal();
     } catch (err) {
       console.error("Bewaren mislukt:", err);
-      showError("Bewaren mislukt: " + err.message);
+      showError("❌ Bewaren mislukt: " + err.message);
     } finally {
       els.btnSave.disabled = false;
     }
@@ -172,6 +198,7 @@
 
   // === 🪟 Modal ===
   function openModal(data = null) {
+    if (!els.modal) return;
     els.form.reset();
     if (data) {
       els.form.elements["id"].value = data.id || "";
@@ -180,20 +207,31 @@
       els.form.elements["geboortedatum"].value = data.geboortedatum || "";
       els.form.elements["chip"].value = data.chip || "";
       els.selEigenaar.value = data.eigenaarId || "";
+    } else {
+      els.selEigenaar.value = state.filterOwner || "";
     }
-    els.modal?.showModal?.();
+    if (typeof els.modal.showModal === "function") els.modal.showModal();
+    else els.modal.setAttribute("open", "true");
   }
+
   function closeModal() {
-    els.modal?.close?.();
+    if (typeof els.modal.close === "function") els.modal.close();
+    els.modal.removeAttribute("open");
   }
 
   // === ⚡ Events ===
-  els.zoek?.addEventListener("input", e => { state.q = e.target.value; render(); });
-  els.ownerFilter?.addEventListener("change", e => { state.filterOwner = e.target.value; render(); });
+  els.zoek?.addEventListener("input", e => {
+    state.q = e.target.value;
+    render();
+  });
+  els.ownerFilter?.addEventListener("change", e => {
+    state.filterOwner = e.target.value;
+    render();
+  });
   els.btnNieuw?.addEventListener("click", () => openModal());
-  els.btnCancel?.addEventListener("click", () => closeModal());
+  els.btnCancel?.addEventListener("click", closeModal);
   els.btnSave?.addEventListener("click", onSave);
-  els.tbody.addEventListener("click", ev => {
+  els.tbody?.addEventListener("click", ev => {
     const btn = ev.target.closest("[data-action='edit']");
     if (!btn) return;
     const id = btn.closest("tr")?.dataset.id;
@@ -201,7 +239,7 @@
     if (hond) openModal(hond);
   });
 
-  // === 🚀 Start ===
+  // === 🚀 Init ===
   loadAll();
 
 })();
