@@ -1,89 +1,54 @@
-/* v0.22.2 – Klantenpagina (rechtstreeks endpoints, met fallback & nette errors) */
+/* v0.21.1 – Klantenpagina (rechtstreeks Apps Script API, robuust) */
 (() => {
-  // === 1) API BASE ===
-  const API_BASE =
-    (window?.SuperhondConfig?.apiBase) ||
-    "https://script.google.com/macros/s/AKfycbzprHaU1ukJT03YLQ6I5EzR1LOq_45tzWNLo-d92rJuwtRat6Qf_b8Ydt-0qoZBIctVNA/exec";
+  // 1) PLAATS HIER JE EIGEN /exec URL (zonder query parameters!)
+  const API_BASE = "https://script.google.com/macros/s/AKfycbzprHaU1ukJT03YLQ6I5EzR1LOq_45tzWNLo-d92rJuwtRat6Qf_b8Ydt-0qoZBIctVNA/exec";
 
-  // === 2) Endpoints (rechtstreeks) ===
-  const URL_KLANTEN     = `${API_BASE}?mode=klanten`;
-  const URL_HONDEN      = `${API_BASE}?mode=honden`;
-  const URL_SAVE_KLANT  = `${API_BASE}?mode=saveKlant`;
-
-  // === 3) DOM ===
+  // 2) DOM
   const els = {
-    loader:   document.querySelector("#loader"),
-    error:    document.querySelector("#error"),
-    wrap:     document.querySelector("#wrap"),
-    tbody:    document.querySelector("#tabel tbody"),
-    // modal + form zijn optioneel; code checkt of ze bestaan
+    loader: document.querySelector("#loader"),
+    error: document.querySelector("#error"),
+    wrap: document.querySelector("#wrap"),
+    tbody: document.querySelector("#tabel tbody"),
     btnNieuw: document.querySelector("#btn-nieuw"),
-    modal:    document.querySelector("#modal"),
-    form:     document.querySelector("#form"),
-    btnCancel:document.querySelector("#btn-cancel"),
-    btnSave:  document.querySelector("#btn-save"),
+    modal: document.querySelector("#modal"),
+    form: document.querySelector("#form"),
+    btnCancel: document.querySelector("#btn-cancel"),
+    btnSave: document.querySelector("#btn-save"),
   };
 
-  // === 4) State ===
+  // 3) State
   const state = {
     klanten: [],
     hondenByOwner: new Map(),
   };
 
-  // === 5) UI helpers ===
-  const showLoader = (on = true) => {
-    if (els.loader) els.loader.hidden = !on;
-    if (els.wrap)   els.wrap.hidden   = on;
-  };
-  const showError = (msg = "") => {
-    if (!els.error) return;
-    els.error.textContent = msg;
-    els.error.style.display = msg ? "" : "none";
-  };
-
-  // === 6) Fetch helpers ===
-  async function getJson(url) {
+  // 4) Eén harde fetch helper (GET) – leest text() en parse’t zelf → betere foutmeldingen
+  async function apiGet(mode, params = {}) {
+    const qs = new URLSearchParams({ mode, t: Date.now(), ...params }).toString();
     let res;
     try {
-      res = await fetch(url, { cache: "no-store" });
+      res = await fetch(`${API_BASE}?${qs}`, { cache: "no-store" });
     } catch {
       throw new Error("Geen verbinding met de API");
     }
+    const txt = await res.text();
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    let j; try { j = await res.json(); } catch { throw new Error("Ongeldige JSON van API"); }
-    if (!j.ok) throw new Error(j.error || "Onbekende API-fout");
-    return j.data;
+    let json;
+    try { json = JSON.parse(txt); } catch { throw new Error("Ongeldige JSON van API"); }
+    if (!json.ok) throw new Error(json.error || "Onbekende API-fout");
+    return json.data;
   }
 
-  async function postJson(url, payload = {}) {
-    let res;
-    try {
-      res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-    } catch {
-      throw new Error("Geen verbinding met de API");
-    }
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    let j; try { j = await res.json(); } catch { throw new Error("Ongeldige JSON van API"); }
-    if (!j.ok) throw new Error(j.error || "Onbekende API-fout");
-    return j.data;
-  }
-
-  // === 7) Normalisatie ===
+  // 5) Normalisatie
   function normKlant(k) {
     const full = String(k.naam || "").trim();
-    const [voornaam, ...rest] = full.split(/\s+/);
-    const achternaam = rest.join(" ");
-
+    const [voornaam, ...r] = full.split(/\s+/);
+    const achternaam = r.join(" ");
     let plaats = "";
     if (k.adres) {
       const parts = String(k.adres).split(",");
       plaats = (parts[1] || parts[0] || "").trim();
     }
-
     return {
       id: k.id || "",
       naam: full || "(naam onbekend)",
@@ -91,53 +56,63 @@
       achternaam,
       email: k.email || "",
       telefoon: k.telefoon || "",
-      plaats
+      plaats,
     };
   }
-
   const normHond = h => ({
     id: h.id || "",
     eigenaarId: h.eigenaar_id || h.eigenaarId || "",
-    naam: h.naam || ""
+    naam: h.naam || "",
+    ras: h.ras || "",
+    geboortedatum: h.geboortedatum || "",
   });
 
-  // === 8) Data laden ===
+  // 6) UI helpers
+  function showLoader(on = true) {
+    if (els.loader) els.loader.style.display = on ? "" : "none";
+    if (els.wrap) els.wrap.style.display = on ? "none" : "";
+  }
+  function showError(msg = "") {
+    if (!els.error) return;
+    els.error.textContent = msg;
+    els.error.style.display = msg ? "" : "none";
+  }
+
+  // 7) Data laden
   async function loadAll() {
-    showLoader(true);
     showError("");
+    showLoader(true);
     try {
       const [klRaw, hoRaw] = await Promise.all([
-        getJson(URL_KLANTEN),
-        getJson(URL_HONDEN)
+        apiGet("klanten"),
+        apiGet("honden"),
       ]);
       const klanten = klRaw.map(normKlant);
       const honden  = hoRaw.map(normHond);
 
-      // eigenaarId → [honden[]]
       const map = new Map();
       honden.forEach(h => {
         if (!map.has(h.eigenaarId)) map.set(h.eigenaarId, []);
         map.get(h.eigenaarId).push(h);
       });
 
-      state.klanten      = klanten;
+      state.klanten = klanten;
       state.hondenByOwner = map;
-
       render();
     } catch (e) {
-      console.error("Fout bij laden:", e);
+      console.error(e);
       showError("⚠️ " + e.message);
     } finally {
       showLoader(false);
     }
   }
 
-  // === 9) Render ===
+  // 8) Render
   function render() {
     if (!els.tbody) return;
     els.tbody.innerHTML = state.klanten.map(k => {
       const dogs = state.hondenByOwner.get(k.id) || [];
-      const chips = dogs.length
+      const dogChips = dogs.length
         ? dogs.map(d => `<a class="chip btn btn-xs" href="../honden/detail.html?id=${d.id}" title="Bekijk ${d.naam}">${d.naam}</a>`).join(" ")
         : '<span class="muted">0</span>';
       return `
@@ -145,102 +120,19 @@
           <td><a href="./detail.html?id=${k.id}"><strong>${k.naam}</strong></a></td>
           <td>${k.email ? `<a href="mailto:${k.email}">${k.email}</a>` : "—"}</td>
           <td>${k.telefoon || "—"}</td>
-          <td>${chips}</td>
+          <td>${dogChips}</td>
           <td class="right">
-            ${els.modal ? `<button class="btn btn-xs" data-action="edit" title="Bewerken">✏️</button>` : ""}
+            <button class="btn btn-xs" data-action="edit" title="Bewerken">✏️</button>
           </td>
-        </tr>`;
+        </tr>
+      `;
     }).join("");
   }
 
-  // === 10) Opslaan (optioneel; alleen als modal+form bestaan) ===
-  async function onSave() {
-    if (!els.form) return;
-    try {
-      els.btnSave && (els.btnSave.disabled = true);
-      showError("");
+  // 9) Events (alleen modal knoppen; bewerken bewaren volgt later)
+  els.btnNieuw?.addEventListener("click", () => els.modal?.showModal?.());
+  els.btnCancel?.addEventListener("click", () => els.modal?.close?.());
 
-      const naam = (
-        els.form.elements["naam"]?.value ||
-        `${els.form.elements["voornaam"]?.value || ""} ${els.form.elements["achternaam"]?.value || ""}`
-      ).trim();
-      const email     = (els.form.elements["email"]?.value || "").trim();
-      const telefoon  = (els.form.elements["telefoon"]?.value || "").trim();
-      const straat    = (els.form.elements["straat"]?.value || "").trim();
-      const nr        = (els.form.elements["huisnr"]?.value || "").trim();
-      const bus       = (els.form.elements["bus"]?.value || "").trim();
-      const postcode  = (els.form.elements["postcode"]?.value || "").trim();
-      const gemeente  = (els.form.elements["gemeente"]?.value || "").trim();
-      const land      = (els.form.elements["land"]?.value || "").trim();
-
-      if (!naam || !email) throw new Error("Naam en e-mail zijn verplicht.");
-
-      const adres = [
-        `${straat} ${nr}${bus ? " bus " + bus : ""}`.trim(),
-        `${postcode} ${gemeente}`.trim(),
-        land
-      ].filter(Boolean).join(", ");
-
-      await postJson(URL_SAVE_KLANT, { naam, email, telefoon, adres, status: "actief" });
-      await loadAll();
-      closeModal();
-    } catch (e) {
-      console.error("Bewaren mislukt:", e);
-      showError("❌ Bewaren mislukt: " + e.message);
-    } finally {
-      els.btnSave && (els.btnSave.disabled = false);
-    }
-  }
-
-  // === 11) Modal open/close (optioneel) ===
-  function openModal(data = null) {
-    if (!els.modal || !els.form) return;
-    els.form.reset();
-    if (data) {
-      els.form.elements["id"] && (els.form.elements["id"].value = data.id || "");
-      els.form.elements["naam"] && (els.form.elements["naam"].value = data.naam || "");
-      els.form.elements["voornaam"] && (els.form.elements["voornaam"].value = data.voornaam || "");
-      els.form.elements["achternaam"] && (els.form.elements["achternaam"].value = data.achternaam || "");
-      els.form.elements["email"] && (els.form.elements["email"].value = data.email || "");
-      els.form.elements["telefoon"] && (els.form.elements["telefoon"].value = data.telefoon || "");
-    }
-    els.modal.showModal?.();
-  }
-  function closeModal() {
-    if (!els.modal) return;
-    els.modal.close?.();
-  }
-
-  // === 12) Events (alleen gebonden als de elementen bestaan) ===
-  els.btnNieuw   && els.btnNieuw  .addEventListener("click", () => openModal());
-  els.btnCancel  && els.btnCancel .addEventListener("click", () => closeModal());
-  els.btnSave    && els.btnSave   .addEventListener("click", onSave);
-
-  els.tbody && els.tbody.addEventListener("click", ev => {
-    const btn = ev.target.closest("button[data-action='edit']");
-    if (!btn || !els.modal) return;
-    const id = btn.closest("tr")?.dataset.id;
-    const klant = state.klanten.find(x => x.id === id);
-    if (klant) openModal(klant);
-  });
-
-  // === 13) Go! ===
-  showError(""); // clear
+  // 10) Go
   loadAll();
-
-  // === 14) (Optioneel) Debug-pane: voeg <pre id="api-debug"> toe en roep ?mode=klanten|honden aan ===
-  (async () => {
-    const debugPre = document.getElementById("api-debug");
-    const forcedMode = new URLSearchParams(location.search).get("mode");
-    if (!debugPre || !forcedMode) return;
-    debugPre.style.display = "";
-    try {
-      const url = `${API_BASE}?mode=${encodeURIComponent(forcedMode)}&t=${Date.now()}`;
-      const res = await fetch(url, { cache: "no-store" });
-      const json = await res.json();
-      debugPre.textContent = JSON.stringify(json, null, 2);
-    } catch (e) {
-      debugPre.textContent = "❌ " + e.message;
-    }
-  })();
 })();
