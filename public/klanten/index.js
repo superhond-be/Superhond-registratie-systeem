@@ -242,3 +242,33 @@ const apiPost = window.SuperhondAPI.post;
   loadAll();
 
 })();
+
+// --- DEBUG: raw API output tonen als je ?mode=klanten of ?mode=honden in de URL zet ---
+(async () => {
+  const debugPre = document.getElementById("api-debug");
+  const qs = new URLSearchParams(location.search);
+  const forcedMode = qs.get("mode"); // bv. klanten of honden
+
+  if (!forcedMode) return;
+
+  debugPre.style.display = "";
+  debugPre.textContent = `Laden… (${forcedMode})`;
+
+  // Gebruik je centrale helper als die er is, anders rechtstreeks
+  const API_BASE = (window.SuperhondConfig?.apiBase) ||
+                   (window.SUPERHOND_DATA?.API_BASE)  ||
+                   "https://script.google.com/macros/s/AKfycbzprHaU1ukJT03YLQ6I5EzR1LOq_45tzWNLo-d92rJuwtRat6Qf_b8Ydt-0qoZBIctVNA/exec";
+
+  try {
+    const url = `${API_BASE}?mode=${encodeURIComponent(forcedMode)}&t=${Date.now()}`;
+    const res = await fetch(url, { cache: "no-store" });
+    const json = await res.json();
+    debugPre.textContent = JSON.stringify(json, null, 2);
+  } catch (e) {
+    debugPre.textContent = "❌ Fout: " + e.message;
+  }
+})();
+
+
+
+
