@@ -1,19 +1,18 @@
-/* v0.21.1 – Klantenpagina (rechtstreeks Apps Script API, robuust) */
+/* v0.21.2 – Klantenpagina (rechtstreeks Apps Script API, robuust) */
 (() => {
-  // 1) PLAATS HIER JE EIGEN /exec URL (zonder query parameters!)
+  // 1) JOUW Web-app /exec URL (zonder query’s)
   const API_BASE = "https://script.google.com/macros/s/AKfycbzprHaU1ukJT03YLQ6I5EzR1LOq_45tzWNLo-d92rJuwtRat6Qf_b8Ydt-0qoZBIctVNA/exec";
 
   // 2) DOM
   const els = {
     loader: document.querySelector("#loader"),
-    error: document.querySelector("#error"),
-    wrap: document.querySelector("#wrap"),
-    tbody: document.querySelector("#tabel tbody"),
-    btnNieuw: document.querySelector("#btn-nieuw"),
-    modal: document.querySelector("#modal"),
-    form: document.querySelector("#form"),
+    error:  document.querySelector("#error"),
+    wrap:   document.querySelector("#wrap"),
+    tbody:  document.querySelector("#tabel tbody"),
+    btnNieuw:  document.querySelector("#btn-nieuw"),
+    modal:     document.querySelector("#modal"),
+    form:      document.querySelector("#form"),
     btnCancel: document.querySelector("#btn-cancel"),
-    btnSave: document.querySelector("#btn-save"),
   };
 
   // 3) State
@@ -22,7 +21,7 @@
     hondenByOwner: new Map(),
   };
 
-  // 4) Eén harde fetch helper (GET) – leest text() en parse’t zelf → betere foutmeldingen
+  // 4) API helper (GET)
   async function apiGet(mode, params = {}) {
     const qs = new URLSearchParams({ mode, t: Date.now(), ...params }).toString();
     let res;
@@ -70,7 +69,7 @@
   // 6) UI helpers
   function showLoader(on = true) {
     if (els.loader) els.loader.style.display = on ? "" : "none";
-    if (els.wrap) els.wrap.style.display = on ? "none" : "";
+    if (els.wrap)   els.wrap.style.display   = on ? "none" : "";
   }
   function showError(msg = "") {
     if (!els.error) return;
@@ -83,13 +82,14 @@
     showError("");
     showLoader(true);
     try {
+      console.info("[Klanten] Laden…", API_BASE);
       const [klRaw, hoRaw] = await Promise.all([
         apiGet("klanten"),
         apiGet("honden"),
       ]);
       const klanten = klRaw.map(normKlant);
       const honden  = hoRaw.map(normHond);
-const API_BASE = "/api/sheets"; // nu via je eigen server
+
       const map = new Map();
       honden.forEach(h => {
         if (!map.has(h.eigenaarId)) map.set(h.eigenaarId, []);
@@ -99,8 +99,9 @@ const API_BASE = "/api/sheets"; // nu via je eigen server
       state.klanten = klanten;
       state.hondenByOwner = map;
       render();
+      console.info(`[Klanten] OK – ${klanten.length} klanten, ${honden.length} honden`);
     } catch (e) {
-      console.error(e);
+      console.error("[Klanten] Fout:", e);
       showError("⚠️ " + e.message);
     } finally {
       showLoader(false);
@@ -129,10 +130,10 @@ const API_BASE = "/api/sheets"; // nu via je eigen server
     }).join("");
   }
 
-  // 9) Events (alleen modal knoppen; bewerken bewaren volgt later)
+  // 9) Events (modal open/close)
   els.btnNieuw?.addEventListener("click", () => els.modal?.showModal?.());
   els.btnCancel?.addEventListener("click", () => els.modal?.close?.());
 
-  // 10) Go
+  // 10) Start
   loadAll();
 })();
