@@ -1,15 +1,15 @@
 // /public/js/layout.js
-// v0.22.0 — Superhond UI + Centrale Config (GAS Web-App URL)
-// - Topbar + Footer rendering
-// - SuperhondConfig: resolveApiBase() / setApiBase()
-// - Optionele API statusbadge (ping)
-// -----------------------------------------------------------
+// v0.22.1 — Superhond UI + Centrale Config (GAS Web-App URL)
+// - resolveApiBase(): QS → LS → /api/config, met validatie + opslag
+// - setApiBase(url): opslaan + event "superhond:apiBaseChanged"
+// - readVersion(): /api/config.version → /version.json → __APP_VERSION__
+// - Topbar/Footer + optionele API-statusbadge
 (() => {
   const HOME = '/dashboard/';
   const LS_KEY = 'superhond_api_base';
   const TIMEOUT_MS = 9000;
 
-  // ============= Utils =============
+  // ===== Utils =====
   const strip = s => String(s || '').replace(/^\uFEFF/, '').trim();
   const isHTML = txt => /^\s*</.test(strip(txt));
   const el = (tag, attrs = {}, children = []) => {
@@ -30,16 +30,27 @@
     finally { if (t) clearTimeout(t); }
   }
 
-  // ============= Centrale Config =============
-  // Bepaalt de Google Apps Script Web-App base URL (…/exec)
+  // ===== Validatie van /exec URL =====
+  function looksLikeExecUrl(u) {
+    try {
+      const url = new URL(String(u || ''));
+      const hostOK = url.hostname === 'script.google.com';
+      const pathOK = url.pathname.startsWith('/macros/s/');
+      const endsExec = url.pathname.endsWith('/exec');
+      return hostOK && pathOK && endsExec;
+    } catch { return false; }
+  }
+
+  // ===== Config-bronnen =====
   async function getFromServer() {
-    // Optionele serverconfig: /api/config moet { apiBase: "…" } teruggeven
     try {
       const r = await fetchWithTimeout('/api/config', 4000);
-      if (!r.ok) return '';
+      if (!r.ok) return {};
       const j = await r.json().catch(() => ({}));
-      return (j?.apiBase || '').trim();
-    } catch { return ''; }
+      const apiBase = (j?.apiBase || '').trim();
+      const version = (j?.version || '').trim();
+      return { apiBase, version };
+    } catch { return {}; }
   }
   function getFromQuery() {
     try {
@@ -50,47 +61,50 @@
   function getFromLocalStorage() {
     try { return (localStorage.getItem(LS_KEY) || '').trim(); } catch { return ''; }
   }
+
+  // ===== Opslaan + event =====
   function setApiBase(url) {
-    try { localStorage.setItem(LS_KEY, String(url || '').trim()); } catch {}
-    window.SuperhondConfig._resolved = String(url || '').trim();
-    return window.SuperhondConfig._resolved;
+    const val = String(url || '').trim();
+    try { localStorage.setItem(LS_KEY, val); } catch {}
+    window.SuperhondConfig._resolved = val;
+    // notify app (andere scripts) dat base is veranderd
+    window.dispatchEvent(new CustomEvent('superhond:apiBaseChanged', { detail: { apiBase: val }}));
+    return val;
   }
 
+  // ===== Resolver (QS → LS → Server) =====
   async function resolveApiBase() {
-    // volgorde: query → localStorage → server → (leeg)
     const fromQS = getFromQuery();
     if (fromQS) return setApiBase(fromQS);
 
     const fromLS = getFromLocalStorage();
     if (fromLS) return setApiBase(fromLS);
 
-    const fromSrv = await getFromServer();
-    if (fromSrv) return setApiBase(fromSrv);
+    const { apiBase } = await getFromServer();
+    if (apiBase) return setApiBase(apiBase);
 
-    return setApiBase(''); // geen default hardcoderen
+    return setApiBase('');
   }
 
-  // Expose config globaal (voor /klanten/, /honden/, …)
-  window.SuperhondConfig = window.SuperhondConfig || {};
-  Object.assign(window.SuperhondConfig, {
-    resolveApiBase,
-    setApiBase,
-    _resolved: getFromLocalStorage() // snelle sync
-  });
-
-  // ============= UI: Topbar/Footer =============
+  // ===== Versie lezen =====
   async function readVersion() {
-    // Probeer /version.json → { version, build, date }
+    // Probeer eerst /api/config.version
+    const { version: vFromCfg } = await getFromServer();
+    if (vFromCfg) return vFromCfg;
+
+    // Dan /version.json
     try {
-      const r = await fetchWithTimeout('/version.json', 3000);
-      if (!r.ok) throw 0;
-      const j = await r.json();
-      return j?.version || '';
-    } catch {
-      return window.__APP_VERSION__ || 'v0.22.x';
-    }
+      const r = await fetchWithTimeout('/version.json', 2500);
+      if (r.ok) {
+        const j = await r.json();
+        if (j?.version) return j.version;
+      }
+    } catch {}
+    // Fallback
+    return window.__APP_VERSION__ || 'v0.22.x';
   }
 
+  // ===== Ping helper (optie voor statusbadge) =====
   async function pingApi(base) {
     if (!base) return { ok: false, note: 'Geen API URL' };
     const url = `${base}?mode=ping&t=${Date.now()}`;
@@ -108,11 +122,12 @@
     }
   }
 
+  // ===== UI mount =====
   async function mount(opts = {}) {
     const title = opts.title || 'Superhond';
     const icon  = opts.icon  || '🐾';
     const back  = (opts.back === null) ? '' : (opts.back || HOME);
-    const showApiStatus = !!opts.showApiStatus; // toon ping-badge
+    const showApiStatus = !!opts.showApiStatus;
 
     // Body context class
     const path = location.pathname;
@@ -120,8 +135,15 @@
     else if (path.includes('/beheer') || path.includes('/admin')) document.body.classList.add('admin-page');
     else document.body.classList.add('subpage');
 
-    // Bepaal versie & API base (in parallel)
-    const [version, apiBase] = await Promise.all([ readVersion(), resolveApiBase() ]);
+    // 1) bepaal API-base
+    let apiBase = await resolveApiBase();
+    // valideer (alleen bij QS/LS): als server-waarde later beter is, wordt die door setApiBase gezet
+    if (apiBase && !looksLikeExecUrl(apiBase)) {
+      console.warn('[Superhond] apiBase lijkt geen geldige /exec URL:', apiBase);
+    }
+
+    // 2) lees versie
+    const version = await readVersion();
 
     // Topbar
     const top = document.getElementById('topbar');
@@ -129,34 +151,33 @@
       top.innerHTML = '';
       const wrap = el('div', { class: 'container topbar-flex' });
 
-      // Back
       if (back) {
         wrap.appendChild(
           el('a', { href: back, class: 'btn btn-back', title: 'Terug' }, el('span', { text: '← Terug' }))
         );
       }
 
-      // Brand
       wrap.appendChild(
-        el('a', { href: HOME, class: 'brand', title: title }, [
-          el('span', { text: `${icon} Superhond` })
-        ])
+        el('a', { href: HOME, class: 'brand', title: title }, el('span', { text: `${icon} Superhond` }))
       );
 
-      // Versie
       wrap.appendChild(el('span', { class: 'version-badge', text: version || 'v0.22.x' }));
 
-      // API status (optioneel)
       if (showApiStatus) {
         const badge = el('span', { class: 'api-badge muted', text: 'API: …' });
         badge.style.marginLeft = '8px';
         wrap.appendChild(badge);
 
-        // async ping
-        const { ok, note } = await pingApi(apiBase);
-        badge.textContent = ok ? 'API: OK' : `API: ${note}`;
-        badge.className = 'api-badge ' + (ok ? 'ok' : note === 'Timeout' ? 'warn' : 'err');
-        badge.title = apiBase ? apiBase : 'Geen API URL ingesteld';
+        // ping async; update bij wijziging van apiBase ook
+        const updateBadge = async () => {
+          apiBase = window.SuperhondConfig._resolved || getFromLocalStorage() || apiBase;
+          const { ok, note } = await pingApi(apiBase);
+          badge.textContent = ok ? 'API: OK' : `API: ${note}`;
+          badge.className = 'api-badge ' + (ok ? 'ok' : note === 'Timeout' ? 'warn' : 'err');
+          badge.title = apiBase || 'Geen API URL ingesteld';
+        };
+        updateBadge();
+        window.addEventListener('superhond:apiBaseChanged', updateBadge);
       }
 
       top.appendChild(wrap);
@@ -176,6 +197,14 @@
     }
   }
 
-  // Expose UI
+  // ===== Globale exports =====
+  window.SuperhondConfig = window.SuperhondConfig || {};
+  Object.assign(window.SuperhondConfig, {
+    resolveApiBase,
+    setApiBase,
+    getApiBaseSync: () => window.SuperhondConfig._resolved || getFromLocalStorage() || '',
+    _resolved: getFromLocalStorage()
+  });
+
   window.SuperhondUI = { mount };
 })();
