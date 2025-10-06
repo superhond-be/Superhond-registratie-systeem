@@ -1,0 +1,144 @@
+/* /public/css/responsive.css  — v0.22.0
+   Responsive “enhancer” voor Superhond
+   - Vergroot container op grotere schermen
+   - Fluid typography met clamp()
+   - Betere schaal voor topbar, toolbar, knoppen
+   - Tabellen scrollbaar op mobiel, ruimer op desktop
+   - Dialog/Modal breedte schaalt mee
+   - Optionele compacte/ruime modi via body-classes
+*/
+
+/* ========== Basis-schaal ========== */
+:root{
+  --container-max: 72rem;            /* ~1152px */
+  --container-pad: 1rem;
+  --font-min: 15px;
+  --font-max: 17px;
+  --line: 1.55;
+
+  --topbar-h: 56px;
+  --radius: 8px;
+
+  --table-font: 0.95rem;
+  --table-pad-y: .55rem;
+  --table-pad-x: .65rem;
+}
+
+/* Fluid typography */
+html { font-size: clamp(var(--font-min), 1.2vw + 12px, var(--font-max)); }
+body { line-height: var(--line); }
+
+/* Container breder op desktop */
+.container{
+  max-width: var(--container-max);
+  padding-left: var(--container-pad);
+  padding-right: var(--container-pad);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Topbar / header */
+.topbar{
+  min-height: var(--topbar-h);
+  display: flex;
+  align-items: center;
+}
+.topbar .topbar-flex{
+  display:flex;
+  gap:.75rem;
+  align-items:center;
+  justify-content:space-between;
+}
+.brand{ font-weight: 600; }
+
+/* Toolbar (zoek + knoppen) */
+.toolbar{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap:.75rem;
+}
+@media (min-width: 768px){
+  .toolbar{ grid-template-columns: 1fr auto auto; }
+}
+
+/* Knoppen iets groter op desktop */
+.btn{ padding:.55rem .8rem; border-radius: 8px; }
+.btn.btn-xs{ padding:.2rem .45rem; border-radius: 6px; }
+
+/* Tabel: mobiel scroll, desktop ruimer */
+.table-wrap{
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  border-radius: var(--radius);
+}
+.table{
+  width:100%;
+  border-collapse: collapse;
+  font-size: var(--table-font);
+}
+.table th, .table td{
+  padding: var(--table-pad-y) var(--table-pad-x);
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle;
+}
+.table th.right, .table td.right{ text-align: right; }
+
+/* Iets grotere spatiëring op brede schermen */
+@media (min-width: 1024px){
+  :root{
+    --container-max: 84rem;      /* ~1344px */
+    --font-max: 18px;
+    --table-font: 1rem;
+  }
+  .table th, .table td{
+    padding: .7rem .8rem;
+  }
+}
+
+/* XL schermen: nog ruimer als gewenst */
+@media (min-width: 1440px){
+  :root{
+    --container-max: 96rem;      /* ~1536px */
+    --font-max: 19px;
+  }
+}
+
+/* Modal/dialog schaalt mee */
+dialog, .modal{
+  width:min(720px, 96vw);
+  border-radius: var(--radius);
+}
+dialog form .row{ margin-bottom:.65rem; }
+
+/* Zoekveld breed op desktop */
+input[type="search"].input{ width:100%; }
+
+/* Statusbadges in topbar (optioneel) */
+.version-badge, .api-badge{
+  font-size:.85rem;
+  padding:.2rem .5rem;
+  border-radius: 999px;
+  background:#eef2ff;
+  color:#3730a3;
+}
+.api-badge.ok   { background:#ecfdf5; color:#065f46; }
+.api-badge.err  { background:#fef2f2; color:#991b1b; }
+.api-badge.warn { background:#fffbeb; color:#92400e; }
+
+/* Footer iets subtieler */
+.footer small{ opacity:.8; }
+
+/* ========== Optionele modus-klassen ========== */
+/* Compacte modus (bijv. voor kleine laptops) */
+body.compact{
+  --container-max: 70rem;
+  --font-min: 14px; --font-max: 16px;
+  --table-font: .93rem;
+}
+
+/* Ruime modus (UX-standaard voor iMac/desktop) */
+body.roomy{
+  --container-max: 100rem;
+  --font-max: 19px;
+  --table-font: 1.05rem;
+}
