@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Klant detail – Superhond</title>
 
-  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+  <link rel="stylesheet" href="../css/style.css?v=0.22.5" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.22.5" />
 </head>
-<body>
+<body class="subpage">
   <!-- Topbar -->
   <header id="topbar" class="topbar"></header>
 
   <main class="container">
-    <h2 class="page-title">Klant detail</h2>
-    <div id="box" class="card">⏳ Bezig met laden…</div>
+    <h1 class="page-title">Klant detail</h1>
+    <article id="box" class="card" aria-live="polite">⏳ Bezig met laden…</article>
     <p><a href="./" class="btn">← Terug naar klanten</a></p>
   </main>
 
@@ -22,7 +22,7 @@
   <footer id="footer" class="footer"></footer>
 
   <!-- Layout -->
-  <script src="../js/layout.js?v=0.20.0" defer></script>
+  <script src="../js/layout.js?v=0.22.5" defer></script>
 
   <!-- Paginalogica -->
   <script type="module">
@@ -39,7 +39,27 @@
     const id     = params.get("id");
     const target = document.getElementById("box");
 
-    const bust = () => "?t=" + Date.now();
+    function cacheBust(url){
+      try { const u = new URL(url, location.origin); u.searchParams.set("t", Date.now()); return u.toString(); }
+      catch { return url + (url.includes("?") ? "&" : "?") + "t=" + Date.now(); }
+    }
+
+    async function fetchJson(tryUrls, { timeout = 9000 } = {}) {
+      for (const base of tryUrls) {
+        const url = cacheBust(base);
+        const ac = ("AbortController" in window) ? new AbortController() : null;
+        const to = ac ? setTimeout(() => ac.abort(), timeout) : null;
+        try {
+          const r = await fetch(url, { cache: "no-store", signal: ac?.signal });
+          if (r.ok) {
+            const j = await r.json().catch(() => null);
+            if (j) return j;
+          }
+        } catch (_) {}
+        finally { if (to) clearTimeout(to); }
+      }
+      return null;
+    }
 
     function fmtAdres(k = {}) {
       const p1 = [T(k.straat), [T(k.huisnr), T(k.bus)].filter(Boolean).join("")].filter(Boolean).join(" ");
@@ -48,52 +68,75 @@
       return esc(out || "—");
     }
 
+    function guessNameFromEmail(email){
+      const local = T(email).split("@")[0];
+      return local.split(/[._-]+/)
+        .map(x => x ? x[0].toUpperCase() + x.slice(1) : "")
+        .join(" ").trim();
+    }
+
     function naamVan(k = {}) {
       const comb = [T(k.voornaam), T(k.achternaam)].filter(Boolean).join(" ").trim();
       if (comb) return esc(comb);
       if (T(k.naam)) return esc(k.naam);
-      const fromMail = T(k.email).split("@")[0] || "";
+      const fromMail = guessNameFromEmail(k.email);
       return esc(fromMail || "(zonder naam)");
     }
 
-    async function fetchJson(tryUrls) {
-      for (const u of tryUrls) {
-        try {
-          const r = await fetch(u + bust(), { cache: "no-store" });
-          if (r.ok) return r.json();
-        } catch (_) {}
-      }
-      return null;
-    }
-
-    function findById(list, id){
-      return (list || []).find(x => String(x?.id) === String(id));
-    }
-
     function hondenVanKlant(honden, klantId){
+      const idStr = String(klantId);
       return (honden || [])
-        .filter(h => String(h.eigenaarId ?? h.klantId ?? h.ownerId) === String(klantId))
+        .map(h => ({
+          ...h,
+          eigenaarId: h.eigenaarId ?? h.eigenaar_id ?? h.ownerId ?? h.klantId ?? h.klant_id ?? ""
+        }))
+        .filter(h => String(h.eigenaarId) === idStr)
         .sort((a,b) => T(a.naam).localeCompare(T(b.naam)));
+    }
+
+    // mailto/tel helpers
+    function mailtoHref(v){
+      const s = T(v);
+      return s && s.includes("@") ? `mailto:${s}` : "";
+    }
+    function normalizePhoneHref(v){
+      let s = T(v);
+      if (!s) return "";
+      s = s.replace(/[^\d+]/g, "");
+      if (s.startsWith("00")) s = "+" + s.slice(2);
+      return s ? `tel:${s}` : "";
     }
 
     function renderDetail(klant, hondenList){
       const naam = naamVan(klant);
       const dogs = hondenVanKlant(hondenList, klant.id);
 
+      const emailText = T(klant.email);
+      const emailHref = mailtoHref(emailText);
+      const emailHTML = emailHref
+        ? `<a href="${esc(emailHref)}">${esc(emailText)}</a>`
+        : (esc(emailText) || "—");
+
+      const telText = T(klant.telefoon);
+      const telHref = normalizePhoneHref(telText);
+      const telHTML = telHref
+        ? `<a href="${esc(telHref)}">${esc(telText)}</a>`
+        : (esc(telText) || "—");
+
       target.innerHTML = `
-        <h3 style="margin-top:0">${naam}</h3>
-        <div class="grid" style="display:grid;gap:1rem;grid-template-columns:1fr">
+        <h2 style="margin-top:0">${naam}</h2>
+        <div class="grid" style="display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
           <section>
             <ul>
-              <li><strong>E-mail:</strong> ${esc(T(klant.email)) || "—"}</li>
-              <li><strong>Telefoon:</strong> ${esc(T(klant.telefoon)) || "—"}</li>
+              <li><strong>E-mail:</strong> ${emailHTML}</li>
+              <li><strong>Telefoon:</strong> ${telHTML}</li>
               <li><strong>Adres:</strong> ${fmtAdres(klant)}</li>
               <li><strong>Land:</strong> ${esc(T(klant.land)) || "—"}</li>
             </ul>
           </section>
 
           <section>
-            <h4>Honden van deze klant</h4>
+            <h3>Honden van deze klant</h3>
             ${
               dogs.length
                 ? `<ul>${
@@ -114,7 +157,7 @@
     async function load() {
       // Topbar/footer mount
       if (window.SuperhondUI?.mount) {
-        SuperhondUI.mount({ title: "Klant detail", icon: "👤", back: "./" });
+        SuperhondUI.mount({ title: "Klant detail", icon: "👤", back: "./", showApiStatus: false });
       }
 
       if (!id) {
@@ -124,7 +167,7 @@
 
       try {
         // 1) Snelpad: buckets (localStorage)
-        ensureMigrated();
+        await ensureMigrated();
         let klanten = getKlanten() || [];
         let honden  = getHonden()  || [];
 
@@ -133,14 +176,16 @@
           const js = await fetchJson(["../api/klanten","../data/klanten.json"]);
           if (Array.isArray(js)) klanten = js;
           else if (Array.isArray(js?.items)) klanten = js.items;
+          else if (Array.isArray(js?.data))  klanten = js.data;
         }
         if (!honden.length) {
           const jh = await fetchJson(["../api/honden","../data/honden.json"]);
           if (Array.isArray(jh)) honden = jh;
           else if (Array.isArray(jh?.items)) honden = jh.items;
+          else if (Array.isArray(jh?.data))  honden = jh.data;
         }
 
-        const klant = findById(klanten, id);
+        const klant = (klanten || []).find(x => String(x?.id) === String(id));
         if (!klant) {
           target.innerHTML = `<p class="error">Klant met id <code>${esc(id)}</code> niet gevonden.</p>`;
           return;
@@ -150,7 +195,7 @@
 
       } catch (e) {
         console.error(e);
-        target.innerHTML = `<p class="error">⚠️ Kon klantgegevens niet laden. ${esc(e.message || e)}</p>`;
+        target.innerHTML = `<p class="error">⚠️ Kon klantgegevens niet laden. ${esc(e?.message || e)}</p>`;
       }
     }
 
