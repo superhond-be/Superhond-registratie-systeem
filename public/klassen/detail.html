@@ -5,34 +5,51 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Klas – Detail • Superhond</title>
 
-  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+  <!-- Styles -->
+  <link rel="stylesheet" href="../css/style.css?v=0.22.2" />
+  <link rel="stylesheet" href="../css/responsive.css?v=0.22.2" />
 
-  <script src="../js/layout.js?v=0.20.0" defer></script>
-  <script type="module" src="./detail.js?v=0.20.0" defer></script>
+  <!-- Layout (topbar/footer + centrale config) -->
+  <script src="../js/layout.js?v=0.22.2" defer></script>
+
+  <!-- Paginalogica -->
+  <script type="module" src="./detail.js?v=0.22.2" defer></script>
+
+  <noscript><style>.requires-js{display:none!important}</style></noscript>
 </head>
 <body class="subpage">
-<header id="topbar" class="topbar"></header>
+  <!-- Topbar -->
+  <header id="topbar" class="topbar"></header>
 
-<main class="container">
-  <h1 class="page-title">Klas</h1>
+  <main class="container">
+    <h1 class="page-title">Klas</h1>
 
-  <!-- Info / fouten -->
-  <article id="msg" class="card" style="display:none"></article>
+    <!-- Info / fouten -->
+    <article id="msg" class="card requires-js" style="display:none"></article>
 
-  <!-- Detail -->
-  <article id="info" class="card">
-    <!-- wordt gevuld door detail.js -->
-  </article>
+    <!-- Detail -->
+    <article id="info" class="card requires-js" aria-live="polite" aria-busy="true">
+      <!-- wordt gevuld door detail.js -->
+    </article>
 
-  <!-- Acties -->
-  <div class="card" style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap">
-    <a class="btn" id="btnBack" href="./">← Terug naar overzicht</a>
-    <a class="btn" id="btnEdit" href="#">✏️ Bewerken</a>
-    <button class="btn" id="btnDelete" type="button">🗑️ Verwijderen</button>
-  </div>
-</main>
+    <!-- Acties -->
+    <div class="card requires-js" style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap">
+      <a class="btn" id="btnBack" href="./">← Terug naar overzicht</a>
+      <a class="btn" id="btnEdit" href="#" aria-label="Bewerk deze klas">✏️ Bewerken</a>
+      <button class="btn danger" id="btnDelete" type="button" aria-label="Verwijder deze klas">🗑️ Verwijderen</button>
+    </div>
+  </main>
 
-<footer id="footer" class="footer"></footer>
+  <!-- Footer -->
+  <footer id="footer" class="footer"></footer>
+
+  <!-- Mount topbar/footer (optioneel met API-statusbadge) -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.SuperhondUI?.mount) {
+        window.SuperhondUI.mount({ title: 'Klas – Detail', icon: '📘', back: './', showApiStatus: false });
+      }
+    });
+  </script>
 </body>
 </html>
