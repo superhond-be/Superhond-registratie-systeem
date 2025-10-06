@@ -89,7 +89,7 @@
       ]);
       const klanten = klRaw.map(normKlant);
       const honden  = hoRaw.map(normHond);
-
+const API_BASE = "/api/sheets"; // nu via je eigen server
       const map = new Map();
       honden.forEach(h => {
         if (!map.has(h.eigenaarId)) map.set(h.eigenaarId, []);
