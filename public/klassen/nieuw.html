@@ -5,55 +5,104 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Nieuwe klas – Superhond</title>
 
-  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
-  <script src="../js/layout.js?v=0.20.0" defer></script>
-  <script type="module" src="./nieuw.js?v=0.20.0" defer></script>
+  <!-- Styles -->
+  <link rel="stylesheet" href="../css/style.css?v=0.22.1" />
+  <link rel="stylesheet" href="../css/responsive.css?v=0.22.1" />
+
+  <!-- Layout (topbar/footer + centrale config) -->
+  <script src="../js/layout.js?v=0.22.1" defer></script>
+
+  <!-- Pagina-logic (zorg dat /klassen/nieuw.js bestaat) -->
+  <script type="module" src="./nieuw.js?v=0.22.1" defer></script>
+
+  <noscript>
+    <style>.requires-js{display:none!important}</style>
+  </noscript>
 </head>
 <body class="subpage">
-<header id="topbar" class="topbar"></header>
+  <!-- Topbar -->
+  <header id="topbar" class="topbar"></header>
 
-<main class="container">
-  <h1 class="page-title">Nieuwe klas</h1>
+  <main class="container">
+    <h1 class="page-title">Nieuwe klas</h1>
+    <p class="muted">Maak hier een nieuwe klas/lesniveau aan. Velden met <span aria-hidden="true">*</span> zijn verplicht.</p>
 
-  <form id="formNieuw" class="card">
-    <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
-      <label>Naam
-        <input class="input" id="naam" type="text" required />
-      </label>
-      <label>Type
-        <input class="input" id="type" type="text" />
-      </label>
-      <label>Thema
-        <input class="input" id="thema" type="text" />
-      </label>
-      <label>Aantal strippen
-        <input class="input input-nr" id="strippen" type="number" min="0" value="0" />
-      </label>
-      <label>Geldigheidsduur (weken)
-        <input class="input input-nr" id="geldigheid" type="number" min="0" value="0" />
-      </label>
-      <label>Status
-        <select class="select" id="status">
-          <option value="actief">Actief</option>
-          <option value="inactief">Inactief</option>
-        </select>
-      </label>
-      <label>Afbeelding (URL)
-        <input class="input" id="afbeelding" type="url" />
-      </label>
-      <label>Beschrijving
-        <textarea class="input" id="beschrijving" rows="3"></textarea>
-      </label>
+    <!-- Meldingen -->
+    <div id="state" class="requires-js" style="margin:.5rem 0 1rem 0;">
+      <span id="loading" class="muted" style="display:none;">⏳ Laden…</span>
+      <div id="error" class="error" style="display:none;"></div>
+      <div id="success" class="success" style="display:none;"></div>
     </div>
 
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" type="submit">Opslaan</button>
-      <a class="btn" href="./">Annuleren</a>
-    </div>
-  </form>
-</main>
+    <!-- Formulier -->
+    <form id="formNieuw" class="card" novalidate>
+      <fieldset style="border:0;padding:0;margin:0">
+        <legend class="visually-hidden">Gegevens van de nieuwe klas</legend>
 
-<footer id="footer" class="footer"></footer>
+        <div class="grid" style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+          <label for="fld-naam">Naam <span aria-hidden="true">*</span>
+            <input class="input" id="fld-naam" name="naam" type="text" required
+                   autocomplete="off" autocapitalize="sentences" spellcheck="false"
+                   placeholder="bv. Puppy, Basis 1" />
+          </label>
+
+          <label for="fld-type">Type
+            <input class="input" id="fld-type" name="type" type="text"
+                   placeholder="bv. Groep, Privé" />
+          </label>
+
+          <label for="fld-thema">Thema
+            <input class="input" id="fld-thema" name="thema" type="text"
+                   placeholder="bv. Socialisatie, Gehoorzaamheid" />
+          </label>
+
+          <label for="fld-strippen">Aantal strippen
+            <input class="input input-nr" id="fld-strippen" name="strippen" type="number"
+                   min="0" step="1" inputmode="numeric" value="0" />
+          </label>
+
+          <label for="fld-geldigheid">Geldigheidsduur (weken)
+            <input class="input input-nr" id="fld-geldigheid" name="geldigheid" type="number"
+                   min="0" step="1" inputmode="numeric" value="0" />
+          </label>
+
+          <label for="fld-status">Status
+            <select class="select" id="fld-status" name="status">
+              <option value="actief" selected>Actief</option>
+              <option value="inactief">Inactief</option>
+            </select>
+          </label>
+
+          <label for="fld-afbeelding">Afbeelding (URL)
+            <input class="input" id="fld-afbeelding" name="afbeelding" type="url"
+                   inputmode="url" placeholder="https://…" />
+          </label>
+
+          <label for="fld-beschrijving" style="grid-column:1/-1">Beschrijving
+            <textarea class="input" id="fld-beschrijving" name="beschrijving" rows="3"
+                      placeholder="Korte omschrijving van de klas…"></textarea>
+          </label>
+        </div>
+      </fieldset>
+
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn primary" id="btn-save" type="submit">Opslaan</button>
+        <a class="btn" href="./">Annuleren</a>
+      </div>
+    </form>
+  </main>
+
+  <!-- Footer -->
+  <footer id="footer" class="footer"></footer>
+
+  <!-- Mount topbar/footer -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.SuperhondUI?.mount) {
+        // toon API-statusbadge zodat je meteen ziet of de verbinding OK is
+        window.SuperhondUI.mount({ title: 'Nieuwe klas', icon: '📚', back: './', showApiStatus: true });
+      }
+    });
+  </script>
 </body>
 </html>
