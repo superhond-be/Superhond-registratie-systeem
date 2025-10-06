@@ -1,9 +1,8 @@
-/* v0.21.8 – Klantenpagina
-   - Ping-first (detecteert login/permissions meteen)
-   - Flexibele API base (URL param -> SuperhondConfig -> localStorage -> default)
-   - Meerdere fallbacks (direct, proxy, AllOrigins raw/get, Jina)
-   - Betere HTML-detectie + duidelijke errors
-   - Compatibele timeout + defensieve rendering
+/* v0.21.9 – Klantenpagina
+   Veranderd:
+   - Ping-first mét fallbacks (direct -> Jina -> AO-raw -> AO-get)
+   - apiGet(): volgorde proxy -> Jina -> AO-raw -> AO-get -> direct
+   - Duidelijke fouten (met route-naam) en defensieve JSON-parsing
 */
 (() => {
   // === 0) CONFIG-RESOLVER ===
@@ -19,13 +18,13 @@
     LS_API_BASE ||
     DEFAULT_BASE;
 
-  // Option: same-origin proxy on Render
+  // Option: same-origin proxy op je host (Render)
   const PROXY_BASE = "/api/sheets";
-  const USE_PROXY_SERVER = false;
+  const USE_PROXY_SERVER = false; // zet op true zodra je proxy actief is
 
-  const TIMEOUT_MS = 12000; // iets ruimer
+  const TIMEOUT_MS = 12000;
 
-  // Persist apiBase if provided via query
+  // Persist apiBase als deze via query wordt meegegeven
   try { if (QS_API_BASE) localStorage.setItem(LS_KEY, QS_API_BASE); } catch {}
 
   // === 1) DOM ===
@@ -42,7 +41,7 @@
   };
 
   // === 2) STATE ===
-  const state = { klanten: [], hondenByOwner: new Map() };
+  const state = { klanten: [], hondenByOwner: new Map(), lastRoute: null };
 
   // === 3) URL helpers ===
   const query = (mode, p={}) => new URLSearchParams({ mode, t: Date.now(), ...p }).toString();
@@ -50,7 +49,6 @@
   const proxyUrl  = (m,p) => `${PROXY_BASE}?${query(m,p)}`;
   const aoRawUrl  = (m,p) => `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl(m,p))}`;
   const aoGetUrl  = (m,p) => `https://api.allorigins.win/get?url=${encodeURIComponent(directUrl(m,p))}`;
-  // Jina "r" proxy (retourneert body als tekst). Let op: verwacht JSON-tekst.
   const jinaUrl   = (m,p) => `https://r.jina.ai/http://${directUrl(m,p).replace(/^https?:\/\//,'')}`;
 
   // === 4) Utils ===
@@ -59,11 +57,9 @@
     const t = stripBOM(txt).slice(0, 200).toLowerCase();
     return t.startsWith('<!doctype') || t.startsWith('<html') || t.includes('<title>');
   };
-  const isValidUrl = (u) => {
-    try { new URL(u); return true; } catch { return false; }
-  };
+  const isValidUrl = (u) => { try { new URL(u); return true; } catch { return false; } };
 
-  // === 5) fetch + timeout (ook voor oudere Safari) ===
+  // Fetch met timeout
   async function fetchWithTimeout(url, ms = TIMEOUT_MS) {
     if (typeof AbortController !== "undefined") {
       const ac = new AbortController();
@@ -72,7 +68,6 @@
         return await fetch(url, { cache: "no-store", signal: ac.signal });
       } finally { clearTimeout(t); }
     }
-    // Fallback zonder AbortController
     return Promise.race([
       fetch(url, { cache: "no-store" }),
       new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))
@@ -82,7 +77,7 @@
   function parseMaybeWrapped(text, expectWrapped=false) {
     const cleaned = stripBOM(text);
     if (isProbablyHTML(cleaned)) {
-      throw new Error("Ontving HTML (waarschijnlijk Google loginpagina) — zet Apps Script Web App op ‘Iedereen (zelfs anoniem)’ en publiceer opnieuw.");
+      throw new Error("HTML ontvangen (login/foutpagina) — zet de Web App op ‘Iedereen (zelfs anoniem)’ en publiceer opnieuw.");
     }
     if (expectWrapped) {
       const wrap = JSON.parse(cleaned);
@@ -96,68 +91,75 @@
     return JSON.parse(cleaned);
   }
 
-  async function tryJson(url, expectWrapped=false) {
+  async function tryJson(url, expectWrapped=false, routeName='direct') {
     const res = await fetchWithTimeout(url);
-    const txt = await res.text().catch(() => { throw new Error("Kon API-antwoord niet lezen"); });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const txt = await res.text().catch(() => { throw new Error(`${routeName}: kon body niet lezen`); });
+    if (!res.ok) throw new Error(`${routeName}: HTTP ${res.status}`);
     const j = parseMaybeWrapped(txt, expectWrapped);
     // accepteer { ok:true, data:[...] } of { data:[...] } of direct []
     const data = Array.isArray(j) ? j : (j?.data ?? null);
     const okFlag = j?.ok;
     if (!data && okFlag !== true) {
-      throw new Error(j?.error || "Onbekende API-structuur (geen data).");
+      throw new Error(`${routeName}: onbekende API-structuur (geen data)`);
     }
+    state.lastRoute = routeName;
     return data || [];
   }
 
-  // === 6) Ping-first ===
+  // === 5) Ping-first met fallbacks ===
   async function ping(base=GAS_BASE) {
     if (!base || !isValidUrl(base)) {
       throw new Error("Geen geldige API URL ingesteld. Ga naar Admin ▸ Instellingen.");
     }
-    const url = `${base}?${query('ping')}`;
-    const res = await fetchWithTimeout(url, 6000);
-    const txt = await res.text().catch(()=>'');
-    if (!res.ok) throw new Error(`Ping HTTP ${res.status}`);
-    if (isProbablyHTML(txt)) {
-      throw new Error("Ping gaf HTML (login) — zet de Web App op ‘Iedereen (zelfs anoniem)’ en publiceer opnieuw.");
+    const direct = `${base}?${query('ping')}`;
+    const steps = [
+      { name: 'direct',       url: direct,               wrapped: false },
+      { name: 'jina',         url: `https://r.jina.ai/http://${direct.replace(/^https?:\/\//,'')}`, wrapped: false },
+      { name: 'allorigins-raw', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(direct)}`, wrapped: false },
+      { name: 'allorigins-get', url: `https://api.allorigins.win/get?url=${encodeURIComponent(direct)}`, wrapped: true },
+    ];
+    const errors = [];
+    for (const s of steps) {
+      try {
+        const res = await fetchWithTimeout(s.url, 8000);
+        const txt = await res.text();
+        if (!res.ok) { errors.push(`${s.name}: HTTP ${res.status}`); continue; }
+        const j = parseMaybeWrapped(txt, s.wrapped);
+        const ok = j?.ok === true || String(j?.ping || '').toLowerCase() === 'ok' || j?.data?.ok === true;
+        if (!ok) { errors.push(`${s.name}: geen ok-indicator`); continue; }
+        state.lastRoute = s.name;
+        return true;
+      } catch (e) {
+        errors.push(`${s.name}: ${e.message}`);
+      }
     }
-    try {
-      const j = JSON.parse(stripBOM(txt));
-      const ok = j?.ok === true || String(j?.ping || '').toLowerCase() === 'ok';
-      if (!ok) throw new Error("Ping antwoordde, maar zonder ok-indicator.");
-    } catch {
-      throw new Error("Ping gaf geen geldige JSON terug.");
-    }
-    return true;
+    throw new Error(`Ping faalde – ${errors.join(' | ')}`);
   }
 
-  // === 7) GET met fallbacks ===
+  // === 6) GET met fallbacks ===
   async function apiGet(mode, params={}) {
     const attempts = [
-      { name: "direct",   url: directUrl(mode, params) },
-      ...(USE_PROXY_SERVER ? [{ name:"proxy", url: proxyUrl(mode, params) }] : []),
-      { name: "allorigins-raw", url: aoRawUrl(mode, params) },
-      { name: "allorigins-get", url: aoGetUrl(mode, params), wrapped: true },
-      { name: "jina", url: jinaUrl(mode, params) }
+      ...(USE_PROXY_SERVER ? [{ name:"proxy", url: proxyUrl(mode, params), wrapped:false }] : []),
+      { name: "jina",           url: jinaUrl(mode, params),             wrapped:false },
+      { name: "allorigins-raw", url: aoRawUrl(mode, params),            wrapped:false },
+      { name: "allorigins-get", url: aoGetUrl(mode, params),            wrapped:true  },
+      { name: "direct",         url: directUrl(mode, params),           wrapped:false },
     ];
     const errors = [];
     for (const a of attempts) {
       try {
-        // console.info(`[API] Try: ${a.name}`, a.url);
-        return await tryJson(a.url, !!a.wrapped);
+        const data = await tryJson(a.url, !!a.wrapped, a.name);
+        return data;
       } catch (e) {
         errors.push(`${a.name}: ${e.message}`);
-        // console.warn(`[API] Error (${a.name}):`, e);
       }
     }
-    throw new Error(`Ophalen mislukt – ${errors.join(" | ")}`);
+    throw new Error(`Ophalen mislukt (${mode}) – ${errors.join(" | ")}`);
   }
 
-  // === 8) Normalisatie (lichtgewicht, defensief) ===
+  // === 7) Normalisatie (lichtgewicht, defensief) ===
   function toTitle(s){ return String(s||'').toLowerCase().replace(/\b([a-zà-ÿ])/g, m => m.toUpperCase()); }
   function normKlant(k) {
-    // Ondersteun zowel {naam} als {voornaam, achternaam}
     const full = String(k.naam || [k.voornaam, k.achternaam].filter(Boolean).join(' ') || "").trim();
     const [voornaam, ...rest] = full.split(/\s+/);
     const achternaam = rest.join(" ").trim();
@@ -184,7 +186,7 @@
     geboortedatum: String(h.geboortedatum || h.geboorte || h.dob || "").trim()
   });
 
-  // === 9) UI helpers ===
+  // === 8) UI helpers ===
   function showLoader(on=true){
     if (els.loader) els.loader.style.display = on ? "" : "none";
     if (els.wrap)   els.wrap.style.display   = on ? "none" : "";
@@ -195,14 +197,14 @@
     els.error.style.display = msg ? "" : "none";
   }
 
-  // === 10) Data laden ===
+  // === 9) Data laden ===
   async function loadAll(){
     showError(""); showLoader(true);
     try{
-      // 10a) Ping eerst (duidelijke fout bij verkeerde rechten/URL)
+      // 9a) Ping eerst (met fallbacks)
       await ping(GAS_BASE);
 
-      // 10b) Data
+      // 9b) Data (met fallbacks)
       const [klRaw, hoRaw] = await Promise.all([ apiGet("klanten"), apiGet("honden") ]);
       const klanten = (klRaw || []).map(normKlant);
       const honden  = (hoRaw || []).map(normHond);
@@ -218,17 +220,20 @@
       render();
     }catch(e){
       console.error("[Klanten] Fout:", e);
-      showError(e?.message || "Laden mislukt");
+      const hint = state.lastRoute
+        ? ` (route: ${state.lastRoute})`
+        : '';
+      showError((e?.message || "Laden mislukt") + hint);
     }finally{
       showLoader(false);
     }
   }
 
-  // === 11) Render ===
+  // === 10) Render ===
   function render(){
     if(!els.tbody) return;
-    if(!Array.isArray(state.klanten)) {
-      els.tbody.innerHTML = `<tr><td colspan="5">Geen gegevens.</td></tr>`;
+    if(!Array.isArray(state.klanten) || state.klanten.length === 0) {
+      els.tbody.innerHTML = `<tr><td colspan="5">${state.klanten.length === 0 ? 'Geen gegevens.' : 'Geen gegevens.'}</td></tr>`;
       return;
     }
     els.tbody.innerHTML = state.klanten.map(k=>{
@@ -250,25 +255,24 @@
     }).join("");
   }
 
-  // === 12) Events ===
+  // === 11) Events ===
   els.btnNieuw?.addEventListener("click", () => els.modal?.showModal?.());
   els.btnCancel?.addEventListener("click", () => els.modal?.close?.());
 
-  // === 13) Debugblok (open /klanten/?mode=klanten of ?mode=honden) ===
+  // === 12) Debugblok (open /klanten/?mode=klanten of ?mode=honden) ===
   (async () => {
     const m = new URLSearchParams(location.search).get("mode");
     if (!els.debug || !m) return;
     els.debug.style.display = "";
     try {
-      // ping zodat foutmelding duidelijker is als permissies niet kloppen
       await ping(GAS_BASE);
       const data = await apiGet(m);
-      els.debug.textContent = JSON.stringify({ ok:true, data }, null, 2);
+      els.debug.textContent = JSON.stringify({ ok:true, data, route: state.lastRoute }, null, 2);
     } catch (e) {
       els.debug.textContent = "❌ " + (e?.message || String(e));
     }
   })();
 
-  // === 14) Start ===
+  // === 13) Start ===
   loadAll();
 })();
