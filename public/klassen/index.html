@@ -5,86 +5,56 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Klassen – Superhond</title>
 
-  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
-  <script src="../js/layout.js?v=0.20.0" defer></script>
-  <script type="module" src="./index.js?v=0.20.0" defer></script>
+  <!-- Styles -->
+  <link rel="stylesheet" href="../css/style.css?v=0.22.2" />
+  <link rel="stylesheet" href="../css/responsive.css?v=0.22.2" />
+
+  <!-- Layout (topbar/footer + centrale config) -->
+  <script src="../js/layout.js?v=0.22.2" defer></script>
+
+  <!-- Page logic -->
+  <script type="module" src="./index.js?v=0.22.2" defer></script>
+
+  <noscript><style>.requires-js{display:none!important}</style></noscript>
 </head>
 <body class="subpage">
-<header id="topbar" class="topbar"></header>
+  <!-- Topbar -->
+  <header id="topbar" class="topbar"></header>
 
-<main class="container">
-  <h1 class="page-title">Klassen</h1>
+  <main class="container">
+    <h1 class="page-title">Klassen <small id="count" class="muted"></small></h1>
 
-  <div class="toolbar">
-    <a class="btn" href="./nieuw.html">➕ Nieuwe klas</a>
-    <input id="zoek" type="search" placeholder="Zoek klas…" />
-  </div>
+    <!-- Toolbar -->
+    <div class="toolbar requires-js" role="region" aria-label="Zoeken en acties" style="margin-bottom:.5rem">
+      <a class="btn" href="./nieuw.html">➕ Nieuwe klas</a>
+      <input id="zoek" type="search" class="input" placeholder="Zoek naam, type of thema…" autocomplete="off" />
+    </div>
 
-  <div id="loader" class="muted">⏳ Laden…</div>
-  <div id="error" class="error" style="display:none"></div>
+    <!-- States -->
+    <div id="loader" class="muted requires-js">⏳ Laden…</div>
+    <div id="error" class="error requires-js" style="display:none"></div>
 
-  <div id="wrap" class="table-wrap" style="display:none">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Naam</th>
-          <th>Type</th>
-          <th>Thema</th>
-          <th>Strippen</th>
-          <th>Geldigheid</th>
-          <th>Status</th>
-          <th>Acties</th>
-        </tr>
-      </thead>
-      <tbody id="tabelBody"></tbody>
-    </table>
-  </div>
-</main>
+    <!-- Tabel -->
+    <div id="wrap" class="table-wrap requires-js" style="display:none">
+      <table class="table" aria-describedby="tabel-caption">
+        <caption id="tabel-caption" class="visually-hidden">Overzicht van klassen</caption>
+        <thead>
+          <tr>
+            <th scope="col">Naam</th>
+            <th scope="col">Type</th>
+            <th scope="col">Thema</th>
+            <th scope="col">Strippen</th>
+            <th scope="col">Geldigheid</th>
+            <th scope="col">Status</th>
+            <th scope="col" aria-label="Acties">Acties</th>
+          </tr>
+        </thead>
+        <tbody id="tabelBody"><!-- gevuld door /klassen/index.js --></tbody>
+      </table>
+    </div>
+  </main>
 
-  <script>
-(async () => {
-  const url = window.SUPERHOND_DATA?.CLASSES_URL;
-  if (!url) return;
-
-  const tbody = document.querySelector('#klassen-tabel tbody'); // pas selector aan
-  if (!tbody) return;
-
-  try {
-    const r = await fetch(url, { cache: 'no-store' });
-    const j = await r.json();
-    const rows = (j.klassen || []).map(k => {
-      const naam   = k.Naam ?? k.naam ?? '';
-      const type   = k.Type ?? k.type ?? '';
-      const thema  = k.Thema ?? k.thema ?? '';
-      const strips = k.Strippen ?? k.strippen ?? '';
-      const geld   = k['Geldigheid (weken)'] ?? k.geldigheid_weken ?? k.geldigheid ?? '';
-      const status = (k.Status ?? k.status ?? '').toString().toLowerCase();
-
-      const pill = status === 'actief'
-        ? '<span class="badge success">actief</span>'
-        : '<span class="badge danger">inactief</span>';
-
-      return `
-        <tr>
-          <td><a href="./detail.html?id=${encodeURIComponent(k.id ?? naam)}">${naam}</a></td>
-          <td>${type}</td>
-          <td>${thema}</td>
-          <td>${strips}</td>
-          <td>${geld} w</td>
-          <td>${pill}</td>
-          <td class="actions">…</td>
-        </tr>`;
-    }).join('');
-
-    tbody.innerHTML = rows || '<tr><td colspan="7" class="muted">Geen klassen</td></tr>';
-  } catch (e) {
-    tbody.innerHTML = '<tr><td colspan="7" class="error">Kon klassen niet laden</td></tr>';
-    console.error(e);
-  }
-})();
-</script>
-
-<footer id="footer" class="footer"></footer>
+  <!-- Footer -->
+  <footer id="footer" class="footer"></footer>
 </body>
 </html>
