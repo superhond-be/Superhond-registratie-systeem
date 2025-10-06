@@ -1,31 +1,31 @@
-/* v0.21.9 – Klantenpagina
-   Veranderd:
+/* v0.22.0 – Klantenpagina (centrale config + robuuste fallbacks)
+   - Haalt GAS-base via SuperhondConfig.resolveApiBase() (geen hardcoded URL)
    - Ping-first mét fallbacks (direct -> Jina -> AO-raw -> AO-get)
    - apiGet(): volgorde proxy -> Jina -> AO-raw -> AO-get -> direct
-   - Duidelijke fouten (met route-naam) en defensieve JSON-parsing
+   - Duidelijke errors + defensieve JSON-parsing
 */
-(() => {
-  // === 0) CONFIG-RESOLVER ===
-  const qs = new URLSearchParams(location.search);
-  const QS_API_BASE = qs.get('apiBase')?.trim();
+(async () => {
+  // === 0) CONFIG-RESOLVER (async) ===
   const LS_KEY = 'superhond_api_base';
-  const LS_API_BASE = (typeof localStorage !== 'undefined' && localStorage.getItem(LS_KEY)) || '';
 
-  const DEFAULT_BASE = "https://script.google.com/macros/s/AKfycbwt_2IjbE68Nw01xnxeConxcNO0fNMwxZBW5DPDnGYYCFs9y00xOV69IA9aYFb9QRra/exec";
-  const GAS_BASE =
-    QS_API_BASE ||
-    (window.SuperhondConfig?.apiBase) ||
-    LS_API_BASE ||
-    DEFAULT_BASE;
+  // resolve API-base via gedeelde layout-config
+  async function resolveApiBase() {
+    if (window.SuperhondConfig?.resolveApiBase) {
+      const v = await window.SuperhondConfig.resolveApiBase();
+      if (v) return v;
+    }
+    // back-up: lees desnoods nog uit localStorage
+    try {
+      const v = localStorage.getItem(LS_KEY) || '';
+      if (v) return v.trim();
+    } catch {}
+    return ''; // geen default forceren
+  }
 
-  // Option: same-origin proxy op je host (Render)
+  let GAS_BASE = (await resolveApiBase()) || '';
   const PROXY_BASE = "/api/sheets";
-  const USE_PROXY_SERVER = false; // zet op true zodra je proxy actief is
-
+  const USE_PROXY_SERVER = false; // zet true zodra je proxy actief is
   const TIMEOUT_MS = 12000;
-
-  // Persist apiBase als deze via query wordt meegegeven
-  try { if (QS_API_BASE) localStorage.setItem(LS_KEY, QS_API_BASE); } catch {}
 
   // === 1) DOM ===
   const els = {
@@ -109,14 +109,14 @@
   // === 5) Ping-first met fallbacks ===
   async function ping(base=GAS_BASE) {
     if (!base || !isValidUrl(base)) {
-      throw new Error("Geen geldige API URL ingesteld. Ga naar Admin ▸ Instellingen.");
+      throw new Error("Geen geldige API URL ingesteld. Open Admin ▸ Instellingen of testpagina en stel de Web-App URL in.");
     }
     const direct = `${base}?${query('ping')}`;
     const steps = [
-      { name: 'direct',       url: direct,               wrapped: false },
-      { name: 'jina',         url: `https://r.jina.ai/http://${direct.replace(/^https?:\/\//,'')}`, wrapped: false },
+      { name: 'direct',         url: direct,                                                   wrapped: false },
+      { name: 'jina',           url: `https://r.jina.ai/http://${direct.replace(/^https?:\/\//,'')}`, wrapped: false },
       { name: 'allorigins-raw', url: `https://api.allorigins.win/raw?url=${encodeURIComponent(direct)}`, wrapped: false },
-      { name: 'allorigins-get', url: `https://api.allorigins.win/get?url=${encodeURIComponent(direct)}`, wrapped: true },
+      { name: 'allorigins-get', url: `https://api.allorigins.win/get?url=${encodeURIComponent(direct)}`, wrapped: true  },
     ];
     const errors = [];
     for (const s of steps) {
@@ -220,9 +220,7 @@
       render();
     }catch(e){
       console.error("[Klanten] Fout:", e);
-      const hint = state.lastRoute
-        ? ` (route: ${state.lastRoute})`
-        : '';
+      const hint = state.lastRoute ? ` (route: ${state.lastRoute})` : '';
       showError((e?.message || "Laden mislukt") + hint);
     }finally{
       showLoader(false);
@@ -233,7 +231,7 @@
   function render(){
     if(!els.tbody) return;
     if(!Array.isArray(state.klanten) || state.klanten.length === 0) {
-      els.tbody.innerHTML = `<tr><td colspan="5">${state.klanten.length === 0 ? 'Geen gegevens.' : 'Geen gegevens.'}</td></tr>`;
+      els.tbody.innerHTML = `<tr><td colspan="5">Geen gegevens.</td></tr>`;
       return;
     }
     els.tbody.innerHTML = state.klanten.map(k=>{
@@ -241,9 +239,7 @@
       const dogChips = dogs.length
         ? dogs.map(d=>`<a class="chip btn btn-xs" href="../honden/detail.html?id=${encodeURIComponent(d.id)}" title="Bekijk ${d.naam}">${d.naam}</a>`).join(" ")
         : '<span class="muted">0</span>';
-      const emailCell = k.email
-        ? `<a href="mailto:${k.email}">${k.email}</a>`
-        : "—";
+      const emailCell = k.email ? `<a href="mailto:${k.email}">${k.email}</a>` : "—";
       return `
         <tr data-id="${k.id}">
           <td><a href="./detail.html?id=${encodeURIComponent(k.id)}"><strong>${k.naam}</strong></a></td>
@@ -274,5 +270,9 @@
   })();
 
   // === 13) Start ===
-  loadAll();
+  if (!GAS_BASE) {
+    showError("Geen API URL ingesteld. Open de testpagina of Admin ▸ Instellingen en zet de Web-App URL. Herlaad daarna deze pagina.");
+  } else {
+    loadAll();
+  }
 })();
