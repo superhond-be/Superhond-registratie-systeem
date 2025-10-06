@@ -2,9 +2,12 @@
 (() => {
 
   // === 🔗 Google Apps Script Web App URL ===
-  
-const API_BASE = 
-  "https://script.google.com/macros/s/AKfycbzprHaU1ukJT03YLQ6I5EzR1LOq_45tzWNLo-d92rJuwtRat6Qf_b8Ydt-0qoZBIctVNA/exec";
+  // i.p.v. eigen fetch helpers:
+const apiGet  = window.SuperhondAPI.get;
+const apiPost = window.SuperhondAPI.post;
+
+// … rest van je code ongewijzigd …
+
   // === 🧩 DOM-elementen ===
   const els = {
     loader: document.querySelector("#loader"),
