@@ -2,228 +2,262 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
+  <title>🐶 Superhond — Google Sheets Web-App test</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Superhond – Google Sheets test</title>
   <style>
-    body {
-      font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-      max-width: 960px; margin: 2rem auto; padding: 0 1rem;
-      background:#fafafa;
-    }
-    h1 {margin-bottom:.5rem;}
-    .card {
-      background:#fff; border:1px solid #e5e7eb; border-radius:10px;
-      padding:12px; margin:12px 0;
-    }
-    .ok{color:#047857} .err{color:#b91c1c} .muted{color:#6b7280}
-    pre {
-      background:#0b1220; color:#d1e7ff; border-radius:8px;
-      padding:10px; overflow:auto; max-height:240px;
-    }
-    .btn {
-      border:1px solid #d1d5db; background:#fff;
-      border-radius:6px; padding:.4rem .8rem; cursor:pointer;
-    }
-    input[type=text] {
-      width:100%; padding:.4rem; border:1px solid #d1d5db; border-radius:6px;
-    }
-    #statusbar {
-      margin-top:1rem; padding:.5rem .7rem; border-radius:6px;
-      background:#f9fafb; border:1px solid #e5e7eb;
-    }
-    #logArea {
-      background:#0b1220; color:#d1e7ff;
-      border-radius:8px; padding:8px; height:160px; overflow:auto; margin:0;
-    }
+    :root { --bg:#0b1020; --fg:#d1e7ff; --ok:#2ca34a; --warn:#e6a700; --err:#d64545; }
+    body { font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; max-width:980px; margin:24px auto; padding:0 12px; }
+    h1,h2,h3 { margin:.25rem 0 .5rem; }
+    .card { border:1px solid #e5e7eb; border-radius:10px; padding:14px; margin:14px 0; }
+    label { font-weight:600; display:block; margin:8px 0 6px; }
+    input[type=url] { width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px; }
+    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
+    button { border:1px solid #cbd5e1; background:#fff; border-radius:8px; padding:8px 12px; cursor:pointer; }
+    button.primary { background:#1d4ed8; color:#fff; border-color:#1d4ed8; }
+    button.ghost { background:#f8fafc; }
+    .muted { color:#64748b; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; color:#fff; }
+    .ok { background:var(--ok); } .warn { background:var(--warn); } .err { background:var(--err); } .info { background:#3a7bd5; }
+    pre.log { background:var(--bg); color:var(--fg); padding:12px; border-radius:10px; min-height:160px; overflow:auto; }
+    table { width:100%; border-collapse:collapse; }
+    th,td { border-bottom:1px solid #e5e7eb; padding:8px; font-size:13px; vertical-align:top; }
+    th:nth-child(1), td:nth-child(1) { width:130px; }
+    th:nth-child(2), td:nth-child(2) { width:110px; }
+    td.right, th.right { text-align:right; white-space:nowrap; }
+    code { background:#f1f5f9; padding:2px 6px; border-radius:6px; }
+    details > summary { cursor:pointer; }
   </style>
 </head>
 <body>
-  <h1>🐶 Superhond – Google Sheets web-app test</h1>
-  <p class="muted">Verifieer of je Apps Script Web App goed werkt en alle tabbladen bereikbaar zijn.</p>
+  <h1>🐶 Superhond — Google Sheets Web-App test</h1>
+  <p class="muted">Controleer of jouw Apps Script Web-App publiek bereikbaar is en via de browser **leesbaar** is (CORS/JSON). Dit is 100% los van je hoofdapp — ideaal om snel problemen te isoleren.</p>
 
-  <!-- 📡 Instellingen -->
-  <section class="card" id="settings">
-    <h2>⚙️ Instellingen & Controle</h2>
-
-    <div style="margin-bottom:1rem">
-      <label for="inputUrl"><strong>📡 Web-app URL</strong></label><br>
-      <input id="inputUrl" type="text" placeholder="https://script.googleusercontent.com/... of https://script.google.com/.../exec" />
-      <button class="btn" id="btn-save-url">💾 Opslaan</button>
-      <button class="btn" id="btn-test-url">🔍 Verbinding testen</button>
-      <span id="pingMsg" class="muted"></span>
+  <section class="card">
+    <h2>Instellingen &amp; Controle</h2>
+    <label for="u">Web-app URL (je <code>/exec</code>)</label>
+    <input id="u" type="url" placeholder="https://script.google.com/macros/s/…/exec">
+    <div class="row">
+      <button id="save" class="primary">💾 Opslaan</button>
+      <button id="test">🔍 Verbinding testen</button>
+      <button id="recheck" class="ghost">🧪 Alleen opnieuw controleren</button>
+      <button id="clear" class="ghost">🧹 Log wissen</button>
+      <button id="dl" class="ghost">⬇️ Log downloaden</button>
     </div>
-
-    <div style="margin-bottom:1rem">
-      <button class="btn" id="btn-reload">🔄 Opnieuw laden (via Sheets)</button>
-      <button class="btn" id="btn-recheck">✅ Controle opnieuw uitvoeren</button>
-    </div>
-
-    <label><input type="checkbox" id="chk-empty" checked> Controleer op lege cellen</label><br>
-    <label><input type="checkbox" id="chk-cols" checked> Controleer op ontbrekende kolommen</label>
-
-    <div id="statusbar">
-      <span id="statusText" class="muted">Nog geen controle uitgevoerd.</span>
-    </div>
+    <p class="muted" style="margin-top:6px">
+      Tip: deploy de Web-App als <strong>Anyone (even anonymous)</strong> en gebruik de echte <code>/exec</code>-URL.
+      Je kunt ook deze pagina openen met <code>?apiBase=…</code> om het veld automatisch te vullen.
+    </p>
   </section>
 
-  <div id="root"></div>
-
-  <!-- 🪵 Logboek -->
-  <section class="card" id="console">
-    <h2>🪵 Logboek</h2>
-    <pre id="logArea"></pre>
-    <div style="display:flex;gap:.5rem;margin-top:.5rem;flex-wrap:wrap">
-      <button class="btn" id="btn-clear-log">🧹 Wissen</button>
-      <button class="btn" id="btn-download-log">💾 Download log</button>
-    </div>
+  <section class="card">
+    <h3>Status</h3>
+    <table>
+      <thead><tr><th>Stap</th><th>Pad</th><th>Endpoint</th><th class="right">Resultaat</th></tr></thead>
+      <tbody id="statusBody">
+        <tr><td colspan="4" class="muted">Nog geen controle uitgevoerd.</td></tr>
+      </tbody>
+    </table>
   </section>
 
-  <script>
-    // ===== BASISINSTELLING =====
-    const SHEETS = ["Klassen","Klanten","Honden","Lessenreeksen","Lessen"];
-    const root = document.getElementById('root');
-    const inputUrl = document.getElementById("inputUrl");
-    const saveMsg = document.getElementById("pingMsg");
-    const statusText = document.getElementById("statusText");
-    const logArea = document.getElementById("logArea");
+  <section class="card">
+    <h3>Logboek</h3>
+    <pre class="log" id="log"></pre>
+  </section>
 
-    let BASE = "";
-    const cache = new Map();
+<script>
+(() => {
+  // ==== CONFIG ====
+  const els = {
+    u: document.getElementById('u'),
+    save: document.getElementById('save'),
+    test: document.getElementById('test'),
+    recheck: document.getElementById('recheck'),
+    clear: document.getElementById('clear'),
+    dl: document.getElementById('dl'),
+    statusBody: document.getElementById('statusBody'),
+    log: document.getElementById('log'),
+  };
+  const LSKEY = 'superhond_api_base';
+  const USE_PROXY = false; // zet true als je /api/sheets proxy hebt
+  const TIMEOUT = 9000;
 
-    // ===== LOGFUNCTIES =====
-    function log(msg,type="info"){
-      const t=new Date().toLocaleTimeString("nl-BE",{hour12:false});
-      const p=type==="error"?"❌":type==="warn"?"⚠️":"ℹ️";
-      logArea.textContent += `[${t}] ${p} ${msg}\n`;
-      logArea.scrollTop = logArea.scrollHeight;
+  // Build URLs
+  const RAW  = (mode, base) => `${base}?mode=${encodeURIComponent(mode)}&t=${Date.now()}`;
+  const AO_RAW = (mode, base) => `https://api.allorigins.win/raw?url=${encodeURIComponent(RAW(mode, base))}`;
+  const AO_GET = (mode, base) => `https://api.allorigins.win/get?url=${encodeURIComponent(RAW(mode, base))}`;
+  const PROXY  = (mode)      => `/api/sheets?mode=${encodeURIComponent(mode)}&t=${Date.now()}`;
+
+  // ==== UTILS ====
+  const stripBOM = s => String(s||'').replace(/^\uFEFF/, '').trim();
+  const isHTML = txt => /^\s*</.test(stripBOM(txt));
+  const qs = new URLSearchParams(location.search);
+  const fromQS = qs.get('apiBase');
+
+  function setStatusRow(step, path, endpoint, resultHTML) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${step}</td><td><code>${path}</code></td><td><code>${endpoint}</code></td><td class="right">${resultHTML}</td>`;
+    els.statusBody.appendChild(tr);
+  }
+  function resetStatus() {
+    els.statusBody.innerHTML = '';
+  }
+  function log(line) {
+    els.log.textContent += line + '\n';
+    els.log.scrollTop = els.log.scrollHeight;
+  }
+
+  async function tfetch(url, ms = TIMEOUT) {
+    const ac = ('AbortController' in window) ? new AbortController() : null;
+    const t = ac ? setTimeout(() => ac.abort(), ms) : null;
+    try {
+      return await fetch(url, { cache:'no-store', signal: ac?.signal });
+    } finally {
+      if (t) clearTimeout(t);
     }
-    document.getElementById("btn-clear-log").onclick=()=>logArea.textContent="";
-    document.getElementById("btn-download-log").onclick=()=>{
-      const blob=new Blob([logArea.textContent||""],{type:"text/plain;charset=utf-8"});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement("a");
-      const stamp=new Date().toISOString().replace(/[:.]/g,"-").slice(0,19);
-      a.href=url; a.download=`superhond-log-${stamp}.txt`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      log("Logboek gedownload als superhond-log.txt");
-    };
+  }
 
-    // ===== URL OPSLAAN / LADEN =====
-    function setBaseUrl(url){ BASE=url.replace(/\/$/,""); }
-    const saved=localStorage.getItem("superhond_exec_url");
-    if(saved){ inputUrl.value=saved; setBaseUrl(saved); log("Web-app URL geladen uit opslag"); }
+  function parseMaybeWrapped(text, wrapped=false) {
+    const s = stripBOM(text);
+    if (isHTML(s)) throw new Error('HTML ontvangen (waarschijnlijk Google login of foutpagina).');
+    if (!wrapped) return JSON.parse(s);
+    const outer = JSON.parse(s);
+    if (typeof outer?.contents !== 'string') throw new Error('AllOrigins(get) gaf geen contents.');
+    const inner = stripBOM(outer.contents);
+    if (isHTML(inner)) throw new Error('AllOrigins(get) contents bevat HTML (login).');
+    return JSON.parse(inner);
+  }
 
-    document.getElementById("btn-save-url").onclick=()=>{
-      const val=inputUrl.value.trim();
-      // ✅ accepteer beide varianten
-      if(!val.startsWith("https://script.google.com/macros/") &&
-         !val.startsWith("https://script.googleusercontent.com/")){
-        saveMsg.textContent="⚠️ Ongeldige URL"; 
-        saveMsg.style.color="#b91c1c";
-        return;
-      }
-      localStorage.setItem("superhond_exec_url",val);
-      setBaseUrl(val);
-      saveMsg.textContent="✅ Opgeslagen!";
-      saveMsg.style.color="#047857";
-      log("Nieuwe Web-app URL opgeslagen");
-      setTimeout(()=>saveMsg.textContent="",2500);
-    };
+  async function tryStep(kind, url, wrapped=false) {
+    const res = await tfetch(url);
+    const text = await res.text();
+    const http = res.status;
+    if (!res.ok) throw new Error(`${kind}: HTTP ${http} — ${text.slice(0,120)}`);
+    const json = parseMaybeWrapped(text, wrapped);
+    // accepteer {ok:true,data}, {data}, of array
+    const data = Array.isArray(json) ? json : (json.data ?? null);
+    return { http, json, data };
+  }
 
-    // ===== VERBINDING TESTEN =====
-    document.getElementById("btn-test-url").onclick=async()=>{
-      const val=inputUrl.value.trim();
-      if(!val){ saveMsg.textContent="⚠️ Geen URL ingevuld"; saveMsg.style.color="#b91c1c"; return; }
-      saveMsg.textContent="🔄 Testen…"; saveMsg.style.color="#6b7280"; log("Verbindingstest gestart…");
-      try{
-        const r=await fetch(val+(val.includes("?")?"&":"?")+"ping=1",{method:"GET",mode:"cors"});
-        const j=await r.json();
-        if(j.ok&&j.pong){ saveMsg.textContent="✅ Verbinding OK"; saveMsg.style.color="#047857"; log("Verbinding OK"); }
-        else { saveMsg.textContent="⚠️ Ongeldig antwoord"; saveMsg.style.color="#b45309"; log("Verbinding gaf ongeldig antwoord","warn"); }
-      }catch(e){
-        saveMsg.textContent="❌ Geen verbinding"; saveMsg.style.color="#b91c1c"; log("Geen verbinding met Web App","error");
-      }
-      setTimeout(()=>saveMsg.textContent="",5000);
-    };
-
-    // ===== HULPFUNCTIES =====
-    function card(title,html){
-      const div=document.createElement("div");
-      div.className="card";
-      div.innerHTML=`<h3 style="margin:0 0 .5rem">${title}</h3>${html}`;
-      root.appendChild(div);
-    }
-    function updateStatusbar(results){
-      if(!results||!results.length){
-        statusText.textContent="Nog geen controle uitgevoerd.";
-        statusText.style.color="#6b7280"; return;
-      }
-      const total=results.length;
-      const ok=results.filter(m=>m.startsWith("✅")).length;
-      const warn=total-ok;
-      statusText.textContent=`📊 ${total} tabbladen gecontroleerd — ✅ ${ok} OK • ⚠️ ${warn} waarschuwing(en)`;
-      statusText.style.color=warn?"#b91c1c":"#047857";
-    }
-    function validateSheet(name,items,requiredCols=[]){
-      const msgs=[];
-      if(!Array.isArray(items)||items.length===0){
-        msgs.push(`⚠️ Geen rijen gevonden in ${name}`); return msgs;
-      }
-      const first=items[0];
-      for(const col of requiredCols)
-        if(!(col in first)) msgs.push(`⚠️ Kolom '${col}' ontbreekt in ${name}`);
-      if(msgs.length===0) msgs.push(`✅ ${name} ok`);
-      return msgs;
+  async function testEndpoint(base, mode) {
+    // 1) Direct
+    try {
+      log(`→ ${mode}: direct ${RAW(mode, base)}`);
+      const { http, json } = await tryStep('direct', RAW(mode, base), false);
+      setStatusRow('direct', 'fetch', mode, `<span class="pill ok">OK</span> <small>HTTP ${http}</small>`);
+      log(`   ✅ direct OK (HTTP ${http})`);
+      return json;
+    } catch (e1) {
+      setStatusRow('direct', 'fetch', mode, `<span class="pill err">Fout</span> <small>${e1.message}</small>`);
+      log(`   ❌ direct: ${e1.message}`);
     }
 
-    // ===== DATA LADEN =====
-    async function loadAll(){
-      root.innerHTML="";
-      if(!BASE){ alert("Geen Web-app URL ingesteld."); return; }
-      const results=[];
-      for(const name of SHEETS){
-        const url=`${BASE}?sheet=${encodeURIComponent(name)}&t=${Date.now()}`;
-        log(`Laden van ${name}…`);
-        try{
-          const r=await fetch(url,{cache:"no-store",mode:"cors"});
-          const j=await r.json();
-          const items=Array.isArray(j?.items)?j.items:[];
-          cache.set(name,items);
-          const msgs=validateSheet(name,items,["id","naam","status"]);
-          results.push(...msgs);
-          const cnt=items.length;
-          card(`Sheet: ${name} <span class="ok">(${cnt} records)</span>`,
-               cnt?`<pre>${JSON.stringify(items.slice(0,3),null,2)}</pre>`:
-               `<div class="muted">Leeg of geen records</div>`);
-          log(`${name}: ${cnt} records geladen`);
-        }catch(e){
-          card(`Sheet: ${name} <span class="err">(fout)</span>`,
-               `<div class="err">Fout: ${e.message || "Load failed"}</div>`);
-          log(`${name}: fout ${e.message || "Load failed"}`,"error");
-        }
-      }
-      updateStatusbar(results);
-      log("Alle tabbladen verwerkt ✅");
+    // 2) AllOrigins raw
+    try {
+      log(`→ ${mode}: allorigins/raw ${AO_RAW(mode, base)}`);
+      const { http, json } = await tryStep('allorigins-raw', AO_RAW(mode, base), false);
+      setStatusRow('allorigins', 'raw', mode, `<span class="pill ok">OK</span> <small>HTTP ${http}</small>`);
+      log(`   ✅ allorigins-raw OK (HTTP ${http})`);
+      return json;
+    } catch (e2) {
+      setStatusRow('allorigins', 'raw', mode, `<span class="pill err">Fout</span> <small>${e2.message}</small>`);
+      log(`   ❌ allorigins-raw: ${e2.message}`);
     }
 
-    // ===== CONTROLE OPNIEUW =====
-    async function recheckAll(){
-      const chkCols=document.getElementById("chk-cols").checked;
-      const results=[];
-      for(const name of SHEETS){
-        const items=cache.get(name);
-        if(!items){ log(`Geen cache voor ${name}`,"warn"); continue; }
-        const msgs=validateSheet(name,items,chkCols?["id","naam","status"]:[]);
-        results.push(...msgs);
-      }
-      updateStatusbar(results);
-      log("Controle opnieuw uitgevoerd");
+    // 3) AllOrigins get (wrapped)
+    try {
+      log(`→ ${mode}: allorigins/get ${AO_GET(mode, base)}`);
+      const { http, json } = await tryStep('allorigins-get', AO_GET(mode, base), true);
+      setStatusRow('allorigins', 'get', mode, `<span class="pill ok">OK</span> <small>HTTP ${http}</small>`);
+      log(`   ✅ allorigins-get OK (HTTP ${http})`);
+      return json;
+    } catch (e3) {
+      setStatusRow('allorigins', 'get', mode, `<span class="pill err">Fout</span> <small>${e3.message}</small>`);
+      log(`   ❌ allorigins-get: ${e3.message}`);
     }
 
-    // knoppen
-    document.getElementById("btn-reload").onclick=()=>{ log("Opnieuw laden gestart…"); loadAll(); };
-    document.getElementById("btn-recheck").onclick=recheckAll;
-  </script>
+    // 4) Server proxy (optioneel)
+    if (USE_PROXY) {
+      try {
+        log(`→ ${mode}: proxy ${PROXY(mode)}`);
+        const { http, json } = await tryStep('proxy', PROXY(mode), false);
+        setStatusRow('proxy', '/api/sheets', mode, `<span class="pill ok">OK</span> <small>HTTP ${http}</small>`);
+        log(`   ✅ proxy OK (HTTP ${http})`);
+        return json;
+      } catch (e4) {
+        setStatusRow('proxy', '/api/sheets', mode, `<span class="pill err">Fout</span> <small>${e4.message}</small>`);
+        log(`   ❌ proxy: ${e4.message}`);
+      }
+    }
+
+    throw new Error(`Alle paden faalden voor ${mode}.`);
+  }
+
+  async function fullTest() {
+    const base = els.u.value.trim();
+    if (!base) { alert('Vul je /exec URL in.'); return; }
+    resetStatus(); els.log.textContent = '';
+
+    // PING eerst — zo detecteren we login/permissions meteen
+    try {
+      const pingJson = await testEndpoint(base, 'ping');
+      const ok = pingJson?.ok === true || pingJson?.data?.ok === true || String(pingJson?.data?.ping||'').toLowerCase() === 'ok';
+      if (!ok) log('⚠️ Ping antwoordde zonder duidelijke ok-indicator.');
+    } catch (e) {
+      log('🚫 Ping faalde op alle paden. Waarschijnlijk CORS/HTML (login) of verkeerde deployment URL.');
+      return;
+    }
+
+    // KLANTEN
+    try {
+      const kl = await testEndpoint(base, 'klanten');
+      const arr = Array.isArray(kl?.data) ? kl.data : (Array.isArray(kl) ? kl : []);
+      log(`👤 Klanten: ${arr.length} rijen`);
+      log(JSON.stringify(arr.slice(0, 5), null, 2));
+    } catch (e) {
+      log('❌ Klanten faalden: ' + e.message);
+    }
+
+    // HONDEN
+    try {
+      const ho = await testEndpoint(base, 'honden');
+      const arr = Array.isArray(ho?.data) ? ho.data : (Array.isArray(ho) ? ho : []);
+      log(`🐶 Honden: ${arr.length} rijen`);
+      log(JSON.stringify(arr.slice(0, 5), null, 2));
+    } catch (e) {
+      log('❌ Honden faalden: ' + e.message);
+    }
+
+    // Diagnose samenvatting
+    const txt = els.statusBody.textContent;
+    if (txt.includes('directOK') || txt.includes('OK')) {
+      // noop; tabel heeft badges
+    }
+    log('\n— Klaar —');
+    log('🎯 Interpretatie:');
+    log('• Als "direct" vaak faalt maar "allorigins" OK is ➜ CORS; je hoofdapp zal via fallback/proxy moeten werken.');
+    log('• Als alles OK is ➜ Je kunt de directe URL in je app gebruiken.');
+  }
+
+  // ==== INIT ====
+  // Prefill uit localStorage of querystring
+  const saved = localStorage.getItem(LSKEY);
+  els.u.value = fromQS || saved || '';
+
+  // Events
+  els.save.addEventListener('click', () => {
+    const v = els.u.value.trim();
+    localStorage.setItem(LSKEY, v);
+    log('💾 Opgeslagen: ' + v);
+  });
+  els.test.addEventListener('click', fullTest);
+  els.recheck.addEventListener('click', () => { resetStatus(); fullTest(); });
+  els.clear.addEventListener('click', () => els.log.textContent = '');
+  els.dl.addEventListener('click', () => {
+    const blob = new Blob([els.log.textContent], { type: 'text/plain' });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'webapp-test-log.txt' });
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+})();
+</script>
 </body>
 </html>
