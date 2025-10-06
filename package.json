@@ -1,13 +1,12 @@
 {
   "name": "superhond-registratie-systeem",
-  "version": "1.0.0",
-  "description": "Superhond Registratie Systeem – Node.js API proxy + frontend",
+  "version": "1.0.1",
+  "description": "🐶 Superhond Registratie Systeem – Node.js Express server + Google Sheets proxy + frontend.",
   "type": "module",
 
   "scripts": {
     "start": "node server/index.js",
     "dev": "nodemon server/index.js",
-
     "bump": "node tools/bump-version.js",
     "bump:minor": "node tools/bump-version.js minor",
     "bump:major": "node tools/bump-version.js major",
@@ -27,19 +26,31 @@
   },
 
   "engines": {
-    "node": ">=18"
+    "node": ">=18.0.0"
   },
 
   "keywords": [
     "superhond",
-    "dogschool",
     "registratie",
-    "node",
+    "dogschool",
     "express",
+    "node",
     "google-sheets",
-    "api-proxy"
+    "api-proxy",
+    "render",
+    "apps-script"
   ],
 
-  "author": "Paul Thijs",
-  "license": "MIT"
+  "author": {
+    "name": "Paul Thijs",
+    "email": "info@superhond.be"
+  },
+
+  "license": "MIT",
+
+  "homepage": "https://superhond.be",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/paulthijs/superhond-registratie-systeem"
+  }
 }
