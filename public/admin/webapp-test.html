@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="nl">
 <head>
@@ -26,7 +25,7 @@
 </head>
 <body>
 <h1>🐶 Superhond – Google Sheets WebApp test</h1>
-<p class="muted">Gebruik deze pagina om te testen of je Google Apps Script webapp (Sheets API) publiek bereikbaar is en JSON terugstuurt zonder CORS-fouten.</p>
+<p class="muted">Gebruik deze pagina om te testen of je Google Apps Script WebApp (Sheets API) publiek bereikbaar is en JSON terugstuurt zonder CORS-fouten.</p>
 
 <section class="card">
   <label for="url">WebApp-URL (eindigend op <code>/exec</code>)</label>
@@ -61,10 +60,12 @@
     status:document.getElementById('status'),
     log:document.getElementById('log')
   };
+
   const LSKEY='superhond_api_base';
   const TIMEOUT=12000;
   const USE_PROXY=false; // zet true zodra je serverproxy klaar is
 
+  // URL en helpers
   const qs=new URLSearchParams(location.search);
   const fromQS=qs.get('apiBase');
   els.url.value=fromQS||localStorage.getItem(LSKEY)||'';
@@ -96,19 +97,19 @@
     return JSON.parse(c);
   }
 
-  async function tryOne(kind,url,wrap){
+  async function tryOne(kind,url,wrap,mode){
     try{
       const r=await ffetch(url);
       const txt=await r.text();
       if(!r.ok) throw new Error(`HTTP ${r.status}`);
       const j=parse(txt,wrap);
-      const arr=Array.isArray(j)?j:(j.data??null);
-      row(kind,url.split('?')[0],'ping',`<span class="pill ok">OK</span> <small>${r.status}</small>`);
-      log(`✅ ${kind}: OK (${r.status})`);
-      return arr||j;
+      const data=Array.isArray(j)?j:(j.data??null);
+      row(kind,url.split('?')[0],mode,`<span class="pill ok">OK</span> <small>${r.status}</small>`);
+      log(`✅ ${mode}: ${kind} OK (${r.status})`);
+      return data||j;
     }catch(e){
-      row(kind,url.split('?')[0],'ping',`<span class="pill err">Fout</span> <small>${e.message}</small>`);
-      log(`❌ ${kind}: ${e.message}`);
+      row(kind,url.split('?')[0],mode,`<span class="pill err">Fout</span> <small>${e.message}</small>`);
+      log(`❌ ${mode}: ${kind} → ${e.message}`);
       throw e;
     }
   }
@@ -122,10 +123,10 @@
       ...(USE_PROXY?[{n:'proxy',url:PROXY(mode,base)}]:[])
     ];
     for(const s of steps){
-      try{return await tryOne(s.n,s.url,!!s.wrap);}
+      try{return await tryOne(s.n,s.url,!!s.wrap,mode);}
       catch(_){continue;}
     }
-    throw new Error('Alles faalde');
+    throw new Error(`${mode}: geen enkele route werkte`);
   }
 
   async function runTest(){
@@ -140,8 +141,9 @@
 
     try{await testAll(base,'klanten');log('👤 Klanten OK');}catch(e){log('❌ Klanten fout: '+e.message);}
     try{await testAll(base,'honden');log('🐶 Honden OK');}catch(e){log('❌ Honden fout: '+e.message);}
+
     log('\\n— Test klaar —');
-    log('Als Jina of AllOrigins werkt maar direct niet → CORS; gebruik proxy of fallback in app.');
+    log('ℹ️ Als Jina of AllOrigins werkt maar direct niet → CORS. Gebruik dan je proxy of fallback in Superhond.');
   }
 
   els.save.onclick=()=>{localStorage.setItem(LSKEY,els.url.value.trim());log('💾 Opgeslagen');};
