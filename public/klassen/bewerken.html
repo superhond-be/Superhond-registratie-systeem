@@ -5,78 +5,100 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Klas – Bewerken • Superhond</title>
 
-  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+  <!-- Styles -->
+  <link rel="stylesheet" href="../css/style.css?v=0.22.3" />
+  <link rel="stylesheet" href="../css/responsive.css?v=0.22.3" />
 
-  <script src="../js/layout.js?v=0.20.0" defer></script>
-  <script type="module" src="./bewerken.js?v=0.20.0" defer></script>
+  <!-- Layout (topbar/footer + centrale config) -->
+  <script src="../js/layout.js?v=0.22.3" defer></script>
+
+  <!-- Paginalogica -->
+  <script type="module" src="./bewerken.js?v=0.22.3" defer></script>
+
+  <noscript><style>.requires-js{display:none!important}</style></noscript>
 </head>
 <body class="subpage">
-<header id="topbar" class="topbar"></header>
+  <!-- Topbar -->
+  <header id="topbar" class="topbar"></header>
 
-<main class="container">
-  <h1 class="page-title">Klas bewerken</h1>
+  <main class="container">
+    <h1 class="page-title">Klas bewerken</h1>
+    <p class="muted">Vul de gegevens van de klas in. Velden met <span aria-hidden="true">*</span> zijn verplicht.</p>
 
-  <form id="formKlas" class="card">
-    <input type="hidden" id="klasId"/>
+    <!-- Meldingen -->
+    <article id="msg" class="card requires-js" style="display:none" aria-live="polite"></article>
 
-    <div style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
-      <label>Naam (hoofdtitel)
-        <input class="input" id="naam" type="text" placeholder="bv. Puppy" required />
-      </label>
+    <!-- Formulier -->
+    <form id="formKlas" class="card requires-js" novalidate>
+      <input type="hidden" id="klasId" />
 
-      <label>Type (subnaam)
-        <input class="input" id="type" type="text" placeholder="bv. Basis" />
-      </label>
+      <div class="grid" style="display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+        <label for="naam">Naam (hoofdtitel) <span aria-hidden="true">*</span>
+          <input class="input" id="naam" type="text" placeholder="bv. Puppy" required
+                 autocomplete="off" autocapitalize="sentences" spellcheck="false" />
+        </label>
 
-      <label>Thema
-        <input class="input" id="thema" type="text" placeholder="bv. Opvoeding" />
-      </label>
+        <label for="type">Type (subnaam)
+          <input class="input" id="type" type="text" placeholder="bv. Basis" />
+        </label>
 
-      <label>Strippen (voor klant)
-        <input class="input input-nr" id="strippen" type="number" min="0" step="1" value="0" />
-      </label>
+        <label for="thema">Thema
+          <input class="input" id="thema" type="text" placeholder="bv. Opvoeding" />
+        </label>
 
-      <label>Geldigheid (weken)
-        <input class="input input-nr" id="geldigheid" type="number" min="0" step="1" value="0" />
-      </label>
+        <label for="strippen">Strippen (voor klant)
+          <input class="input input-nr" id="strippen" type="number" min="0" step="1" value="0" inputmode="numeric" />
+        </label>
 
-      <label>Status
-        <select class="select" id="status">
-          <option value="actief">Actief</option>
-          <option value="inactief">Niet actief</option>
-        </select>
-      </label>
+        <label for="geldigheid">Geldigheid (weken)
+          <input class="input input-nr" id="geldigheid" type="number" min="0" step="1" value="0" inputmode="numeric" />
+        </label>
 
-      <label>MailBlue (lijst/label)
-        <input class="input" id="mailblue" type="text" placeholder="bv. NL_Puppy_Basis" />
-      </label>
+        <label for="status">Status
+          <select class="select" id="status">
+            <option value="actief">Actief</option>
+            <option value="inactief">Niet actief</option>
+          </select>
+        </label>
 
-      <label style="grid-column:1/-1">Afbeelding (URL)
-        <input class="input" id="afbeelding" type="url" placeholder="https://..." />
-      </label>
+        <label for="mailblue">MailBlue (lijst/label)
+          <input class="input" id="mailblue" type="text" placeholder="bv. NL_Puppy_Basis" />
+        </label>
 
-      <div style="grid-column:1/-1;display:flex;gap:12px;align-items:flex-start">
-        <img id="imgPreview" alt="Voorbeeld" style="max-width:220px;max-height:140px;border:1px solid var(--border);border-radius:8px;display:none"/>
-        <div style="flex:1">
-          <label>Beschrijving
-            <textarea class="input" id="beschrijving" rows="6" placeholder="Korte omschrijving…"></textarea>
-          </label>
+        <label for="afbeelding" style="grid-column:1/-1">Afbeelding (URL)
+          <input class="input" id="afbeelding" type="url" inputmode="url" placeholder="https://…" />
+        </label>
+
+        <div style="grid-column:1/-1;display:flex;gap:12px;align-items:flex-start">
+          <img id="imgPreview" alt="Voorbeeld van de klasafbeelding"
+               style="max-width:220px;max-height:140px;border:1px solid var(--border,#e5e7eb);border-radius:8px;display:none" />
+          <div style="flex:1">
+            <label for="beschrijving">Beschrijving
+              <textarea class="input" id="beschrijving" rows="6" placeholder="Korte omschrijving…"></textarea>
+            </label>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" type="submit" id="btnSave">💾 Opslaan</button>
-      <button class="btn" type="button" id="btnSaveBack">💾 Opslaan & terug</button>
-      <button class="btn" type="button" id="btnDelete">🗑️ Verwijderen</button>
-      <a class="btn" href="./">Annuleren</a>
-    </div>
-  </form>
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn primary" type="submit" id="btnSave">💾 Opslaan</button>
+        <button class="btn" type="button" id="btnSaveBack">💾 Opslaan & terug</button>
+        <button class="btn danger" type="button" id="btnDelete">🗑️ Verwijderen</button>
+        <a class="btn" href="./">Annuleren</a>
+      </div>
+    </form>
+  </main>
 
-  <article id="msg" class="card" style="display:none"></article>
-</main>
+  <!-- Footer -->
+  <footer id="footer" class="footer"></footer>
 
-<footer id="footer" class="footer"></footer>
+  <!-- Mount topbar/footer (optioneel API-statusbadge) -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.SuperhondUI?.mount) {
+        window.SuperhondUI.mount({ title: 'Klas – Bewerken', icon: '✏️', back: './', showApiStatus: false });
+      }
+    });
+  </script>
 </body>
 </html>
