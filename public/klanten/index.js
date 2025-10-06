@@ -1,13 +1,15 @@
-/* v0.21.6 – Klantenpagina (Apps Script API met compatibele timeout & fallbacks) */
+/* v0.21.7 – Klantenpagina (GAS API met compatibele timeout + meerdere fallbacks + duidelijke errors) */
 (() => {
   // === 1) BASIS ===
   const GAS_BASE =
     (window.SuperhondConfig?.apiBase) ||
     "https://script.google.com/macros/s/AKfycbwt_2IjbE68Nw01xnxeConxcNO0fNMwxZBW5DPDnGYYCFs9y00xOV69IA9aYFb9QRra/exec";
 
-  const PROXY_BASE = "/api/sheets";   // (optioneel) eigen same-origin proxy
-  const USE_PROXY_SERVER = false;     // true zodra je proxy live is
-  const TIMEOUT_MS = 8000;
+  // Optioneel: eigen same-origin proxy op je Render site (Node/Express)
+  const PROXY_BASE = "/api/sheets";
+  const USE_PROXY_SERVER = false;
+
+  const TIMEOUT_MS = 12000; // iets ruimer
 
   // === 2) DOM ===
   const els = {
@@ -19,20 +21,24 @@
     modal:     document.querySelector("#modal"),
     form:      document.querySelector("#form"),
     btnCancel: document.querySelector("#btn-cancel"),
+    debug:     document.getElementById("api-debug")
   };
 
   // === 3) STATE ===
   const state = { klanten: [], hondenByOwner: new Map() };
 
-  // === 4) Helpers ===
-  const qs = (mode, p={}) => new URLSearchParams({ mode, t: Date.now(), ...p }).toString();
-  const directUrl    = (m,p) => `${GAS_BASE}?${qs(m,p)}`;
-  const proxyUrl     = (m,p) => `${PROXY_BASE}?${qs(m,p)}`;
-  const aoRawUrl     = (m,p) => `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl(m,p))}`;
-  const aoGetUrl     = (m,p) => `https://api.allorigins.win/get?url=${encodeURIComponent(directUrl(m,p))}`;
-  const cleanJson    = (txt="") => txt.replace(/^\uFEFF/, "").trim();
+  // === 4) URL helpers ===
+  const query = (mode, p={}) => new URLSearchParams({ mode, t: Date.now(), ...p }).toString();
+  const directUrl = (m,p) => `${GAS_BASE}?${query(m,p)}`;
+  const proxyUrl  = (m,p) => `${PROXY_BASE}?${query(m,p)}`;
+  const aoRawUrl  = (m,p) => `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl(m,p))}`;
+  const aoGetUrl  = (m,p) => `https://api.allorigins.win/get?url=${encodeURIComponent(directUrl(m,p))}`;
+  // Jina “r” proxy (nog een publiek CORS-omzeiler). Verwacht JSON als tekst.
+  const jinaUrl   = (m,p) => `https://r.jina.ai/http://${directUrl(m,p).replace(/^https?:\/\//,'')}`;
 
-  // Timeout helper that works even on old Safari (no hard dependency on AbortController)
+  const stripBOM = s => String(s||'').replace(/^\uFEFF/, '').trim();
+
+  // === 5) fetch + timeout die óók op oudere Safari werkt ===
   async function fetchWithTimeout(url, ms = TIMEOUT_MS) {
     if (typeof AbortController !== "undefined") {
       const ac = new AbortController();
@@ -41,72 +47,56 @@
         return await fetch(url, { cache: "no-store", signal: ac.signal });
       } finally { clearTimeout(t); }
     }
-    // Fallback: race without abort (compatible)
+    // fallback zonder AbortController
     return Promise.race([
       fetch(url, { cache: "no-store" }),
       new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))
     ]);
   }
 
-  function parseMaybeWrapped(txt, expectWrapped = false) {
-    const c = cleanJson(txt);
+  function parseMaybeWrapped(text, expectWrapped=false) {
+    const cleaned = stripBOM(text);
     if (expectWrapped) {
-      const wrap = JSON.parse(c);
+      const wrap = JSON.parse(cleaned);
       if (!wrap || typeof wrap.contents !== "string") throw new Error("Proxy-antwoord onjuist");
-      return JSON.parse(cleanJson(wrap.contents));
+      return JSON.parse(stripBOM(wrap.contents));
     }
-    return JSON.parse(c);
+    return JSON.parse(cleaned);
   }
 
-  // === 5) robuuste GET (direct → proxy → AllOrigins /raw → AllOrigins /get) ===
-  async function apiGet(mode, params = {}) {
-    // a) direct naar GAS
-    try {
-      const r = await fetchWithTimeout(directUrl(mode, params));
-      const t = await r.text();
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const j = parseMaybeWrapped(t);
-      if (!j.ok) throw new Error(j.error || "Onbekende API-fout");
-      return j.data;
-    } catch (e1) {
-      console.warn("[API] Direct faalde:", e1?.message || e1);
-    }
+  async function tryJson(url, expectWrapped=false) {
+    const res = await fetchWithTimeout(url);
+    const txt = await res.text().catch(() => { throw new Error("Kon API-antwoord niet lezen"); });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const j = parseMaybeWrapped(txt, expectWrapped);
+    if (!j || j.ok !== true) throw new Error(j?.error || "Onbekende API-fout");
+    return j.data;
+  }
 
-    // b) eigen server-proxy
-    if (USE_PROXY_SERVER) {
+  // === 6) GET met fallbacks ===
+  async function apiGet(mode, params={}) {
+    const attempts = [
+      { name: "direct",   url: directUrl(mode, params) },
+      ...(USE_PROXY_SERVER ? [{ name:"proxy", url: proxyUrl(mode, params) }] : []),
+      { name: "allorigins-raw", url: aoRawUrl(mode, params) },
+      { name: "allorigins-get", url: aoGetUrl(mode, params), wrapped: true },
+      { name: "jina", url: jinaUrl(mode, params) }
+    ];
+
+    const errors = [];
+    for (const a of attempts) {
       try {
-        const r = await fetchWithTimeout(proxyUrl(mode, params));
-        const t = await r.text();
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const j = parseMaybeWrapped(t);
-        if (!j.ok) throw new Error(j.error || "Onbekende API-fout");
-        return j.data;
-      } catch (e2) {
-        console.warn("[API] Server-proxy faalde:", e2?.message || e2);
+        console.info(`[API] Probeer: ${a.name}`, a.url);
+        return await tryJson(a.url, !!a.wrapped);
+      } catch (e) {
+        errors.push(`${a.name}: ${e.message}`);
+        console.warn(`[API] Fout (${a.name}):`, e);
       }
     }
-
-    // c) AllOrigins raw
-    try {
-      const r = await fetchWithTimeout(aoRawUrl(mode, params));
-      const t = await r.text();
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const j = parseMaybeWrapped(t);
-      if (!j.ok) throw new Error(j.error || "Onbekende API-fout");
-      return j.data;
-    } catch (e3) {
-      console.warn("[API] AllOrigins /raw faalde:", e3?.message || e3);
-      // d) AllOrigins get (wrapped)
-      const r = await fetchWithTimeout(aoGetUrl(mode, params));
-      const t = await r.text();
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const j = parseMaybeWrapped(t, true);
-      if (!j.ok) throw new Error(j.error || "Onbekende API-fout");
-      return j.data;
-    }
+    throw new Error(`Load failed – ${errors.join(" | ")}`);
   }
 
-  // === 6) Normalisatie ===
+  // === 7) Normalisatie ===
   function normKlant(k) {
     const full = String(k.naam || "").trim();
     const [voornaam, ...rest] = full.split(/\s+/);
@@ -116,74 +106,43 @@
       const parts = String(k.adres).split(",");
       plaats = (parts[1] || parts[0] || "").trim();
     }
-    return {
-      id: k.id || "",
-      naam: full || "(naam onbekend)",
-      voornaam, achternaam,
-      email: k.email || "",
-      telefoon: k.telefoon || "",
-      plaats,
-    };
+    return { id: k.id || "", naam: full || "(naam onbekend)", voornaam, achternaam, email: k.email || "", telefoon: k.telefoon || "", plaats };
   }
-  const normHond = h => ({
-    id: h.id || "",
-    eigenaarId: h.eigenaar_id || h.eigenaarId || "",
-    naam: h.naam || "",
-    ras: h.ras || "",
-    geboortedatum: h.geboortedatum || "",
-  });
+  const normHond = h => ({ id: h.id || "", eigenaarId: h.eigenaar_id || h.eigenaarId || "", naam: h.naam || "", ras: h.ras || "", geboortedatum: h.geboortedatum || "" });
 
-  // === 7) UI helpers ===
-  function showLoader(on = true) {
-    if (els.loader) els.loader.style.display = on ? "" : "none";
-    if (els.wrap)   els.wrap.style.display   = on ? "none" : "";
-  }
-  function showError(msg = "") {
-    if (!els.error) return;
-    els.error.textContent = msg;
-    els.error.style.display = msg ? "" : "none";
-  }
+  // === 8) UI helpers ===
+  function showLoader(on=true){ if(els.loader) els.loader.style.display = on ? "" : "none"; if(els.wrap) els.wrap.style.display = on ? "none" : ""; }
+  function showError(msg=""){ if(!els.error) return; els.error.textContent = msg; els.error.style.display = msg ? "" : "none"; }
 
-  // === 8) Data laden ===
-  async function loadAll() {
+  // === 9) Data laden ===
+  async function loadAll(){
     showError(""); showLoader(true);
-    try {
-      console.info("[Klanten] Laden… via GAS:", GAS_BASE);
-      const [klRaw, hoRaw] = await Promise.all([apiGet("klanten"), apiGet("honden")]);
+    try{
+      const [klRaw, hoRaw] = await Promise.all([ apiGet("klanten"), apiGet("honden") ]);
       const klanten = klRaw.map(normKlant);
       const honden  = hoRaw.map(normHond);
 
       const map = new Map();
-      honden.forEach(h => {
-        if (!map.has(h.eigenaarId)) map.set(h.eigenaarId, []);
-        map.get(h.eigenaarId).push(h);
-      });
+      honden.forEach(h => { if(!map.has(h.eigenaarId)) map.set(h.eigenaarId, []); map.get(h.eigenaarId).push(h); });
 
       state.klanten = klanten;
       state.hondenByOwner = map;
       render();
-      console.info(`[Klanten] OK – ${klanten.length} klanten, ${honden.length} honden`);
-    } catch (e) {
+    }catch(e){
       console.error("[Klanten] Fout:", e);
-      const m = e?.message || "Onbekende fout";
-      showError(
-        m.includes("timeout") ? "⏳ Time-out bij API" :
-        m.includes("network") || m.includes("netwerk") ? "🚫 Geen netwerkverbinding" :
-        m.includes("JSON") ? "⚠️ Ongeldige JSON van API" :
-        "⚠️ " + m
-      );
-    } finally {
+      showError(e.message || "Load failed");
+    }finally{
       showLoader(false);
     }
   }
 
-  // === 9) Render ===
-  function render() {
-    if (!els.tbody) return;
-    els.tbody.innerHTML = state.klanten.map(k => {
+  // === 10) Render ===
+  function render(){
+    if(!els.tbody) return;
+    els.tbody.innerHTML = state.klanten.map(k=>{
       const dogs = state.hondenByOwner.get(k.id) || [];
       const dogChips = dogs.length
-        ? dogs.map(d => `<a class="chip btn btn-xs" href="../honden/detail.html?id=${d.id}" title="Bekijk ${d.naam}">${d.naam}</a>`).join(" ")
+        ? dogs.map(d=>`<a class="chip btn btn-xs" href="../honden/detail.html?id=${d.id}" title="Bekijk ${d.naam}">${d.naam}</a>`).join(" ")
         : '<span class="muted">0</span>';
       return `
         <tr data-id="${k.id}">
@@ -196,20 +155,19 @@
     }).join("");
   }
 
-  // === 10) Events ===
+  // === 11) Events ===
   els.btnNieuw?.addEventListener("click", () => els.modal?.showModal?.());
   els.btnCancel?.addEventListener("click", () => els.modal?.close?.());
 
-  // === 11) Debug: raw JSON (open /klanten/?mode=klanten) ===
+  // === 12) Debugblok (open /klanten/?mode=klanten of ?mode=honden) ===
   (async () => {
-    const pre = document.getElementById("api-debug");
     const m = new URLSearchParams(location.search).get("mode");
-    if (!pre || !m) return;
-    pre.style.display = "";
-    try { pre.textContent = JSON.stringify({ ok:true, data: await apiGet(m) }, null, 2); }
-    catch (e) { pre.textContent = "❌ " + (e?.message || String(e)); }
+    if (!els.debug || !m) return;
+    els.debug.style.display = "";
+    try { els.debug.textContent = JSON.stringify({ ok:true, data: await apiGet(m) }, null, 2); }
+    catch (e) { els.debug.textContent = "❌ " + (e?.message || String(e)); }
   })();
 
-  // === 12) Start ===
+  // === 13) Start ===
   loadAll();
 })();
