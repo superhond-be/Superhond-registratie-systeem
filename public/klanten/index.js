@@ -1,15 +1,14 @@
-/* v0.21.3 – Klantenpagina (Apps Script API met CORS-fallback) */
+/* v0.21.4 – Klantenpagina (Apps Script API met auto-fallback & timeout) */
 (() => {
   // === 1) BASIS-URLS ===
-  // Zet HIER je eigen GAS /exec-URL ZONDER query's:
   const GAS_BASE =
-    (window.SuperhondConfig?.apiBase) || // optionele centrale config
+    (window.SuperhondConfig?.apiBase) ||
     "https://script.google.com/macros/s/AKfycbzprHaU1ukJT03YLQ6I5EzR1LOq_45tzWNLo-d92rJuwtRat6Qf_b8Ydt-0qoZBIctVNA/exec";
 
-  // Als je later een eigen proxy op je server maakt, zet PROXY_BASE = "/api/sheets" en USE_PROXY_SERVER = true
-  const PROXY_BASE = "/api/sheets";         // jouw server-proxy (same-origin)
-  const USE_PROXY_SERVER = false;           // zodra je proxy live is: true
-  const USE_PUBLIC_PROXY = true; // forceer de AllOrigins-proxy
+  const PROXY_BASE = "/api/sheets";  // eigen server-proxy (same-origin)
+  const USE_PROXY_SERVER = false;    // zet op true wanneer je proxy live is
+
+  const TIMEOUT_MS = 8000;
 
   // === 2) DOM ===
   const els = {
@@ -26,45 +25,96 @@
   // === 3) STATE ===
   const state = { klanten: [], hondenByOwner: new Map() };
 
-  // === 4) URL-bouwers ===
-  function buildDirectUrl(mode, params = {}) {
+  // === 4) Helpers ===
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  function withTimeout(promise, ms = TIMEOUT_MS) {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort("timeout"), ms);
+    return Promise.race([
+      promise(ctrl.signal).finally(() => clearTimeout(t)),
+      (async () => { await sleep(ms + 10); throw new Error("timeout"); })()
+    ]);
+  }
+
+  function buildDirectUrl(mode, params={}) {
     const qs = new URLSearchParams({ mode, t: Date.now(), ...params }).toString();
     return `${GAS_BASE}?${qs}`;
   }
-  function buildServerProxyUrl(mode, params = {}) {
+  function buildServerProxyUrl(mode, params={}) {
     const qs = new URLSearchParams({ mode, t: Date.now(), ...params }).toString();
     return `${PROXY_BASE}?${qs}`;
   }
-  function buildAllOriginsUrl(mode, params = {}) {
-    const direct = buildDirectUrl(mode, params);
-    return `https://api.allorigins.win/raw?url=${encodeURIComponent(direct)}`;
+  function buildAllOriginsRawUrl(mode, params={}) {
+    return `https://api.allorigins.win/raw?url=${encodeURIComponent(buildDirectUrl(mode, params))}`;
+  }
+  function buildAllOriginsGetUrl(mode, params={}) {
+    return `https://api.allorigins.win/get?url=${encodeURIComponent(buildDirectUrl(mode, params))}`;
   }
 
-  function buildUrl(mode, params = {}) {
-    if (USE_PROXY_SERVER) return buildServerProxyUrl(mode, params);  // jouw server-proxy
-    if (USE_PUBLIC_PROXY) return buildAllOriginsUrl(mode, params);   // tijdelijke publieke proxy
-    return buildDirectUrl(mode, params);                              // direct (meestal CORS-blokkade)
-  }
-
-  // === 5) API (GET) met robuuste foutafhandeling ===
+  // === 5) robuuste GET (direct → server-proxy → publieke proxy) ===
   async function apiGet(mode, params = {}) {
-    let res;
-    const url = buildUrl(mode, params);
+    // a) direct naar GAS
     try {
-      res = await fetch(url, { cache: "no-store" });
-    } catch {
-      throw new Error("Geen verbinding met de API (netwerk of CORS)");
+      return await fetchJson(buildDirectUrl(mode, params));
+    } catch (e1) {
+      console.warn("[API] Direct faalde:", e1?.message || e1);
     }
-    const txt = await res.text();                 // eerst text voor betere debug
+
+    // b) eigen server proxy (indien geactiveerd)
+    if (USE_PROXY_SERVER) {
+      try {
+        return await fetchJson(buildServerProxyUrl(mode, params));
+      } catch (e2) {
+        console.warn("[API] Server-proxy faalde:", e2?.message || e2);
+      }
+    }
+
+    // c) publieke proxy (AllOrigins) – probeer raw, en zo nodig get->contents
+    try {
+      return await fetchJson(buildAllOriginsRawUrl(mode, params));
+    } catch (e3) {
+      console.warn("[API] AllOrigins /raw faalde:", e3?.message || e3);
+      // /get-variant geeft {contents:"<string>"} terug
+      const j = await fetchJson(buildAllOriginsGetUrl(mode, params), {expectWrapped: true});
+      return j;
+    }
+  }
+
+  // === 6) fetchJson met betere JSON-detectie ===
+  async function fetchJson(url, opts = {}) {
+    const { expectWrapped = false } = opts;
+    const doFetch = (signal) => fetch(url, { cache: "no-store", signal });
+
+    let res, text;
+    try {
+      res = await withTimeout(doFetch);
+    } catch (e) {
+      throw new Error(e?.message === "timeout" ? "Time-out bij API" : "Geen netwerkverbinding");
+    }
+    try {
+      text = await res.text();
+    } catch {
+      throw new Error("Kon API-antwoord niet lezen");
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    // AllOrigins /get geeft {"contents":"..."} – probeer dat eerst indien verwacht
+    if (expectWrapped) {
+      let wrapper;
+      try { wrapper = JSON.parse(text); } catch { throw new Error("Ongeldige JSON van proxy"); }
+      if (!wrapper || typeof wrapper.contents !== "string") throw new Error("Proxy-antwoord onjuist");
+      text = wrapper.contents;
+    }
+
     let json;
-    try { json = JSON.parse(txt); }
+    try { json = JSON.parse(text); }
     catch { throw new Error("Ongeldige JSON van API"); }
-    if (!json.ok) throw new Error(json.error || "Onbekende API-fout");
+
+    if (!json || json.ok !== true) throw new Error(json?.error || "Onbekende API-fout");
     return json.data;
   }
 
-  // === 6) Normalisatie ===
+  // === 7) Normalisatie ===
   function normKlant(k) {
     const full = String(k.naam || "").trim();
     const [voornaam, ...rest] = full.split(/\s+/);
@@ -92,7 +142,7 @@
     geboortedatum: h.geboortedatum || "",
   });
 
-  // === 7) UI helpers ===
+  // === 8) UI helpers ===
   function showLoader(on = true) {
     if (els.loader) els.loader.style.display = on ? "" : "none";
     if (els.wrap)   els.wrap.style.display   = on ? "none" : "";
@@ -103,13 +153,16 @@
     els.error.style.display = msg ? "" : "none";
   }
 
-  // === 8) Data laden ===
+  // === 9) Data laden ===
   async function loadAll() {
     showError("");
     showLoader(true);
     try {
-      console.info("[Klanten] Laden via:", USE_PROXY_SERVER ? "server-proxy" : (USE_PUBLIC_PROXY ? "AllOrigins" : "direct"));
-      const [klRaw, hoRaw] = await Promise.all([ apiGet("klanten"), apiGet("honden") ]);
+      console.info("[Klanten] Laden…");
+      const [klRaw, hoRaw] = await Promise.all([
+        apiGet("klanten"),
+        apiGet("honden"),
+      ]);
       const klanten = klRaw.map(normKlant);
       const honden  = hoRaw.map(normHond);
 
@@ -131,7 +184,7 @@
     }
   }
 
-  // === 9) Render ===
+  // === 10) Render ===
   function render() {
     if (!els.tbody) return;
     els.tbody.innerHTML = state.klanten.map(k => {
@@ -150,24 +203,20 @@
     }).join("");
   }
 
-  // === 10) Events ===
+  // === 11) Events ===
   els.btnNieuw?.addEventListener("click", () => els.modal?.showModal?.());
   els.btnCancel?.addEventListener("click", () => els.modal?.close?.());
 
-  // === 11) Debug: toon raw JSON met ?mode=klanten of ?mode=honden in de URL ===
+  // === 12) Debug (optioneel): toon raw JSON met ?mode=klanten of ?mode=honden ===
   (async () => {
     const pre = document.getElementById("api-debug");
     const m = new URLSearchParams(location.search).get("mode");
     if (!pre || !m) return;
     pre.style.display = "";
-    try {
-      const data = await apiGet(m);
-      pre.textContent = JSON.stringify({ ok:true, data }, null, 2);
-    } catch (e) {
-      pre.textContent = "❌ " + e.message;
-    }
+    try { pre.textContent = JSON.stringify({ ok:true, data: await apiGet(m) }, null, 2); }
+    catch (e) { pre.textContent = "❌ " + e.message; }
   })();
 
-  // === 12) Start ===
+  // === 13) Start ===
   loadAll();
 })();
