@@ -4,49 +4,69 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Klassen – Superhond</title>
-  <link rel="stylesheet" href="/css/style.css?v=0.19.8" />
-  <script src="/js/layout.js?v=0.19.8" defer></script>
-  <script type="module" src="/klassen/beheer.js?v=0.19.8" defer></script>
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="/css/style.css?v=0.22.4" />
+  <link rel="stylesheet" href="/css/responsive.css?v=0.22.4" />
+
+  <!-- Layout (topbar/footer + centrale config) -->
+  <script src="/js/layout.js?v=0.22.4" defer></script>
+
+  <!-- Paginalogica (beheer/editor) -->
+  <script type="module" src="/klassen/beheer.js?v=0.22.4" defer></script>
+
+  <noscript><style>.requires-js{display:none!important}</style></noscript>
 </head>
-<body>
-<header id="topbar" class="topbar"></header>
+<body class="subpage">
+  <!-- Topbar -->
+  <header id="topbar" class="topbar"></header>
 
-<main class="container">
-  <h1 class="page-title">Klassen</h1>
+  <main class="container">
+    <h1 class="page-title">Klassen</h1>
 
-  <div class="card" style="margin-bottom:.75rem">
-    <div class="toolbar" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-      <button id="btn-add" class="btn primary">+ Klas</button>
-      <span class="muted" id="total"></span>
-      <span style="flex:1 1 auto"></span>
-      <a class="btn" href="/">→ Dashboard</a>
-    </div>
-  </div>
+    <!-- Toolbar -->
+    <section class="card requires-js" style="margin-bottom:.75rem">
+      <div class="toolbar" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+        <button id="btn-add" class="btn primary" type="button">+ Klas</button>
+        <span class="muted" id="total"></span>
+        <span style="flex:1 1 auto"></span>
+        <a class="btn" href="/">→ Dashboard</a>
+      </div>
+      <!-- Foutmeldingen vanuit beheer.js -->
+      <div id="error" class="error" style="display:none;margin-top:.5rem"></div>
+    </section>
 
-  <div class="table-wrap card">
-    <table class="table" id="tbl">
-      <thead>
-        <tr>
-          <th>Naam</th>
-          <th>Type</th>
-          <th>Thema</th>
-          <th>Afbeelding</th>
-          <th>Beschrijving</th>
-          <th>MailBlue</th>
-          <th>Status</th>
-          <th class="right">Acties</th>
-        </tr>
-      </thead>
-      <tbody><!-- JS --></tbody>
-    </table>
-  </div>
-</main>
+    <!-- Tabel -->
+    <section class="table-wrap card requires-js">
+      <table class="table" id="tbl" aria-describedby="tbl-caption">
+        <caption id="tbl-caption" class="visually-hidden">Beheer van klassen</caption>
+        <thead>
+          <tr>
+            <th scope="col">Naam</th>
+            <th scope="col">Type</th>
+            <th scope="col">Thema</th>
+            <th scope="col">Afbeelding</th>
+            <th scope="col">Beschrijving</th>
+            <th scope="col">MailBlue</th>
+            <th scope="col">Status</th>
+            <th class="right" scope="col">Acties</th>
+          </tr>
+        </thead>
+        <tbody><!-- gevuld door /klassen/beheer.js --></tbody>
+      </table>
+    </section>
+  </main>
 
-<footer id="footer" class="footer"></footer>
-<script>
-  window.addEventListener('DOMContentLoaded', ()=>{
-    SuperhondUI.mount({ title:'Superhond — Klassen', icon:'📚', back:'/' });
-  });
-</script>
+  <!-- Footer -->
+  <footer id="footer" class="footer"></footer>
+
+  <!-- Mount topbar/footer -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (window.SuperhondUI?.mount) {
+        SuperhondUI.mount({ title:'Superhond — Klassen', icon:'📚', back:'/' });
+      }
+    });
+  </script>
 </body>
 </html>
