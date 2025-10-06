@@ -8,6 +8,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const ORIGIN = process.env.CORS_ORIGIN || "*";
 
+import sheetsRouter from "./api/sheets.js";
+app.use("/api/sheets", sheetsRouter);
+
 app.use(cors({ origin: ORIGIN }));
 app.use(express.json());
 
