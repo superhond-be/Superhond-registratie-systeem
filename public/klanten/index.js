@@ -9,7 +9,7 @@
   // Als je later een eigen proxy op je server maakt, zet PROXY_BASE = "/api/sheets" en USE_PROXY_SERVER = true
   const PROXY_BASE = "/api/sheets";         // jouw server-proxy (same-origin)
   const USE_PROXY_SERVER = false;           // zodra je proxy live is: true
-  const USE_PUBLIC_PROXY = !USE_PROXY_SERVER; // tijdelijk via AllOrigins voor GET
+  const USE_PUBLIC_PROXY = true; // forceer de AllOrigins-proxy
 
   // === 2) DOM ===
   const els = {
