@@ -1,1 +1,153 @@
-/admin/webapp-test.html?apiBase=JOUW_EXEC_URL
+
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <title>🐶 Superhond – Google Sheets WebApp test</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif; margin:2rem auto; max-width:960px; padding:0 1rem; }
+    h1 { margin-bottom:.5rem; }
+    .muted { color:#64748b; }
+    .card { border:1px solid #e5e7eb; border-radius:8px; padding:1rem; margin:1rem 0; }
+    input[type=url]{width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;}
+    button{border:1px solid #cbd5e1;background:#fff;border-radius:6px;padding:6px 10px;cursor:pointer}
+    button.primary{background:#1d4ed8;color:#fff;border-color:#1d4ed8}
+    button.ghost{background:#f8fafc}
+    table{width:100%;border-collapse:collapse;margin-top:.5rem}
+    th,td{padding:6px 8px;border-bottom:1px solid #e5e7eb;font-size:13px}
+    th:nth-child(1){width:130px}
+    th:nth-child(2){width:110px}
+    td.right{text-align:right}
+    pre{background:#0b1020;color:#d1e7ff;padding:1rem;border-radius:8px;min-height:140px;overflow:auto}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;color:#fff}
+    .ok{background:#2ca34a}.err{background:#d64545}.warn{background:#e6a700}
+  </style>
+</head>
+<body>
+<h1>🐶 Superhond – Google Sheets WebApp test</h1>
+<p class="muted">Gebruik deze pagina om te testen of je Google Apps Script webapp (Sheets API) publiek bereikbaar is en JSON terugstuurt zonder CORS-fouten.</p>
+
+<section class="card">
+  <label for="url">WebApp-URL (eindigend op <code>/exec</code>)</label>
+  <input id="url" type="url" placeholder="https://script.google.com/macros/s/…/exec">
+  <div style="margin-top:8px">
+    <button id="save" class="primary">💾 Opslaan</button>
+    <button id="run">🔍 Verbinding testen</button>
+    <button id="clear" class="ghost">🧹 Log wissen</button>
+  </div>
+  <p class="muted" style="margin-top:.4rem">De WebApp moet gedeployed zijn als <strong>Iedereen (zelfs anoniem)</strong>.</p>
+</section>
+
+<section class="card">
+  <h3>Status</h3>
+  <table><thead><tr><th>Methode</th><th>Pad</th><th>Endpoint</th><th class="right">Resultaat</th></tr></thead>
+    <tbody id="status"><tr><td colspan="4" class="muted">Nog geen test uitgevoerd.</td></tr></tbody>
+  </table>
+</section>
+
+<section class="card">
+  <h3>Log</h3>
+  <pre id="log"></pre>
+</section>
+
+<script>
+(() => {
+  const els = {
+    url:document.getElementById('url'),
+    save:document.getElementById('save'),
+    run:document.getElementById('run'),
+    clear:document.getElementById('clear'),
+    status:document.getElementById('status'),
+    log:document.getElementById('log')
+  };
+  const LSKEY='superhond_api_base';
+  const TIMEOUT=12000;
+  const USE_PROXY=false; // zet true zodra je serverproxy klaar is
+
+  const qs=new URLSearchParams(location.search);
+  const fromQS=qs.get('apiBase');
+  els.url.value=fromQS||localStorage.getItem(LSKEY)||'';
+
+  const RAW =(m,b)=>`${b}?mode=${m}&t=${Date.now()}`;
+  const AO_RAW=(m,b)=>`https://api.allorigins.win/raw?url=${encodeURIComponent(RAW(m,b))}`;
+  const AO_GET=(m,b)=>`https://api.allorigins.win/get?url=${encodeURIComponent(RAW(m,b))}`;
+  const JINA  =(m,b)=>`https://r.jina.ai/http://${RAW(m,b).replace(/^https?:\\/\\//,'')}`;
+  const PROXY =(m)=>`/api/sheets?mode=${m}&t=${Date.now()}`;
+
+  const strip=s=>String(s||'').replace(/^\\uFEFF/,'').trim();
+  const isHTML=t=>/^\\s*</.test(strip(t));
+  const log=t=>{els.log.textContent+=t+'\\n';els.log.scrollTop=els.log.scrollHeight;};
+  const row=(m,p,e,res)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${m}</td><td><code>${p}</code></td><td><code>${e}</code></td><td class="right">${res}</td>`;els.status.appendChild(tr);};
+
+  async function ffetch(u,ms=TIMEOUT){
+    const ac=new AbortController();const to=setTimeout(()=>ac.abort(),ms);
+    try{return await fetch(u,{cache:'no-store',signal:ac.signal});}
+    finally{clearTimeout(to);}
+  }
+
+  function parse(t,wrap=false){
+    const s=strip(t);
+    if(isHTML(s)) throw new Error('HTML ontvangen (login of foutpagina)');
+    if(!wrap) return JSON.parse(s);
+    const j=JSON.parse(s);
+    const c=strip(j.contents||'');
+    if(isHTML(c)) throw new Error('AllOrigins-get gaf HTML');
+    return JSON.parse(c);
+  }
+
+  async function tryOne(kind,url,wrap){
+    try{
+      const r=await ffetch(url);
+      const txt=await r.text();
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      const j=parse(txt,wrap);
+      const arr=Array.isArray(j)?j:(j.data??null);
+      row(kind,url.split('?')[0],'ping',`<span class="pill ok">OK</span> <small>${r.status}</small>`);
+      log(`✅ ${kind}: OK (${r.status})`);
+      return arr||j;
+    }catch(e){
+      row(kind,url.split('?')[0],'ping',`<span class="pill err">Fout</span> <small>${e.message}</small>`);
+      log(`❌ ${kind}: ${e.message}`);
+      throw e;
+    }
+  }
+
+  async function testAll(base,mode){
+    const steps=[
+      {n:'direct',url:RAW(mode,base)},
+      {n:'AO-raw',url:AO_RAW(mode,base)},
+      {n:'AO-get',url:AO_GET(mode,base),wrap:true},
+      {n:'Jina',url:JINA(mode,base)},
+      ...(USE_PROXY?[{n:'proxy',url:PROXY(mode,base)}]:[])
+    ];
+    for(const s of steps){
+      try{return await tryOne(s.n,s.url,!!s.wrap);}
+      catch(_){continue;}
+    }
+    throw new Error('Alles faalde');
+  }
+
+  async function runTest(){
+    const base=els.url.value.trim();
+    if(!base){alert('Vul je /exec URL in');return;}
+    localStorage.setItem(LSKEY,base);
+    els.status.innerHTML='';
+    els.log.textContent='';
+
+    try{await testAll(base,'ping');}
+    catch(e){log('🚫 Ping faalde overal. Controleer rechten of netwerk.');return;}
+
+    try{await testAll(base,'klanten');log('👤 Klanten OK');}catch(e){log('❌ Klanten fout: '+e.message);}
+    try{await testAll(base,'honden');log('🐶 Honden OK');}catch(e){log('❌ Honden fout: '+e.message);}
+    log('\\n— Test klaar —');
+    log('Als Jina of AllOrigins werkt maar direct niet → CORS; gebruik proxy of fallback in app.');
+  }
+
+  els.save.onclick=()=>{localStorage.setItem(LSKEY,els.url.value.trim());log('💾 Opgeslagen');};
+  els.run.onclick=runTest;
+  els.clear.onclick=()=>{els.log.textContent='';};
+})();
+</script>
+</body>
+</html>
