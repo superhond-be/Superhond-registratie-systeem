@@ -1,9 +1,9 @@
 /* v0.21.4 – Klantenpagina (Apps Script API met auto-fallback & timeout) */
 (() => {
-  // === 1) BASIS-URLS ===
+  // === 1) BASIS-
   const GAS_BASE =
-    (window.SuperhondConfig?.apiBase) ||
-    "https://script.google.com/macros/s/AKfycbzprHaU1ukJT03YLQ6I5EzR1LOq_45tzWNLo-d92rJuwtRat6Qf_b8Ydt-0qoZBIctVNA/exec";
+  (window.SuperhondConfig?.apiBase) ||
+  "https://script.google.com/macros/s/AKfycbwt_2IjbE68Nw01xnxeConxcNO0fNMwxZBW5DPDnGYYCFs9y00xOV69IA9aYFb9QRra/exec";
 
   const PROXY_BASE = "/api/sheets";  // eigen server-proxy (same-origin)
   const USE_PROXY_SERVER = false;    // zet op true wanneer je proxy live is
