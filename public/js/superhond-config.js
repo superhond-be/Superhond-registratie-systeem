@@ -1,28 +1,20 @@
-<script>
-;(() => {
-  const KEY = "superhond.apiBase";
+/* superhond-config.js – centrale instellingen */
+(() => {
+  // 🚀 Vul hier de fallback in (je nieuwste Web-App-URL)
+  const FALLBACK = "https://script.google.com/macros/s/AKfycbzprHaU1ukJT03YLQ6I5EzR1LOq_45tzWNLo-d92rJuwtRat6Qf_b8Ydt-0qoZBIctVNA/exec";
 
-  // Zet hier optioneel een fallback (handig bij eerste deploy)
-  const FALLBACK = ""; // bv: "https://script.google.com/macros/s/XXX/exec"
-
-  function get() {
-    const fromLS = localStorage.getItem(KEY);
-    return (fromLS && fromLS.trim()) || FALLBACK || "";
-  }
-
-  function set(url) {
-    const clean = String(url || "").trim();
-    if (!/^https?:\/\/.+\/exec(\?.*)?$/.test(clean)) {
-      throw new Error("Ongeldige Apps Script /exec URL.");
-    }
-    localStorage.setItem(KEY, clean);
-    return clean;
-  }
-
-  // Globale helper
   window.SuperhondConfig = {
-    getApiBase: get,
-    setApiBase: set
+    version: "v0.21.0",
+    get apiBase() {
+      return (
+        localStorage.getItem("superhond.apiBase") ||
+        FALLBACK
+      );
+    },
+    set apiBase(url) {
+      localStorage.setItem("superhond.apiBase", url);
+    },
   };
+
+  console.log("✅ Superhond-config geladen:", window.SuperhondConfig.apiBase);
 })();
-</script>
