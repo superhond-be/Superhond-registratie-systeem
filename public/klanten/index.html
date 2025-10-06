@@ -4,43 +4,46 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Klanten – Superhond</title>
+  <meta name="theme-color" content="#1d4ed8" />
 
   <!-- Centrale UI -->
-  <link rel="stylesheet" href="/css/style.css?v=0.20.0" />
-  <link rel="stylesheet" href="/css/superhond.css?v=0.20.0" />
+  <link rel="stylesheet" href="/css/style.css?v=0.21.8" />
+  <link rel="stylesheet" href="/css/superhond.css?v=0.21.8" />
 
   <!-- Layout (topbar/footer) -->
-  <script src="/js/layout.js?v=0.20.0" defer></script>
+  <script src="/js/layout.js?v=0.21.8" defer></script>
 
-  <!-- Pagina-logic (absoluut pad om path-issues te vermijden) -->
-  <script type="module" src="/klanten/index.js?v=0.20.0" defer></script>
+  <!-- Pagina-logic (absoluut pad; module laadt vanzelf "deferred") -->
+  <script type="module" src="/klanten/index.js?v=0.21.8"></script>
 
   <noscript>
-    <style>
-      .requires-js { display:none !important; }
-    </style>
+    <style>.requires-js{display:none!important}</style>
   </noscript>
 </head>
 <body class="subpage">
   <!-- Topbar -->
-  <header id="topbar" class="topbar"></header>
+  <header id="topbar" class="topbar" role="banner"></header>
 
-  <main class="container">
+  <main class="container" role="main">
     <h1 class="page-title">Klanten</h1>
 
-    <p><a class="btn" href="/">⬅️ Terug naar dashboard</a></p>
+    <p><a class="btn" href="/" aria-label="Terug naar dashboard">⬅️ Terug naar dashboard</a></p>
 
     <!-- Toolbar -->
     <div class="toolbar requires-js" role="region" aria-label="Zoeken en acties">
       <label for="zoek" class="visually-hidden">Zoek</label>
       <input id="zoek" type="search" class="input" placeholder="Zoek naam of e-mail…" autocomplete="off" />
-
-      <button id="btn-nieuw" class="btn primary" type="button">+ Nieuwe klant</button>
+      <button id="btn-nieuw" class="btn primary" type="button" aria-haspopup="dialog">+ Nieuwe klant</button>
     </div>
 
     <!-- States -->
-    <div id="loader" class="muted requires-js">⏳ Laden…</div>
-    <div id="error" class="error requires-js" style="display:none;"></div>
+    <div id="loader" class="muted requires-js" role="status" aria-live="polite">⏳ Laden…</div>
+    <div id="error" class="error requires-js" role="alert" style="display:none;"></div>
+
+    <!-- Debug (wordt door index.js getoond bij ?mode=... of fout) -->
+    <section class="requires-js" aria-label="API debug" style="display:none;">
+      <pre id="api-debug" class="debug-panel" style="display:none;overflow:auto;max-height:40vh;border:1px solid #e5e7eb;padding:.75rem;border-radius:.5rem;background:#0b1020;color:#d1e7ff;"></pre>
+    </section>
 
     <!-- Tabel -->
     <div class="table-wrap requires-js" id="wrap" style="display:none;">
@@ -61,7 +64,7 @@
   </main>
 
   <!-- Footer -->
-  <footer id="footer" class="footer"></footer>
+  <footer id="footer" class="footer" role="contentinfo"></footer>
 
   <!-- Modal: klant aanmaken/bewerken -->
   <dialog id="modal" class="requires-js" aria-labelledby="modal-title">
@@ -71,17 +74,17 @@
 
       <div class="row">
         <label for="fld-naam">Naam (volledig)</label>
-        <input id="fld-naam" name="naam" placeholder="Tom Janssens" />
+        <input id="fld-naam" name="naam" placeholder="Tom Janssens" autocomplete="name" />
       </div>
 
       <div class="row">
         <label for="fld-voornaam">Voornaam</label>
-        <input id="fld-voornaam" name="voornaam" />
+        <input id="fld-voornaam" name="voornaam" autocomplete="given-name" />
       </div>
 
       <div class="row">
         <label for="fld-achternaam">Achternaam</label>
-        <input id="fld-achternaam" name="achternaam" />
+        <input id="fld-achternaam" name="achternaam" autocomplete="family-name" />
       </div>
 
       <div class="row">
@@ -96,8 +99,8 @@
 
       <div class="row">
         <label for="fld-land">Land</label>
-        <select name="land" id="fld-land">
-          <option value="BE">BE</option>
+        <select name="land" id="fld-land" autocomplete="country">
+          <option value="BE" selected>BE</option>
           <option value="NL">NL</option>
         </select>
       </div>
@@ -138,7 +141,7 @@
   <script>
     window.addEventListener('DOMContentLoaded', () => {
       if (window.SuperhondUI?.mount) {
-        SuperhondUI.mount({ title: 'Klanten', icon: '👤', version: 'v0.20.0', back: '/' });
+        window.SuperhondUI.mount({ title: 'Klanten', icon: '👤', version: 'v0.21.8', back: '/' });
       }
     });
   </script>
