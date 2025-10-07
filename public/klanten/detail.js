@@ -162,7 +162,12 @@ async function init(){
     // Voor klanten
     if (!klanten.length) {
       const candsK = [];
-      if (apiBase) candsK.push(`${apiBase}?mode=klanten`);
+      //if (apiBase) candsK.push(`${apiBase}?mode=klanten`);
+      // was:
+      //candsK.push("/api/sheets?mode=klanten");
+      // wordt:
+      if (apiBase) candsK.push(`/api/sheets?mode=klanten&base=${encodeURIComponent(apiBase)}`);
+      
       candsK.push("/api/sheets?mode=klanten");                       // Node proxy (indien aanwezig)
       candsK.push("../data/klanten.json", "/data/klanten.json");     // statische demo
       const js = await fetchJson(candsK);
