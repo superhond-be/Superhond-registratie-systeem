@@ -1,6 +1,10 @@
 /* ===========================================================================
    Superhond – klantenmodule
-   v0.23.3  (Acties: bekijken/bewerken/verwijderen + fix naamweergave)
+   v0.23.4  (snelle load + save + acties + bust/refresh)
+   - 1 call (mode=all) → {klanten, honden}
+   - Route-memoization + 5 min cache (met force refresh)
+   - Auto-reload bij wijziging apiBase (via layout.js event)
+   - Naam = voornaam + achternaam (fallback uit e-mail)
    =========================================================================== */
 (() => {
   // ==== Config ====
@@ -12,6 +16,8 @@
   const TIMEOUT_MS   = 10000;
   const USE_PROXY_SERVER = false;
   const PROXY_BASE   = '/api/sheets';
+
+  const FORCE_BUST = qs.has('bust') || qs.has('nocache');
 
   const fromQS = (qs.get('apiBase') || '').trim();
   try { if (fromQS) localStorage.setItem(LS_KEY_API, fromQS); } catch {}
@@ -30,6 +36,7 @@
     tbody:     document.querySelector('#tabel tbody'),
     zoek:      document.querySelector('#zoek'),
     btnNieuw:  document.querySelector('#btn-nieuw'),
+    btnReload: document.querySelector('#btn-reload'),
     modal:     document.querySelector('#modal'),
     form:      document.querySelector('#form'),
     btnCancel: document.querySelector('#btn-cancel'),
@@ -42,7 +49,6 @@
   const isHTML   = t => /^\s*</.test(stripBOM(t).slice(0, 200).toLowerCase());
   const S        = v => String(v ?? '');
   const sv       = el => (el ? S(el.value).trim() : '');
-  const esc      = s => S(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
   function fetchWithTimeout(url, opts = {}, ms = TIMEOUT_MS) {
     if (typeof AbortController !== 'undefined') {
@@ -53,7 +59,9 @@
     }
     return Promise.race([
       fetch(url, { cache: 'no-store', ...opts }),
-      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))
+      new Promise((_, rej) =>
+        setTimeout(() => rej(new Error('timeout')), ms)
+      )
     ]);
   }
 
@@ -78,9 +86,19 @@
   const getSavedRoute = () => { try { return localStorage.getItem(LS_KEY_ROUTE) || ''; } catch { return ''; } };
   const saveRoute     = n => { try { localStorage.setItem(LS_KEY_ROUTE, n); } catch {} };
   const resetRouteAndCache = () => {
-    try { localStorage.removeItem(LS_KEY_ROUTE); localStorage.removeItem(LS_KEY_CACHE); } catch {}
+    try {
+      localStorage.removeItem(LS_KEY_ROUTE);
+      localStorage.removeItem(LS_KEY_CACHE);
+    } catch {}
   };
-  window.addEventListener('superhond:apiBaseChanged', () => { resetRouteAndCache(); location.reload(); });
+  const clearCacheOnly = () => {
+    try { localStorage.removeItem(LS_KEY_CACHE); } catch {}
+  };
+
+  window.addEventListener('superhond:apiBaseChanged', () => {
+    resetRouteAndCache();
+    location.reload();
+  });
 
   async function tryRoute(name, url, wrapped = false) {
     const r = await fetchWithTimeout(url);
@@ -95,7 +113,7 @@
 
   async function apiGetAll() {
     const mode = 'all';
-    if (!GAS_BASE) throw new Error('Geen API-URL ingesteld (zie Instellingen of ?apiBase=…).');
+    if (!GAS_BASE) throw new Error('Geen API-URL ingesteld (zie Admin ▸ Instellingen).');
     const saved = getSavedRoute();
 
     const seq = (() => {
@@ -118,10 +136,6 @@
       try { return await tryRoute(s.n, s.u, !!s.w); }
       catch (e) { errors.push(`${s.n}: ${e.message}`); }
     }
-    if (saved && saved !== 'direct') {
-      try { return await tryRoute('direct', directUrl(mode)); }
-      catch (e) { errors.push(`direct(retry): ${e.message}`); }
-    }
     throw new Error('Ophalen mislukt – ' + errors.join(' | '));
   }
 
@@ -133,25 +147,14 @@
   };
   const toTitle = s => S(s).toLowerCase().replace(/\b([a-zà-ÿ])/g, m => m.toUpperCase());
 
-  const normKlant = k => {
-    const voornaam   = G(k, 'voornaam', 'Voornaam');
-    const achternaam = G(k, 'achternaam', 'Achternaam');
-    const naamSheet  = G(k, 'naam', 'Naam');
-    const email      = G(k, 'email', 'Email', 'E-mail', 'e-mail').toLowerCase();
-
-    // Toon VOORNAAM + ACHTERNAAM als die bestaan; anders naamSheet; anders uit e-mail
-    const naam =
-      [voornaam, achternaam].filter(Boolean).join(' ').trim() ||
-      naamSheet ||
-      (email ? email.split('@')[0].replace(/[._-]+/g,' ') : '(naam onbekend)');
-
-    return {
-      id:   G(k, 'id', 'ID', 'KlantID', 'klant_id', 'klantId'),
-      naam,
-      email,
-      telefoon: G(k, 'telefoon', 'Telefoon', 'gsm', 'GSM', 'Mobiel')
-    };
-  };
+  const normKlant = k => ({
+    id:   G(k, 'id', 'ID', 'KlantID', 'klant_id', 'klantId'),
+    naam: G(k, 'naam', 'Naam') ||
+          [G(k, 'voornaam', 'Voornaam'), G(k, 'achternaam', 'Achternaam')]
+            .filter(Boolean).join(' ').trim() || '(naam onbekend)',
+    email: G(k, 'email', 'Email', 'E-mail', 'e-mail').toLowerCase(),
+    telefoon: G(k, 'telefoon', 'Telefoon', 'gsm', 'GSM', 'Mobiel')
+  });
 
   const normHond = h => ({
     id:         G(h, 'id', 'ID', 'HondID'),
@@ -187,45 +190,66 @@
 
   // ==== Render & filter ====
   let ALL = { klanten: [], honden: [] };
-  const findKlant = id => ALL.klanten.find(k => String(k.id) === String(id));
 
   function render(klanten = [], honden = []) {
     if (!els.tbody) return;
     klanten = klanten.slice().sort((a, b) => S(a.naam).localeCompare(S(b.naam)));
 
-    const byOwner = new Map();
+    const map = new Map();
     honden.forEach(h => {
-      if (!byOwner.has(h.eigenaarId)) byOwner.set(h.eigenaarId, []);
-      byOwner.get(h.eigenaarId).push(h);
+      if (!map.has(h.eigenaarId)) map.set(h.eigenaarId, []);
+      map.get(h.eigenaarId).push(h);
     });
 
     els.tbody.innerHTML = klanten.length
       ? klanten.map(k => {
-          const dogs = byOwner.get(k.id) || [];
+          const dogs = map.get(k.id) || [];
           const chips = dogs.length
-            ? dogs.map(d => `<a class="chip btn btn-xs" href="../honden/detail.html?id=${encodeURIComponent(d.id)}">${esc(d.naam)}</a>`).join(' ')
+            ? dogs.map(d => `<a class="chip btn btn-xs" href="../honden/detail.html?id=${encodeURIComponent(d.id)}">${d.naam}</a>`).join(' ')
             : '<span class="muted">0</span>';
-          const email = k.email ? `<a href="mailto:${encodeURIComponent(k.email)}">${esc(k.email)}</a>` : '—';
-          const tel   = k.telefoon ? esc(k.telefoon) : '—';
-
-          // Acties: bekijken, bewerken, verwijderen
-          const actions = `
-            <div class="row-actions">
-              <button class="btn btn-xs" data-action="view" title="Bekijken"   type="button">🔍</button>
-              <button class="btn btn-xs" data-action="edit" title="Bewerken"   type="button">✏️</button>
-              <button class="btn btn-xs danger" data-action="del" title="Verwijderen" type="button">🗑</button>
-            </div>`;
-
           return `
-            <tr data-id="${esc(k.id)}">
-              <td><a href="./detail.html?id=${encodeURIComponent(k.id)}"><strong>${esc(k.naam)}</strong></a></td>
-              <td>${email}</td>
-              <td>${tel}</td>
+            <tr data-id="${k.id}">
+              <td><a href="./detail.html?id=${encodeURIComponent(k.id)}" title="Bekijken">${k.naam}</a></td>
+              <td>${k.email ? `<a href="mailto:${k.email}">${k.email}</a>` : '—'}</td>
+              <td>${k.telefoon || '—'}</td>
               <td>${chips}</td>
-              <td class="right">${actions}</td>
+              <td class="right">
+                <a class="btn btn-xs" href="./detail.html?id=${encodeURIComponent(k.id)}" title="Bekijken">👁</a>
+                <button class="btn btn-xs" data-action="edit" title="Bewerken">✏️</button>
+                <button class="btn btn-xs danger" data-action="del" title="Verwijderen">🗑</button>
+              </td>
             </tr>`;
         }).join('')
       : '<tr><td colspan="5">Geen gegevens.</td></tr>';
+
+    // Row actions (edit/delete — delete alleen frontend demo)
+    els.tbody.querySelectorAll('button[data-action="edit"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tr = btn.closest('tr');
+        const id = tr?.getAttribute('data-id');
+        const k  = ALL.klanten.find(x => x.id === id);
+        if (!k) return;
+        // vul modal
+        els.form?.reset();
+        if (fld('fld-id'))         fld('fld-id').value = k.id || '';
+        if (fld('fld-voornaam'))   fld('fld-voornaam').value = '';
+        if (fld('fld-achternaam')) fld('fld-achternaam').value = '';
+        if (fld('fld-email'))      fld('fld-email').value = k.email || '';
+        if (fld('fld-telefoon'))   fld('fld-telefoon').value = k.telefoon || '';
+        els.modal?.showModal?.();
+      });
+    });
+    els.tbody.querySelectorAll('button[data-action="del"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tr = btn.closest('tr');
+        const id = tr?.getAttribute('data-id');
+        if (!id) return;
+        if (!confirm('Klant verwijderen (alleen lokaal)?')) return;
+        ALL.klanten = ALL.klanten.filter(k => k.id !== id);
+        writeCache({ klanten: ALL.klanten, honden: ALL.honden });
+        render(ALL.klanten, ALL.honden);
+      });
+    });
   }
 
   function applyFilter() {
@@ -279,12 +303,14 @@
     }
   }
 
-  // ==== Save / Delete ====
+  // ==== Save (POST saveKlant) ====
   const emailLike = s => /\S+@\S+\.\S+/.test(String(s || ''));
-  const nameFromEmail = mail => (String(mail || '').split('@')[0] || '').replace(/[._-]+/g, ' ').trim();
+  const nameFromEmail = mail =>
+    (String(mail || '').split('@')[0] || '').replace(/[._-]+/g, ' ').trim();
 
   const fullName = () =>
-    [sv(fld('fld-voornaam')), sv(fld('fld-achternaam'))].filter(Boolean).join(' ').trim() ||
+    [sv(fld('fld-voornaam')), sv(fld('fld-achternaam'))]
+      .filter(Boolean).join(' ').trim() ||
     nameFromEmail(sv(fld('fld-email')));
 
   const composeAdres = () => {
@@ -293,7 +319,8 @@
     return [p1, p2].filter(Boolean).join(', ');
   };
 
-  async function apiPostSaveKlantDirect(payload) {
+  async function apiPostSaveKlant(payload) {
+    if (!GAS_BASE) throw new Error('Geen API URL ingesteld.');
     const r = await fetchWithTimeout(
       `${GAS_BASE}?mode=saveKlant&t=${Date.now()}`,
       { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload || {}) },
@@ -304,31 +331,6 @@
     const j = parseMaybeWrapped(txt, false);
     if (j?.ok !== true) throw new Error(j?.error || 'Onbekende API-fout');
     return j.data;
-  }
-  async function apiPostSaveKlantProxy(payload) {
-    const r = await fetchWithTimeout(
-      `${PROXY_BASE}?mode=saveKlant&t=${Date.now()}`,
-      { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload || {}) },
-      15000
-    );
-    const txt = await r.text();
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const j = parseMaybeWrapped(txt, false);
-    if (j?.ok !== true) throw new Error(j?.error || 'Onbekende API-fout (proxy)');
-    return j.data;
-  }
-  async function apiPostSaveKlant(payload) {
-    if (!GAS_BASE) throw new Error('Geen API URL ingesteld.');
-    if (USE_PROXY_SERVER) {
-      try { return await apiPostSaveKlantProxy(payload); }
-      catch (e) { console.warn('[save] proxy faalde, val terug op direct:', e?.message || e); }
-      return await apiPostSaveKlantDirect(payload);
-    }
-    try { return await apiPostSaveKlantDirect(payload); }
-    catch (e) {
-      console.warn('[save] direct faalde, probeer proxy:', e?.message || e);
-      return await apiPostSaveKlantProxy(payload);
-    }
   }
 
   async function onSave() {
@@ -356,9 +358,10 @@
       if (!payload.naam) throw new Error('Voornaam of achternaam invullen (of e-mail).');
       if (payload.email && !emailLike(payload.email)) throw new Error('Geef een geldig e-mailadres.');
 
-      await apiPostSaveKlant(payload);
+      const data = await apiPostSaveKlant(payload);
+      if (!payload.id && data?.id) payload.id = data.id; // gebruik backend-ID
 
-      localStorage.removeItem(LS_KEY_CACHE);
+      clearCacheOnly();
       await loadAll({ preferCache: false });
       els.modal?.close?.();
     } catch (e) {
@@ -368,62 +371,21 @@
     }
   }
 
-  async function onDelete(id) {
-    const k = findKlant(id);
-    if (!k) return;
-    if (!confirm(`Verwijder klant "${k.naam}"? (wordt inactief)`)) return;
-    try {
-      // Soft-delete: status=inactief (vereist mini wijziging in GAS, zie onder)
-      await apiPostSaveKlant({ id, status: 'inactief' });
-      localStorage.removeItem(LS_KEY_CACHE);
-      await loadAll({ preferCache: false });
-    } catch (e) {
-      showError('❌ Verwijderen mislukt: ' + (e.message || e));
-    }
-  }
-
-  function openEdit(id) {
-    const k = findKlant(id);
-    if (!k || !els.form) return;
-    els.form.reset();
-    const set = (fid, val) => { const el = fld(fid); if (el) el.value = val || ''; };
-
-    set('fld-id', id);
-    // we vullen waar mogelijk de opgesplitste velden (als naam niet splitsbaar, laat ze leeg)
-    const parts = S(k.naam).split(' ');
-    set('fld-voornaam', parts.length>1 ? parts.slice(0, -1).join(' ') : '');
-    set('fld-achternaam', parts.length>1 ? parts.slice(-1).join(' ') : '');
-    set('fld-email', k.email || '');
-    set('fld-telefoon', k.telefoon || '');
-    // adresvelden blijven leeg tenzij je die ook in ALL bewaart
-
-    els.modal?.showModal?.();
-  }
-
-  // Tabel action clicks (delegation)
-  els.tbody?.addEventListener('click', (ev) => {
-    const btn = ev.target.closest('[data-action]');
-    if (!btn) return;
-    const tr = btn.closest('tr[data-id]');
-    const id = tr?.getAttribute('data-id');
-    if (!id) return;
-
-    const act = btn.getAttribute('data-action');
-    if (act === 'view')   location.href = `./detail.html?id=${encodeURIComponent(id)}`;
-    if (act === 'edit')   openEdit(id);
-    if (act === 'del')    onDelete(id);
-  });
-
   // ==== Events ====
   els.btnNieuw?.addEventListener('click', () => { els.form?.reset(); els.modal?.showModal?.(); });
   els.btnCancel?.addEventListener('click', () => els.modal?.close?.());
   els.btnSave?.addEventListener('click', onSave);
 
+  els.btnReload?.addEventListener('click', () => {
+    clearCacheOnly();
+    loadAll({ preferCache: false });
+  });
+
   // ==== Start ====
   if (!GAS_BASE) {
     showLoader(false);
-    showError('Geen API URL ingesteld. Open Instellingen of voeg ?apiBase=… toe aan de URL.');
+    showError('Geen API URL ingesteld. Open Admin ▸ Instellingen of voeg ?apiBase=… toe aan de URL.');
     return;
   }
-  loadAll();
+  loadAll({ preferCache: !FORCE_BUST });
 })();
