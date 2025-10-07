@@ -1,17 +1,20 @@
-// /public/klanten/detail.js
-// v0.22.8 — Klant detail (buckets + centrale API + proxy + demo JSON fallbacks)
-// - gebruikt SuperhondConfig.getApiBaseSync() als primaire API
+/public/klanten/detail.js
+```js
+// v0.23.0 — Klant detail (buckets + centrale API + proxy + demo JSON fallbacks)
+// - Gebruikt SuperhondConfig.getApiBaseSync() als primaire API
 // - mailto/tel voor #d-email / #d-telefoon als anchors
 
-import { ensureMigrated, getKlanten, getHonden } from "../js/store.js";
+import { ensureMigrated, getKlanten, getReeksen, getKlassen, getLessen } from "../js/store.js";
+// getHonden is niet altijd aanwezig in oudere store.js versies; we vangen dat op:
+import * as Store from "../js/store.js";
 
 /* ========== utils ========== */
 const S = v => String(v ?? "");
 const T = v => S(v).trim();
 
-const byId  = id => document.getElementById(id) || null;
-const show  = (el, on = true) => { if (el) el.style.display = on ? "" : "none"; };
-const setText = (id, val) => { const el = byId(id); if (el) el.textContent = S(val); };
+const byId   = id => document.getElementById(id) || null;
+const show   = (el, on = true) => { if (el) el.style.display = on ? "" : "none"; };
+const setTxt = (id, val) => { const el = byId(id); if (el) el.textContent = S(val); };
 
 function guessNameFromEmail(email){
   const local = T(email).split("@")[0];
@@ -24,7 +27,7 @@ function ensureNaam(k){
   const n = T(k.naam);
   if (n) return n;
   const comb = [T(k.voornaam), T(k.achternaam)].filter(Boolean).join(" ").trim();
-  return comb || guessNameFromEmail(k.email) || `Klant #${k.id ?? ""}`.trim();
+  return comb || guessNameFromEmail(k.email) || `Klant #${T(k.id) || "?"}`;
 }
 function fmtAdres(k = {}){
   const p1 = [T(k.straat), [T(k.huisnr), T(k.bus)].filter(Boolean).join("")].filter(Boolean).join(" ");
@@ -43,23 +46,34 @@ function cacheBust(url) {
 }
 
 /* ========== centrale fetch helper (API → proxy → data) ========== */
+function isHTML(txt){ return /^\s*</.test(String(txt || "").trim()); }
+
 async function fetchJson(candidates, { timeout = 9000 } = {}) {
-  for (const base of candidates) {
+  let lastErr = null;
+  for (const base of candidates.filter(Boolean)) {
     const url = cacheBust(base);
     const ac  = ("AbortController" in window) ? new AbortController() : null;
     const to  = ac ? setTimeout(() => ac.abort(), timeout) : null;
     try {
       const r = await fetch(url, { cache: "no-store", signal: ac?.signal });
-      if (!r.ok) continue;
-      const j = await r.json().catch(() => null);
-      if (j) return j;
-    } catch {
+      const text = await r.text();
+      if (!r.ok) { lastErr = new Error(`HTTP ${r.status} bij ${url}`); continue; }
+      if (isHTML(text)) { lastErr = new Error(`Ontvangen HTML i.p.v. JSON bij ${url}`); continue; }
+      try {
+        return JSON.parse(text);
+      } catch {
+        lastErr = new Error(`Ongeldige JSON bij ${url}`);
+      }
+    } catch (e) {
+      lastErr = e;
       // probeer volgende kandidaat
     } finally { if (to) clearTimeout(to); }
   }
+  if (lastErr) throw lastErr;
   return null;
 }
 
+/* ========== data helpers ========== */
 function hondenVanKlant(honden, klantId){
   const idStr = String(klantId);
   return (honden || [])
@@ -134,8 +148,12 @@ async function init(){
   try {
     // 0) UI buckets (snel)
     await ensureMigrated();
-    let klanten = getKlanten() || [];
-    let honden  = getHonden()  || [];
+    // Sommige oudere store.js versies hebben geen getHonden(); gebruik dan lege array
+    const safeGetHonden  = typeof Store.getHonden  === 'function' ? Store.getHonden  : () => [];
+    const safeGetKlanten = typeof getKlanten       === 'function' ? getKlanten       : () => [];
+
+    let klanten = safeGetKlanten() || [];
+    let honden  = safeGetHonden()  || [];
 
     // 1) Centrale API-base + proxy + demo JSON: kandidaten opbouwen
     //    (SuperhondConfig komt uit /js/layout.js)
@@ -145,8 +163,8 @@ async function init(){
     if (!klanten.length) {
       const candsK = [];
       if (apiBase) candsK.push(`${apiBase}?mode=klanten`);
-      candsK.push("/api/sheets?mode=klanten");      // Node proxy (indien aanwezig)
-      candsK.push("../data/klanten.json", "/data/klanten.json"); // statische demo
+      candsK.push("/api/sheets?mode=klanten");                       // Node proxy (indien aanwezig)
+      candsK.push("../data/klanten.json", "/data/klanten.json");     // statische demo
       const js = await fetchJson(candsK);
       if (Array.isArray(js)) klanten = js;
       else if (Array.isArray(js?.items)) klanten = js.items;
@@ -169,14 +187,17 @@ async function init(){
     if (!k) throw new Error(`Klant met id=${id} niet gevonden`);
 
     // --- Velden invullen ---
-    // let op: geen "volledige naam" veld meer — tonen apart of laat desgewenst weg:
-    // byId("d-naam") && (byId("d-naam").textContent = ensureNaam(k));
-    setText("d-voornaam",    T(k.voornaam));
-    setText("d-achternaam",  T(k.achternaam));
+    const naam = ensureNaam(k);
+    setTxt("d-voornaam",    T(k.voornaam));
+    setTxt("d-achternaam",  T(k.achternaam));
     setTextOrLink("d-email",    T(k.email),    "email");
     setTextOrLink("d-telefoon", T(k.telefoon), "tel");
-    setText("d-adres",       fmtAdres(k));
-    setText("d-land",        T(k.land));
+    setTxt("d-adres",       fmtAdres(k));
+    setTxt("d-land",        T(k.land));
+
+    // Optioneel: als er een #d-naam element bestaat, toon samengevoegde naam
+    const naamEl = byId("d-naam");
+    if (naamEl) naamEl.textContent = naam;
 
     // --- Honden chips ---
     const list = hondenVanKlant(honden, k.id);
