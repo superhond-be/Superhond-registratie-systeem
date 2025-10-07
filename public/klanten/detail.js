@@ -1,50 +1,66 @@
 // /public/klanten/detail.js
-// v0.22.5 — Klant detail (store.js buckets + fallback naar /api/* of /data/*)
-// - Klikbare mailto/tel links als #d-email / #d-telefoon anchors zijn
+// v0.22.8 — Klant detail (buckets + centrale API + proxy + demo JSON fallbacks)
+// - gebruikt SuperhondConfig.getApiBaseSync() als primaire API
+// - mailto/tel voor #d-email / #d-telefoon als anchors
 
 import { ensureMigrated, getKlanten, getHonden } from "../js/store.js";
 
-// ---------- utils ----------
-const S = (v) => String(v ?? "");
-const T = (v) => S(v).trim();
+/* ========== utils ========== */
+const S = v => String(v ?? "");
+const T = v => S(v).trim();
 
-function byId(id) { return document.getElementById(id) || null; }
-function show(el, on = true) { if (el) el.style.display = on ? "" : "none"; }
-function setText(id, val) { const el = byId(id); if (el) el.textContent = S(val); }
+const byId  = id => document.getElementById(id) || null;
+const show  = (el, on = true) => { if (el) el.style.display = on ? "" : "none"; };
+const setText = (id, val) => { const el = byId(id); if (el) el.textContent = S(val); };
 
-function guessNameFromEmail(email) {
+function guessNameFromEmail(email){
   const local = T(email).split("@")[0];
-  return local.split(/[._-]+/).map(x => x ? x[0].toUpperCase() + x.slice(1) : "").join(" ").trim();
+  return local
+    .split(/[._-]+/)
+    .map(x => x ? x[0].toUpperCase() + x.slice(1) : "")
+    .join(" ").trim();
 }
-function ensureNaam(k) {
+function ensureNaam(k){
   const n = T(k.naam);
   if (n) return n;
   const comb = [T(k.voornaam), T(k.achternaam)].filter(Boolean).join(" ").trim();
   return comb || guessNameFromEmail(k.email) || `Klant #${k.id ?? ""}`.trim();
 }
-function fmtAdres(k = {}) {
+function fmtAdres(k = {}){
   const p1 = [T(k.straat), [T(k.huisnr), T(k.bus)].filter(Boolean).join("")].filter(Boolean).join(" ");
   const p2 = [T(k.postcode), T(k.gemeente)].filter(Boolean).join(" ");
   const composed = [p1, p2].filter(Boolean).join(", ");
   return composed || T(k.adres) || "—";
 }
 function cacheBust(url) {
-  try { const u = new URL(url, location.origin); u.searchParams.set("t", Date.now()); return u.toString(); }
-  catch { return `${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`; }
+  try {
+    const u = new URL(url, location.origin);
+    u.searchParams.set("t", Date.now());
+    return u.toString();
+  } catch {
+    return `${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`;
+  }
 }
+
+/* ========== centrale fetch helper (API → proxy → data) ========== */
 async function fetchJson(candidates, { timeout = 9000 } = {}) {
   for (const base of candidates) {
     const url = cacheBust(base);
-    const ac = ("AbortController" in window) ? new AbortController() : null;
-    const to = ac ? setTimeout(() => ac.abort(), timeout) : null;
+    const ac  = ("AbortController" in window) ? new AbortController() : null;
+    const to  = ac ? setTimeout(() => ac.abort(), timeout) : null;
     try {
       const r = await fetch(url, { cache: "no-store", signal: ac?.signal });
-      if (r.ok) { const j = await r.json().catch(() => null); if (j) return j; }
-    } catch { /* volgende */ } finally { if (to) clearTimeout(to); }
+      if (!r.ok) continue;
+      const j = await r.json().catch(() => null);
+      if (j) return j;
+    } catch {
+      // probeer volgende kandidaat
+    } finally { if (to) clearTimeout(to); }
   }
   return null;
 }
-function hondenVanKlant(honden, klantId) {
+
+function hondenVanKlant(honden, klantId){
   const idStr = String(klantId);
   return (honden || [])
     .map(h => ({
@@ -52,33 +68,26 @@ function hondenVanKlant(honden, klantId) {
       eigenaarId: h.eigenaarId ?? h.eigenaar_id ?? h.ownerId ?? h.klantId ?? h.klant_id ?? ""
     }))
     .filter(h => String(h.eigenaarId) === idStr)
-    .sort((a, b) => T(a.naam).localeCompare(T(b.naam)));
+    .sort((a,b) => T(a.naam).localeCompare(T(b.naam)));
 }
 
-// ---------- link helpers ----------
-function isEmailLike(v) {
-  const s = T(v);
-  return !!s && s.includes("@"); // simpele check, we overschrijven geen rare strings
-}
-function mailtoHref(v) {
-  const s = T(v);
-  if (!isEmailLike(s)) return "";
-  return `mailto:${s}`;
-}
-function normalizePhoneForHref(v) {
+/* ========== anchors/helpers voor mail/tel ========== */
+const isEmailLike = v => !!T(v) && T(v).includes("@");
+const mailtoHref  = v => isEmailLike(v) ? `mailto:${T(v)}` : "";
+
+function normalizePhoneForHref(v){
   let s = T(v);
   if (!s) return "";
-  // houd 0-9 en '+' over
-  s = s.replace(/[^\d+]/g, "");
-  // als begint met 00… → maak +…
+  s = s.replace(/[^\d+]/g, "");   // houd cijfers en '+' over
   if (s.startsWith("00")) s = `+${s.slice(2)}`;
   return s;
 }
-function telHref(v) {
+const telHref = v => {
   const n = normalizePhoneForHref(v);
   return n ? `tel:${n}` : "";
-}
-/** Zet tekst of (indien element een <a> is) ook href. */
+};
+
+/** Zet tekst of (indien <a>) ook href. */
 function setTextOrLink(id, val, kind /* 'email' | 'tel' */) {
   const el = byId(id);
   if (!el) return;
@@ -87,8 +96,8 @@ function setTextOrLink(id, val, kind /* 'email' | 'tel' */) {
 
   if (kind === "email") {
     if (isAnchor) {
-      const href = mailtoHref(text);
       el.removeAttribute("href");
+      const href = mailtoHref(text);
       if (href) el.setAttribute("href", href);
     }
     el.textContent = text || "—";
@@ -96,49 +105,61 @@ function setTextOrLink(id, val, kind /* 'email' | 'tel' */) {
   }
   if (kind === "tel") {
     if (isAnchor) {
-      const href = telHref(text);
       el.removeAttribute("href");
+      const href = telHref(text);
       if (href) el.setAttribute("href", href);
     }
     el.textContent = text || "—";
     return;
   }
-
-  // fallback: gewone tekst
-  el.textContent = text;
+  el.textContent = text || "—";
 }
 
-// ---------- main ----------
+/* ========== main ========== */
 const params = new URLSearchParams(location.search);
-const id = params.get("id");
+const id     = params.get("id");
 
 const loader = byId("loader");
 const error  = byId("error");
 const sec    = byId("klant");
 
-async function init() {
+async function init(){
   if (!id) {
     show(loader, false);
-    show(error, true);
+    show(error,  true);
     if (error) error.textContent = "⚠️ Geen id meegegeven in de URL.";
     return;
   }
 
   try {
-    // 1) buckets
+    // 0) UI buckets (snel)
     await ensureMigrated();
     let klanten = getKlanten() || [];
     let honden  = getHonden()  || [];
 
-    // 2) fallback JSON/API
+    // 1) Centrale API-base + proxy + demo JSON: kandidaten opbouwen
+    //    (SuperhondConfig komt uit /js/layout.js)
+    const apiBase = (window.SuperhondConfig?.getApiBaseSync?.() || "").trim();
+
+    // Voor klanten
     if (!klanten.length) {
-      const js = await fetchJson(["../api/klanten", "../data/klanten.json"]);
+      const candsK = [];
+      if (apiBase) candsK.push(`${apiBase}?mode=klanten`);
+      candsK.push("/api/sheets?mode=klanten");      // Node proxy (indien aanwezig)
+      candsK.push("../data/klanten.json", "/data/klanten.json"); // statische demo
+      const js = await fetchJson(candsK);
       if (Array.isArray(js)) klanten = js;
       else if (Array.isArray(js?.items)) klanten = js.items;
       else if (Array.isArray(js?.data))  klanten = js.data;
     }
+
+    // Voor honden
     if (!honden.length) {
-      const jh = await fetchJson(["../api/honden", "../data/honden.json"]);
+      const candsH = [];
+      if (apiBase) candsH.push(`${apiBase}?mode=honden`);
+      candsH.push("/api/sheets?mode=honden");
+      candsH.push("../data/honden.json", "/data/honden.json");
+      const jh = await fetchJson(candsH);
       if (Array.isArray(jh)) honden = jh;
       else if (Array.isArray(jh?.items)) honden = jh.items;
       else if (Array.isArray(jh?.data))  honden = jh.data;
@@ -147,8 +168,9 @@ async function init() {
     const k = (klanten || []).find(x => String(x?.id) === String(id));
     if (!k) throw new Error(`Klant met id=${id} niet gevonden`);
 
-    // velden
-    // setText("d-naam",        ensureNaam(k));
+    // --- Velden invullen ---
+    // let op: geen "volledige naam" veld meer — tonen apart of laat desgewenst weg:
+    // byId("d-naam") && (byId("d-naam").textContent = ensureNaam(k));
     setText("d-voornaam",    T(k.voornaam));
     setText("d-achternaam",  T(k.achternaam));
     setTextOrLink("d-email",    T(k.email),    "email");
@@ -156,7 +178,7 @@ async function init() {
     setText("d-adres",       fmtAdres(k));
     setText("d-land",        T(k.land));
 
-    // honden-chips
+    // --- Honden chips ---
     const list = hondenVanKlant(honden, k.id);
     const wrap = byId("honden");
     if (wrap) {
@@ -180,12 +202,13 @@ async function init() {
     }
 
     show(loader, false);
-    show(sec, true);
-    show(error, false);
+    show(sec,    true);
+    show(error,  false);
+
   } catch (e) {
     console.error("[klanten/detail] fout:", e);
     show(loader, false);
-    show(error, true);
+    show(error,  true);
     if (error) error.textContent = "⚠️ " + (e?.message || e);
   }
 }
