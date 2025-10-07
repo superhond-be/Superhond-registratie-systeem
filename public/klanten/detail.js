@@ -148,7 +148,7 @@ async function init() {
     if (!k) throw new Error(`Klant met id=${id} niet gevonden`);
 
     // velden
-    setText("d-naam",        ensureNaam(k));
+    // setText("d-naam",        ensureNaam(k));
     setText("d-voornaam",    T(k.voornaam));
     setText("d-achternaam",  T(k.achternaam));
     setTextOrLink("d-email",    T(k.email),    "email");
