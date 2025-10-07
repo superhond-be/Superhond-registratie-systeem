@@ -4,14 +4,40 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Superhond ➜ Dashboard</title>
+
+  <!-- Snelle redirect (HTML fallback + JS) -->
   <meta http-equiv="refresh" content="0; url=./dashboard/">
+
   <script>
-    // extra veilig: relative redirect, geen leading slash
-    (function(){
-      var base = location.pathname.replace(/\/index\.html?$/,'');
-      location.replace(base + (base.endsWith('/')?'':'/') + 'dashboard/');
+    // 💡 Veilige redirect: relatieve paden, geen leading slash (werkt ook op subdirectory hosting)
+    (function() {
+      try {
+        const base = location.pathname.replace(/\/index\.html?$/i, '');
+        const target = base + (base.endsWith('/') ? '' : '/') + 'dashboard/';
+        // Gebruik replace() i.p.v. assign() zodat er geen terugknop-loop ontstaat
+        location.replace(target);
+      } catch (err) {
+        console.error("Redirect fout:", err);
+      }
     })();
   </script>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      text-align: center;
+      padding: 2rem;
+      color: #333;
+      background: #fafafa;
+    }
+    a {
+      color: #0070f3;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
 <body>
   <p>Doorsturen naar <a href="./dashboard/">dashboard</a>…</p>
