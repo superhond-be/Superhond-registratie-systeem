@@ -12,16 +12,16 @@
   <!-- Topbar -->
   <header id="topbar" class="topbar"></header>
 
-  <main class="container">
+  <main class="container" role="main">
     <h1 class="page-title">Klant detail</h1>
     <article id="box" class="card" aria-live="polite">⏳ Bezig met laden…</article>
-    <p><a href="./" class="btn">← Terug naar klanten</a></p>
+    <p><a href="./" class="btn" aria-label="Terug naar klanten">← Terug naar klanten</a></p>
   </main>
 
   <!-- Footer -->
-  <footer id="footer" class="footer"></footer>
+  <footer id="footer" class="footer" role="contentinfo"></footer>
 
-  <!-- Layout -->
+  <!-- Layout (centrale config + UI) -->
   <script src="../js/layout.js?v=0.22.5" defer></script>
 
   <!-- Paginalogica -->
@@ -171,15 +171,26 @@
         let klanten = getKlanten() || [];
         let honden  = getHonden()  || [];
 
-        // 2) Fallback naar API/JSON als buckets leeg zijn
+        // 2) Centrale API-config → proxy → statische demo
+        const apiBase = (window.SuperhondConfig?.getApiBaseSync?.() || "").trim();
+
         if (!klanten.length) {
-          const js = await fetchJson(["../api/klanten","../data/klanten.json"]);
+          const cands = [];
+          if (apiBase) cands.push(`${apiBase}?mode=klanten`);
+          cands.push("/api/sheets?mode=klanten");
+          cands.push("../data/klanten.json", "/data/klanten.json");
+          const js = await fetchJson(cands);
           if (Array.isArray(js)) klanten = js;
           else if (Array.isArray(js?.items)) klanten = js.items;
           else if (Array.isArray(js?.data))  klanten = js.data;
         }
+
         if (!honden.length) {
-          const jh = await fetchJson(["../api/honden","../data/honden.json"]);
+          const cands = [];
+          if (apiBase) cands.push(`${apiBase}?mode=honden`);
+          cands.push("/api/sheets?mode=honden");
+          cands.push("../data/honden.json", "/data/honden.json");
+          const jh = await fetchJson(cands);
           if (Array.isArray(jh)) honden = jh;
           else if (Array.isArray(jh?.items)) honden = jh.items;
           else if (Array.isArray(jh?.data))  honden = jh.data;
