@@ -1,51 +1,31 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Hond detail – Superhond</title>
-
-  <!-- Stijlen (absoluut pad om pad-issues te vermijden) -->
-  <link rel="stylesheet" href="/css/style.css?v=0.20.0" />
-  <link rel="stylesheet" href="/css/superhond.css?v=0.20.0" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Klant detail – Superhond</title>
+  <link rel="stylesheet" href="../css/style.css?v=0.22.6" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.22.6" />
+  <link rel="stylesheet" href="../css/responsive.css?v=0.22.0" />
+  <script src="../js/layout.js?v=0.22.2" defer></script>
+  <script type="module" src="./detail.js?v=0.23.4" defer></script>
 </head>
-<body>
-  <!-- Topbar -->
+<body class="subpage">
   <header id="topbar" class="topbar"></header>
 
-  <main class="container">
-    <h2 class="page-title">Hond detail</h2>
+  <main class="container" role="main">
+    <h1 class="page-title">Klant detail</h1>
 
-    <div id="loader" class="muted">⏳ Bezig met laden…</div>
-    <div id="error"  class="error" style="display:none"></div>
+    <div class="toolbar" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.5rem">
+      <a class="btn" href="./" aria-label="Terug naar klanten">← Terug naar klanten</a>
+      <span style="flex:1"></span>
+      <button id="btn-reload" class="btn" type="button" title="Vernieuwen">↻ Vernieuwen</button>
+    </div>
 
-    <section id="hond" class="card" style="display:none">
-      <h3 id="d-naam" style="margin-top:0">—</h3>
-
-      <div class="grid" style="display:grid; gap:12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
-        <div>
-          <ul>
-            <li><strong>Ras:</strong> <span id="d-ras">—</span></li>
-            <li><strong>Geboortedatum:</strong> <span id="d-geboortedatum">—</span></li>
-            <li><strong>Chip:</strong> <span id="d-chip">—</span></li>
-          </ul>
-        </div>
-
-        <div>
-          <h4 style="margin:.2rem 0 .5rem">Eigenaar</h4>
-          <div id="d-eigenaar">—</div>
-        </div>
-      </div>
-    </section>
-
-    <p><a href="/honden/" class="btn">← Terug naar honden</a></p>
+    <article id="box" class="card" aria-live="polite">⏳ Bezig met laden…</article>
+    <pre id="debug" class="debug-panel" style="display:none;overflow:auto;max-height:40vh;border:1px solid #e5e7eb;padding:.75rem;border-radius:.5rem;background:#0b1020;color:#d1e7ff"></pre>
   </main>
 
-  <!-- Footer -->
   <footer id="footer" class="footer"></footer>
-
-  <!-- Scripts -->
-  <script src="/js/layout.js?v=0.20.0" defer></script>
-  <script type="module" src="/honden/detail.js" defer></script>
 </body>
 </html>
