@@ -5,7 +5,48 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Klanten – Superhond</title>
   <meta name="theme-color" content="#1d4ed8" />
-
+<dialog id="modal" class="modal">
+  <form id="form" method="dialog">
+    <input type="hidden" id="fld-id" />
+    <div class="grid" style="display:grid;gap:.6rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+      <label>Voornaam
+        <input id="fld-voornaam" class="input" type="text" autocomplete="given-name" />
+      </label>
+      <label>Achternaam
+        <input id="fld-achternaam" class="input" type="text" autocomplete="family-name" />
+      </label>
+      <label>E-mail
+        <input id="fld-email" class="input" type="email" autocomplete="email" />
+      </label>
+      <label>Telefoon
+        <input id="fld-telefoon" class="input" type="tel" autocomplete="tel" />
+      </label>
+      <label>Land
+        <input id="fld-land" class="input" type="text" value="BE" />
+      </label>
+      <label>Straat
+        <input id="fld-straat" class="input" type="text" />
+      </label>
+      <label>Nr
+        <input id="fld-huisnr" class="input" type="text" />
+      </label>
+      <label>Bus
+        <input id="fld-bus" class="input" type="text" />
+      </label>
+      <label>Postcode
+        <input id="fld-postcode" class="input" type="text" />
+      </label>
+      <label>Gemeente
+        <input id="fld-gemeente" class="input" type="text" />
+      </label>
+    </div>
+    <div class="toolbar" style="margin-top:.75rem;gap:.5rem">
+      <button type="button" id="btn-cancel" class="btn">Annuleren</button>
+      <span style="flex:1"></span>
+      <button type="button" id="btn-save" class="btn primary">Bewaren</button>
+    </div>
+  </form>
+</dialog>
   <!-- Centrale UI -->
   <link rel="stylesheet" href="/css/style.css?v=0.21.8" />
   <link rel="stylesheet" href="/css/superhond.css?v=0.21.8" />
