@@ -16,17 +16,15 @@
   const TIMEOUT_MS   = 10000;
   const USE_PROXY_SERVER = false;
   const PROXY_BASE   = '/api/sheets';
+  const FORCE_BUST   = qs.has('bust') || qs.has('nocache');
 
-  const FORCE_BUST = qs.has('bust') || qs.has('nocache');
-
+  // API-base via layout.js (QS → LS → /api/config)
   const fromQS = (qs.get('apiBase') || '').trim();
   try { if (fromQS) localStorage.setItem(LS_KEY_API, fromQS); } catch {}
   const GAS_BASE =
     fromQS ||
     (window.SuperhondConfig?._resolved || '') ||
-    (typeof localStorage !== 'undefined'
-      ? localStorage.getItem(LS_KEY_API) || ''
-      : '');
+    (typeof localStorage !== 'undefined' ? localStorage.getItem(LS_KEY_API) || '' : '');
 
   // ==== DOM ====
   const els = {
@@ -40,7 +38,7 @@
     modal:     document.querySelector('#modal'),
     form:      document.querySelector('#form'),
     btnCancel: document.querySelector('#btn-cancel'),
-    btnSave:   document.querySelector('#btn-save')
+    btnSave:   document.querySelector('#btn-save'),
   };
   const fld = id => els.form?.querySelector(`#${id}`);
 
@@ -59,9 +57,7 @@
     }
     return Promise.race([
       fetch(url, { cache: 'no-store', ...opts }),
-      new Promise((_, rej) =>
-        setTimeout(() => rej(new Error('timeout')), ms)
-      )
+      new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))
     ]);
   }
 
@@ -85,20 +81,10 @@
   // ==== Routebeheer ====
   const getSavedRoute = () => { try { return localStorage.getItem(LS_KEY_ROUTE) || ''; } catch { return ''; } };
   const saveRoute     = n => { try { localStorage.setItem(LS_KEY_ROUTE, n); } catch {} };
-  const resetRouteAndCache = () => {
-    try {
-      localStorage.removeItem(LS_KEY_ROUTE);
-      localStorage.removeItem(LS_KEY_CACHE);
-    } catch {}
-  };
-  const clearCacheOnly = () => {
-    try { localStorage.removeItem(LS_KEY_CACHE); } catch {}
-  };
+  const clearCache    = () => { try { localStorage.removeItem(LS_KEY_ROUTE); localStorage.removeItem(LS_KEY_CACHE); } catch {} };
+  const clearCacheOnly= () => { try { localStorage.removeItem(LS_KEY_CACHE); } catch {} };
 
-  window.addEventListener('superhond:apiBaseChanged', () => {
-    resetRouteAndCache();
-    location.reload();
-  });
+  window.addEventListener('superhond:apiBaseChanged', () => { clearCache(); location.reload(); });
 
   async function tryRoute(name, url, wrapped = false) {
     const r = await fetchWithTimeout(url);
@@ -163,15 +149,8 @@
   });
 
   // ==== UI helpers ====
-  function showLoader(on = true) {
-    if (els.loader) els.loader.style.display = on ? '' : 'none';
-    if (els.wrap)   els.wrap.style.display   = on ? 'none' : '';
-  }
-  function showError(msg = '') {
-    if (!els.error) return;
-    els.error.textContent = msg;
-    els.error.style.display = msg ? '' : 'none';
-  }
+  function showLoader(on = true) { if (els.loader) els.loader.style.display = on ? '' : 'none'; if (els.wrap) els.wrap.style.display = on ? 'none' : ''; }
+  function showError(msg = '') { if (!els.error) return; els.error.textContent = msg; els.error.style.display = msg ? '' : 'none'; }
 
   // ==== Cache ====
   const readCache = () => {
@@ -184,9 +163,7 @@
       return obj.data;
     } catch { return null; }
   };
-  const writeCache = data => {
-    try { localStorage.setItem(LS_KEY_CACHE, JSON.stringify({ ts: Date.now(), data })); } catch {}
-  };
+  const writeCache = data => { try { localStorage.setItem(LS_KEY_CACHE, JSON.stringify({ ts: Date.now(), data })); } catch {} };
 
   // ==== Render & filter ====
   let ALL = { klanten: [], honden: [] };
@@ -222,14 +199,13 @@
         }).join('')
       : '<tr><td colspan="5">Geen gegevens.</td></tr>';
 
-    // Row actions (edit/delete — delete alleen frontend demo)
+    // Row actions
     els.tbody.querySelectorAll('button[data-action="edit"]').forEach(btn => {
       btn.addEventListener('click', () => {
         const tr = btn.closest('tr');
         const id = tr?.getAttribute('data-id');
         const k  = ALL.klanten.find(x => x.id === id);
         if (!k) return;
-        // vul modal
         els.form?.reset();
         if (fld('fld-id'))         fld('fld-id').value = k.id || '';
         if (fld('fld-voornaam'))   fld('fld-voornaam').value = '';
@@ -263,10 +239,7 @@
     render(f, ALL.honden);
   }
   let filterTimer = null;
-  els.zoek?.addEventListener('input', () => {
-    clearTimeout(filterTimer);
-    filterTimer = setTimeout(applyFilter, 120);
-  });
+  els.zoek?.addEventListener('input', () => { clearTimeout(filterTimer); filterTimer = setTimeout(applyFilter, 120); });
 
   // ==== Load ====
   async function loadAll({ preferCache = true } = {}) {
@@ -296,21 +269,17 @@
     } catch (e) {
       console.error('[klanten] loadAll fout:', e);
       showLoader(false);
-      const msg = e?.name === 'AbortError'
-        ? 'Timeout bij ophalen (netwerk?)'
-        : (e.message || 'Laden mislukt');
+      const msg = e?.name === 'AbortError' ? 'Timeout bij ophalen (netwerk?)' : (e.message || 'Laden mislukt');
       showError(msg);
     }
   }
 
   // ==== Save (POST saveKlant) ====
   const emailLike = s => /\S+@\S+\.\S+/.test(String(s || ''));
-  const nameFromEmail = mail =>
-    (String(mail || '').split('@')[0] || '').replace(/[._-]+/g, ' ').trim();
+  const nameFromEmail = mail => (String(mail || '').split('@')[0] || '').replace(/[._-]+/g, ' ').trim();
 
   const fullName = () =>
-    [sv(fld('fld-voornaam')), sv(fld('fld-achternaam'))]
-      .filter(Boolean).join(' ').trim() ||
+    [sv(fld('fld-voornaam')), sv(fld('fld-achternaam'))].filter(Boolean).join(' ').trim() ||
     nameFromEmail(sv(fld('fld-email')));
 
   const composeAdres = () => {
@@ -321,11 +290,9 @@
 
   async function apiPostSaveKlant(payload) {
     if (!GAS_BASE) throw new Error('Geen API URL ingesteld.');
-    const r = await fetchWithTimeout(
-      `${GAS_BASE}?mode=saveKlant&t=${Date.now()}`,
-      { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload || {}) },
-      15000
-    );
+    const r = await fetchWithTimeout(`${GAS_BASE}?mode=saveKlant&t=${Date.now()}`, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload || {})
+    }, 15000);
     const txt = await r.text();
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const j = parseMaybeWrapped(txt, false);
@@ -375,11 +342,7 @@
   els.btnNieuw?.addEventListener('click', () => { els.form?.reset(); els.modal?.showModal?.(); });
   els.btnCancel?.addEventListener('click', () => els.modal?.close?.());
   els.btnSave?.addEventListener('click', onSave);
-
-  els.btnReload?.addEventListener('click', () => {
-    clearCacheOnly();
-    loadAll({ preferCache: false });
-  });
+  els.btnReload?.addEventListener('click', () => { clearCacheOnly(); loadAll({ preferCache: false }); });
 
   // ==== Start ====
   if (!GAS_BASE) {
