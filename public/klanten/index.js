@@ -242,7 +242,7 @@
 
       const payload = {
         id: sv(fld('fld-id')),
-        naam: fullName(),
+        // naam: fullName(),
         email: sv(fld('fld-email')),
         telefoon: sv(fld('fld-telefoon')) || '',
         adres: composeAdres(),
