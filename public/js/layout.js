@@ -1,16 +1,21 @@
-// /public/js/layout.js
-// v0.22.2 — Superhond UI + Centrale Config (GAS Web-App URL)
+/public/js/layout.js
+```js
+// v0.23.0 — Superhond UI + Centrale Config (GAS Web-App URL)
 // - resolveApiBase(): QS → LS → /api/config (memoized), met validatie + opslag
-// - setApiBase(url): opslaan + event "superhond:apiBaseChanged"
+// - setApiBase(url), clearApiBase(): beheren + event "superhond:apiBaseChanged"
+// - getApiBaseSync(): snelle sync getter
 // - readVersion(): /api/config.version → /version.json → __APP_VERSION__
-// - Injecteert /css/responsive.css automatisch (1x)
+// - Injecteert /css/responsive.css automatisch (1x, idempotent)
 // - Topbar/Footer + optionele API-statusbadge
+// - Beter HOME-pad: automatisch relatief of via override (SuperhondConfig.HOME)
+
 (() => {
-  const HOME = '/dashboard/';
+  // ===== Config =====
+  const DEFAULT_HOME_ABS = '/dashboard/'; // werkt op Render/root
   const LS_KEY = 'superhond_api_base';
   const TIMEOUT_MS = 9000;
 
-  // ===== Utils =====
+  // ===== Kleine helpers =====
   const strip = s => String(s || '').replace(/^\uFEFF/, '').trim();
   const isHTML = txt => /^\s*</.test(strip(txt));
   const nowStamp = () =>
@@ -30,14 +35,33 @@
     return n;
   }
 
-  async function fetchWithTimeout(url, ms = TIMEOUT_MS) {
+  function fetchWithTimeout(url, ms = TIMEOUT_MS, opts = {}) {
     const ac = ('AbortController' in window) ? new AbortController() : null;
-    const t = ac ? setTimeout(() => ac.abort('timeout'), ms) : null;
+    const t = ac ? setTimeout(() => ac.abort(), ms) : null;
     try {
-      return await fetch(url, { cache: 'no-store', signal: ac?.signal });
+      return fetch(url, { cache: 'no-store', signal: ac?.signal, ...opts });
     } finally {
       if (t) clearTimeout(t);
     }
+  }
+
+  // ===== Detecteer een bruikbare HOME (relatief werkt overal, abs voor gemak) =====
+  function computeHomeHref() {
+    // 1) Override via config
+    const cfgHome = window?.SuperhondConfig?.HOME;
+    if (cfgHome) return String(cfgHome);
+
+    // 2) Als we al in /dashboard/ zitten, blijf hier
+    if (/\/dashboard\/?$/.test(location.pathname)) return location.pathname.endsWith('/') ? location.pathname : location.pathname + '/';
+
+    // 3) Probeer relatief pad vanaf huidige map
+    // bv. /klanten/ -> ../dashboard/
+    //     /dashboard/sub/ -> ./ (blijven)
+    const depth = (location.pathname.replace(/\/+$/, '').match(/\//g) || []).length - 1; // grof benadering
+    if (depth >= 1) return '../'.repeat(1) + 'dashboard/';
+
+    // 4) Fallback: absolute root
+    return DEFAULT_HOME_ABS;
   }
 
   // ===== Validatie van /exec URL =====
@@ -57,11 +81,12 @@
   // ===== Éénmalige inject van globale CSS =====
   (function ensureGlobalStyles() {
     const href = '/css/responsive.css?v=0.22.0';
-    if (!document.querySelector(`link[href*="responsive.css"]`)) {
+    if (!document.querySelector(`link[href*="responsive.css"]`) && !window.__RESPONSIVE_CSS_INJECTED__) {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = href;
       document.head.appendChild(link);
+      window.__RESPONSIVE_CSS_INJECTED__ = true;
     }
   })();
 
@@ -73,7 +98,9 @@
         try {
           const r = await fetchWithTimeout('/api/config', 4000);
           if (!r.ok) return {};
-          const j = await r.json().catch(() => ({}));
+          const txt = await r.text();
+          if (isHTML(txt)) return {}; // voorkom HTML (proxy/login)
+          const j = JSON.parse(strip(txt));
           return {
             apiBase: (j?.apiBase || '').trim(),
             version: (j?.version || '').trim()
@@ -97,7 +124,7 @@
     try { return (localStorage.getItem(LS_KEY) || '').trim(); } catch { return ''; }
   }
 
-  // ===== Opslaan + event =====
+  // ===== Opslaan / wissen + event =====
   function setApiBase(url) {
     const val = String(url || '').trim();
     try { localStorage.setItem(LS_KEY, val); } catch {}
@@ -105,9 +132,20 @@
     window.dispatchEvent(new CustomEvent('superhond:apiBaseChanged', { detail: { apiBase: val }}));
     return val;
   }
+  function clearApiBase() {
+    try { localStorage.removeItem(LS_KEY); } catch {}
+    window.SuperhondConfig._resolved = '';
+    window.dispatchEvent(new CustomEvent('superhond:apiBaseChanged', { detail: { apiBase: '' }}));
+  }
 
   // ===== Resolver (QS → LS → Server) =====
   async function resolveApiBase() {
+    // Quick command: ?clearApi=1
+    try {
+      const qs = new URLSearchParams(location.search);
+      if (qs.get('clearApi')) clearApiBase();
+    } catch {}
+
     const fromQS = getFromQuery();
     if (fromQS) return setApiBase(fromQS);
 
@@ -128,11 +166,14 @@
     try {
       const r = await fetchWithTimeout('/version.json', 2500);
       if (r.ok) {
-        const j = await r.json();
-        if (j?.version) return j.version;
+        const txt = await r.text();
+        if (!isHTML(txt)) {
+          const j = JSON.parse(strip(txt));
+          if (j?.version) return j.version;
+        }
       }
     } catch {}
-    return window.__APP_VERSION__ || 'v0.22.x';
+    return window.__APP_VERSION__ || 'v0.23.x';
   }
 
   // ===== Ping helper (optie voor statusbadge) =====
@@ -160,7 +201,8 @@
   async function mount(opts = {}) {
     const title = opts.title || 'Superhond';
     const icon  = opts.icon  || '🐾';
-    const back  = (opts.back === null) ? '' : (opts.back || HOME);
+    const backOpt = (opts.back === null) ? '' : opts.back; // null = geen back knop
+    const HOME = backOpt || computeHomeHref();
     const showApiStatus = !!opts.showApiStatus;
 
     // Body context class
@@ -184,21 +226,21 @@
       top.innerHTML = '';
       const wrap = el('div', { class: 'container topbar-flex' });
 
-      if (back) {
+      if (HOME) {
         wrap.appendChild(
-          el('a', { href: back, class: 'btn btn-back', title: 'Terug' }, [
+          el('a', { href: HOME, class: 'btn btn-back', title: 'Terug' }, [
             el('span', { text: '← Terug' })
           ])
         );
       }
 
       wrap.appendChild(
-        el('a', { href: HOME, class: 'brand', title: title }, [
+        el('a', { href: HOME || DEFAULT_HOME_ABS, class: 'brand', title: title }, [
           el('span', { text: `${icon} Superhond` })
         ])
       );
 
-      wrap.appendChild(el('span', { class: 'version-badge', text: version || 'v0.22.x' }));
+      wrap.appendChild(el('span', { class: 'version-badge', text: version || 'v0.23.x' }));
 
       if (showApiStatus) {
         const badge = el('span', { class: 'api-badge muted', text: 'API: …' });
@@ -225,7 +267,7 @@
       foot.innerHTML = '';
       foot.appendChild(
         el('div', { class:'container' },
-          el('small', { text:`© Superhond 2025 — ${version || 'v0.22.x'} — ${nowStamp()}` })
+          el('small', { text:`© Superhond 2025 — ${version || 'v0.23.x'} — ${nowStamp()}` })
         )
       );
     }
@@ -236,7 +278,9 @@
   Object.assign(window.SuperhondConfig, {
     resolveApiBase,
     setApiBase,
+    clearApiBase,
     getApiBaseSync: () => window.SuperhondConfig._resolved || getFromLocalStorage() || '',
+    HOME: window.SuperhondConfig.HOME || null, // optionele override
     _resolved: getFromLocalStorage()
   });
 
