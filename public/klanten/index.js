@@ -1,15 +1,18 @@
-/* v0.22.9 – Klanten (snelle load + save zonder “volledige naam”)
+/* v0.23.0 – Klanten (snelle load + save zonder “volledige naam”)
    - 1 call (mode=all) → {klanten, honden}
-   - Route-memoization + 5 min cache
-   - ✅ naam wordt afgeleid uit voornaam/achternaam (of uit e-mail)
+   - Route-memoization + 5 min cache + reload bij wijziging apiBase
+   - naam = voornaam + achternaam (fallback uit e-mail)
 */
 (() => {
-  // === Config / opslagkeys ===
+  // ===== Config / storage keys =====
   const qs = new URLSearchParams(location.search);
   const LS_KEY_API   = 'superhond_api_base';
   const LS_KEY_ROUTE = 'superhond_api_route';
   const LS_KEY_CACHE = 'superhond_cache_all';
   const CACHE_TTL_MS = 5 * 60 * 1000;
+  const TIMEOUT_MS   = 10000;         // iets royaler voor mobiel
+  const USE_PROXY_SERVER = false;     // zet true als je /api/sheets gebruikt
+  const PROXY_BASE = '/api/sheets';
 
   const fromQS = (qs.get('apiBase') || '').trim();
   try { if (fromQS) localStorage.setItem(LS_KEY_API, fromQS); } catch {}
@@ -18,29 +21,26 @@
     (window.SuperhondConfig?._resolved || '') ||
     (typeof localStorage !== 'undefined' ? (localStorage.getItem(LS_KEY_API) || '') : '');
 
-  const PROXY_BASE = "/api/sheets";
-  const USE_PROXY_SERVER = false;
-  const TIMEOUT_MS = 8000;
-
-  // === DOM ===
+  // ===== DOM =====
   const els = {
-    loader:    document.querySelector("#loader"),
-    error:     document.querySelector("#error"),
-    wrap:      document.querySelector("#wrap"),
-    tbody:     document.querySelector("#tabel tbody"),
-    btnNieuw:  document.querySelector("#btn-nieuw"),
-    modal:     document.querySelector("#modal"),
-    form:      document.querySelector("#form"),
-    btnCancel: document.querySelector("#btn-cancel"),
-    btnSave:   document.querySelector("#btn-save"),
+    loader:    document.querySelector('#loader'),
+    error:     document.querySelector('#error'),
+    wrap:      document.querySelector('#wrap'),
+    tbody:     document.querySelector('#tabel tbody'),
+    zoek:      document.querySelector('#zoek'),
+    btnNieuw:  document.querySelector('#btn-nieuw'),
+    modal:     document.querySelector('#modal'),
+    form:      document.querySelector('#form'),
+    btnCancel: document.querySelector('#btn-cancel'),
+    btnSave:   document.querySelector('#btn-save')
   };
   const fld = id => els.form?.querySelector(`#${id}`);
 
-  // === Utils ===
+  // ===== Utils =====
   const stripBOM = s => String(s||'').replace(/^\uFEFF/, '').trim();
-  const isHTML = t => /^\s*</.test(stripBOM(t).slice(0,200).toLowerCase());
-  const S = v => String(v ?? '');
-  const sv = el => (el ? S(el.value).trim() : '');
+  const isHTML   = t => /^\s*</.test(stripBOM(t).slice(0,200).toLowerCase());
+  const S        = v => String(v ?? '');
+  const sv       = el => (el ? S(el.value).trim() : '');
 
   function fetchWithTimeout(url, opts={}, ms=TIMEOUT_MS){
     if (typeof AbortController !== 'undefined') {
@@ -52,7 +52,8 @@
       new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')), ms))
     ]);
   }
-  const query = (mode, p={}) => new URLSearchParams({ mode, t: Date.now(), ...p }).toString();
+
+  const query     = (mode, p={}) => new URLSearchParams({ mode, t: Date.now(), ...p }).toString();
   const directUrl = (m,p) => `${GAS_BASE}?${query(m,p)}`;
   const proxyUrl  = (m,p) => `${PROXY_BASE}?${query(m,p)}`;
   const aoRawUrl  = (m,p) => `https://api.allorigins.win/raw?url=${encodeURIComponent(directUrl(m,p))}`;
@@ -69,9 +70,21 @@
     return JSON.parse(c);
   }
 
-  // === Adaptive route ===
+  // ===== Adaptive route =====
   const getSavedRoute = () => { try { return localStorage.getItem(LS_KEY_ROUTE) || ''; } catch { return ''; } };
-  const saveRoute = (name) => { try { localStorage.setItem(LS_KEY_ROUTE, name); } catch {} };
+  const saveRoute     = (name) => { try { localStorage.setItem(LS_KEY_ROUTE, name); } catch {} };
+  const resetRouteAndCache = () => {
+    try {
+      localStorage.removeItem(LS_KEY_ROUTE);
+      localStorage.removeItem(LS_KEY_CACHE);
+    } catch {}
+  };
+
+  // Herlaad automatisch als de centrale API-URL wijzigt (via layout.js)
+  window.addEventListener('superhond:apiBaseChanged', () => {
+    resetRouteAndCache();
+    location.reload();
+  });
 
   async function tryRoute(name, url, wrapped=false){
     const r = await fetchWithTimeout(url);
@@ -86,8 +99,9 @@
 
   async function apiGetAll() {
     const mode = 'all';
-    if (!GAS_BASE) throw new Error('Geen API URL ingesteld. Ga naar Admin ▸ Instellingen.');
+    if (!GAS_BASE) throw new Error('Geen API URL ingesteld. Open Admin ▸ Instellingen.');
     const saved = getSavedRoute();
+
     const seq = (()=>{
       if (saved === 'direct') return [{n:'direct', u:directUrl(mode)}];
       if (saved === 'jina')   return [{n:'jina',   u:jinaUrl(mode)}];
@@ -111,31 +125,45 @@
     throw new Error('Ophalen mislukt – ' + errors.join(' | '));
   }
 
-  // === Normalisatie ===
-  const toTitle = s => S(s).toLowerCase().replace(/\b([a-zà-ÿ])/g, m => m.toUpperCase());
-  const normKlant = k => {
-    const full = S(k.naam || [k.voornaam, k.achternaam].filter(Boolean).join(' ')).trim();
-    const [voornaam, ...rest] = full.split(/\s+/);
-    return {
-      id: S(k.id || k.KlantID || ''),
-      naam: full || '(naam onbekend)',
-      voornaam: toTitle(voornaam || ''),
-      achternaam: toTitle(rest.join(' ') || ''),
-      email: S(k.email || '').toLowerCase(),
-      telefoon: S(k.telefoon || k.gsm || ''),
-    };
+  // ===== Normalisatie =====
+  const G = (o, ...keys) => {
+    for (const k of keys) {
+      if (o && o[k] != null && String(o[k]).trim() !== '') return String(o[k]);
+    }
+    return '';
   };
-  const normHond = h => ({
-    id: S(h.id || h.HondID || ''),
-    eigenaarId: S(h.eigenaar_id || h.eigenaarId || h.KlantID || ''),
-    naam: toTitle(h.naam || h.HondNaam || ''),
-  });
+  const toTitle = s => S(s).toLowerCase().replace(/\b([a-zà-ÿ])/g, m => m.toUpperCase());
 
-  // === UI helpers ===
-  function showLoader(on=true){ if(els.loader) els.loader.style.display = on ? '' : 'none'; if(els.wrap) els.wrap.style.display = on ? 'none' : ''; }
-  function showError(msg=''){ if(!els.error) return; els.error.textContent = msg; els.error.style.display = msg ? '' : 'none'; }
+  function normKlant(k = {}) {
+    const id   = G(k, 'id','ID','Id','KlantID','klant_id','klantId');
+    const naam = G(k,'naam','Naam') ||
+                 [G(k,'voornaam','Voornaam'), G(k,'achternaam','Achternaam')]
+                  .filter(Boolean).join(' ').trim() || '(naam onbekend)';
+    const email = G(k,'email','Email','E-mail','e-mail').toLowerCase();
+    const tel   = G(k,'telefoon','Telefoon','gsm','GSM','Mobiel');
+    return { id, naam, email, telefoon: tel };
+  }
 
-  // === Cache ===
+  function normHond(h = {}) {
+    return {
+      id:         G(h,'id','ID','HondID'),
+      eigenaarId: G(h,'eigenaar_id','eigenaarId','KlantID','klant_id','ownerId','klantId'),
+      naam:       toTitle(G(h,'naam','Naam','HondNaam'))
+    };
+  }
+
+  // ===== UI helpers =====
+  function showLoader(on=true){
+    if (els.loader) els.loader.style.display = on ? '' : 'none';
+    if (els.wrap)   els.wrap.style.display   = on ? 'none' : '';
+  }
+  function showError(msg=''){
+    if(!els.error) return;
+    els.error.textContent = msg;
+    els.error.style.display = msg ? '' : 'none';
+  }
+
+  // ===== Cache =====
   const readCache = () => {
     try {
       const raw = localStorage.getItem(LS_KEY_CACHE);
@@ -150,11 +178,20 @@
     try { localStorage.setItem(LS_KEY_CACHE, JSON.stringify({ ts: Date.now(), data })); } catch {}
   };
 
-  // === Render ===
+  // ===== Render =====
+  let ALL = { klanten:[], honden:[] };
+
   function render(klanten=[], honden=[]){
     if(!els.tbody) return;
+
+    // sorteer op naam
+    klanten = klanten.slice().sort((a,b)=>S(a.naam).localeCompare(S(b.naam)));
+
     const map = new Map();
-    honden.forEach(h => { if(!map.has(h.eigenaarId)) map.set(h.eigenaarId, []); map.get(h.eigenaarId).push(h); });
+    honden.forEach(h => {
+      if(!map.has(h.eigenaarId)) map.set(h.eigenaarId, []);
+      map.get(h.eigenaarId).push(h);
+    });
 
     els.tbody.innerHTML = klanten.length ? klanten.map(k=>{
       const dogs = map.get(k.id) || [];
@@ -172,7 +209,24 @@
     }).join('') : `<tr><td colspan="5">Geen gegevens.</td></tr>`;
   }
 
-  // === Load ===
+  // client-side filter
+  function applyFilter(){
+    const q = (els.zoek?.value || '').toLowerCase().trim();
+    if (!q) return render(ALL.klanten, ALL.honden);
+    const filtered = ALL.klanten.filter(k =>
+      S(k.naam).toLowerCase().includes(q) ||
+      S(k.email).toLowerCase().includes(q) ||
+      S(k.telefoon).toLowerCase().includes(q)
+    );
+    render(filtered, ALL.honden);
+  }
+  let filterTimer = null;
+  els.zoek?.addEventListener('input', ()=>{
+    clearTimeout(filterTimer);
+    filterTimer = setTimeout(applyFilter, 120);
+  });
+
+  // ===== Load =====
   async function loadAll({ preferCache=true } = {}){
     showError('');
     let usedCache = false;
@@ -181,19 +235,22 @@
       const c = readCache();
       if (c?.klanten && c?.honden) {
         usedCache = true;
+        ALL = { klanten: c.klanten.map(normKlant), honden: c.honden.map(normHond) };
         if (els.wrap) els.wrap.style.display = '';
         if (els.loader) els.loader.style.display = 'none';
-        render(c.klanten.map(normKlant), c.honden.map(normHond));
+        render(ALL.klanten, ALL.honden);
       }
     }
 
     try{
       if (!usedCache) showLoader(true);
       const data = await apiGetAll(); // { klanten, honden }
-      const klanten = (data.klanten || []).map(normKlant);
-      const honden  = (data.honden  || []).map(normHond);
-      writeCache({ klanten, honden });
-      render(klanten, honden);
+      ALL = {
+        klanten: (data.klanten || []).map(normKlant),
+        honden:  (data.honden  || []).map(normHond)
+      };
+      writeCache({ klanten: ALL.klanten, honden: ALL.honden });
+      render(ALL.klanten, ALL.honden);
       showLoader(false);
     }catch(e){
       if (!usedCache) {
@@ -205,8 +262,8 @@
     }
   }
 
-  // === Save (POST saveKlant) — zonder “volledige naam” invoer ===
-  const emailLike = s => /\S+@\S+\.\S+/.test(String(s||''));
+  // ===== Save (POST saveKlant) — zonder “volledige naam” invoer =====
+  const emailLike     = s => /\S+@\S+\.\S+/.test(String(s||''));
   const nameFromEmail = mail => (String(mail||'').split('@')[0] || '').replace(/[._-]+/g,' ').trim();
 
   function fullName() {
@@ -221,10 +278,11 @@
 
   async function apiPostSaveKlant(payload){
     if (!GAS_BASE) throw new Error('Geen API URL ingesteld.');
+    // text/plain voorkomt preflight bij GAS
     const r = await fetchWithTimeout(
       `${GAS_BASE}?mode=saveKlant&t=${Date.now()}`,
-      { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload||{}) },
-      10000
+      { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify(payload||{}) },
+      15000
     );
     const txt = await r.text();
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -270,11 +328,11 @@
     }
   }
 
-  // === Events ===
+  // ===== Events =====
   els.btnNieuw?.addEventListener('click', () => { els.form?.reset(); els.modal?.showModal?.(); });
   els.btnCancel?.addEventListener('click', () => els.modal?.close?.());
   els.btnSave?.addEventListener('click', onSave);
 
-  // === Start ===
+  // ===== Start =====
   loadAll();
 })();
