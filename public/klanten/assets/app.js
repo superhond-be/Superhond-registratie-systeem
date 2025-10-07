@@ -1,3 +1,5 @@
+/public/klanten/assets/app.js
+```js
 /* Superhond Klantenportaal – Frontend zonder backend.
    - Klantgegevens + Honden beheer (localStorage)
    - Lessen bekijken/filteren, interesse bewaren
@@ -8,6 +10,7 @@
   // ---------- Config ----------
   const PORTAAL_VERSION = "V1.2";
   const BUILD_DATE = "23-09-2025";
+  const LOCALE = "nl-BE";
 
   // ---------- Demo data (vervang later door API) ----------
   const LESSONS = [
@@ -31,8 +34,18 @@
       locatie:{name:"Turnhout Hal", maps:"https://maps.google.com/?q=Turnhout"}, trainers:["Sofie"], tags:["privé","gedrag"]}
   ];
 
+  // ---------- Storage shim (veilig in private mode/quota) ----------
+  const memStore = new Map();
+  const safeStorage = {
+    getItem(k){ try { return localStorage.getItem(k); } catch { return memStore.get(k) ?? null; } },
+    setItem(k,v){ try { localStorage.setItem(k,v); } catch { memStore.set(k,v); } },
+    removeItem(k){ try { localStorage.removeItem(k); } catch { memStore.delete(k); } },
+  };
+
   // ---------- State ----------
-  const $ = (sel, el=document) => el.querySelector(sel);
+  const $  = (sel, el=document) => el.querySelector(sel);
+  const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
+
   const key = {
     client: "sh_client",
     dogs: "sh_dogs",
@@ -45,25 +58,31 @@
     filters: { q:"", type:"", loc:"", trainer:"" }
   };
 
-  // ---------- Elements ----------
-  const tableWrap = $("#tableWrap");
-  const tableTpl = $("#tableTemplate");
-  const rowTpl = $("#rowTemplate");
-  const cardTpl = $("#cardTemplate");
-  const interestDrawer = $("#interesseDrawer");
-  const interestPills = $("#interestPills");
-  const dogsList = $("#dogsList");
-  const dogDialog = $("#dogDialog");
-  const dogForm = $("#dogForm");
-  const clientForm = $("#clientForm");
+  // ---------- Elements (met guards) ----------
+  const tableWrap       = $("#tableWrap");
+  const tableTpl        = $("#tableTemplate");
+  const rowTpl          = $("#rowTemplate");
+  const cardTpl         = $("#cardTemplate");
+  const interestDrawer  = $("#interesseDrawer");
+  const interestPills   = $("#interestPills");
+  const dogsList        = $("#dogsList");
+  const dogDialog       = $("#dogDialog");
+  const dogForm         = $("#dogForm");
+  const clientForm      = $("#clientForm");
 
-  // Footer + header labels
+  // Footer + header labels (alleen als aanwezig)
   document.title = `Superhond – Klantenportaal ${PORTAAL_VERSION}`;
-  $(".chip").textContent = `Klantenportaal · ${PORTAAL_VERSION}`;
-  $(".footer").textContent = `© Superhond · Klantenportaal · ${PORTAAL_VERSION} · Gebouwd op ${BUILD_DATE}`;
+  const headerChip = $(".chip"); if (headerChip) headerChip.textContent = `Klantenportaal · ${PORTAAL_VERSION}`;
+  const footerEl = $(".footer"); if (footerEl) footerEl.textContent = `© Superhond · Klantenportaal · ${PORTAAL_VERSION} · Gebouwd op ${BUILD_DATE}`;
 
   // ---------- Init ----------
   function init(){
+    // Als essentiële elementen ontbreken, stop netjes
+    if (!clientForm || !dogsList || !tableWrap) {
+      console.warn("[app] Vereiste DOM-elementen ontbreken, initialisatie geannuleerd.");
+      return;
+    }
+
     // Prefill client form from state
     fillClientForm(state.client);
     renderDogs();
@@ -77,7 +96,9 @@
       save(key.client, data);
       flash("Klantgegevens bewaard.");
     });
-    $("#prefillDemo").addEventListener("click", ()=>{
+
+    const prefillDemoBtn = $("#prefillDemo");
+    if (prefillDemoBtn) prefillDemoBtn.addEventListener("click", ()=>{
       const demo = {
         firstName:"Sara", lastName:"De Smet", email:"sara@example.be",
         phone:"+32 470 00 00 00", country:"België", street:"Kleine Baan", streetNo:"12",
@@ -94,52 +115,69 @@
       }
       flash("Demo ingevuld.");
     });
-    $("#resetClient").addEventListener("click", ()=>{
+
+    const resetClientBtn = $("#resetClient");
+    if (resetClientBtn) resetClientBtn.addEventListener("click", ()=>{
       clientForm.reset(); state.client = {}; save(key.client, state.client);
       flash("Klantgegevens gereset.");
     });
 
     // Dogs handlers
-    $("#addDogBtn").addEventListener("click", ()=> openDogDialog());
-    dogDialog.addEventListener("close", ()=>{
-      if(dogDialog.returnValue!=="save") return;
-      const form = new FormData(dogForm);
-      const dog = Object.fromEntries(form.entries());
-      // nieuw of edit?
-      const editId = dogForm.dataset.editId;
-      if(editId){
-        const idx = state.dogs.findIndex(d=>d.id===editId);
-        state.dogs[idx] = {...state.dogs[idx], ...dog};
-        delete dogForm.dataset.editId;
-      } else {
-        dog.id = uuid();
-        state.dogs.push(dog);
-      }
-      save(key.dogs, state.dogs);
-      renderDogs();
-      flash("Hond opgeslagen.");
-      dogForm.reset();
-    });
+    const addDogBtn = $("#addDogBtn");
+    if (addDogBtn && dogDialog && dogForm) {
+      addDogBtn.addEventListener("click", ()=> openDogDialog());
+
+      dogDialog.addEventListener("close", ()=>{
+        if(dogDialog.returnValue!=="save") return;
+        const form = new FormData(dogForm);
+        const dog = Object.fromEntries(form.entries());
+        // nieuw of edit?
+        const editId = dogForm.dataset.editId;
+        if(editId){
+          const idx = state.dogs.findIndex(d=>d.id===editId);
+          if (idx >= 0) state.dogs[idx] = {...state.dogs[idx], ...dog};
+          delete dogForm.dataset.editId;
+        } else {
+          dog.id = uuid();
+          state.dogs.push(dog);
+        }
+        save(key.dogs, state.dogs);
+        renderDogs();
+        flash("Hond opgeslagen.");
+        dogForm.reset();
+      });
+    }
 
     // Filters (lessen)
-    $("#search").addEventListener("input", ({target}) => {state.filters.q = target.value; renderLessons();});
-    $("#typeFilter").addEventListener("change", ({target}) => {state.filters.type = target.value; renderLessons();});
-    $("#locFilter").addEventListener("change", ({target}) => {state.filters.loc = target.value; renderLessons();});
-    $("#trainerFilter").addEventListener("change", ({target}) => {state.filters.trainer = target.value; renderLessons();});
-    $("#resetBtn").addEventListener("click", ()=>{
+    const searchEl   = $("#search");
+    const typeEl     = $("#typeFilter");
+    const locEl      = $("#locFilter");
+    const trainerEl  = $("#trainerFilter");
+    const resetBtn   = $("#resetBtn");
+
+    if (searchEl)  searchEl.addEventListener("input",  ({target}) => {state.filters.q = target.value; renderLessons();});
+    if (typeEl)    typeEl.addEventListener("change", ({target}) => {state.filters.type = target.value; renderLessons();});
+    if (locEl)     locEl.addEventListener("change",  ({target}) => {state.filters.loc = target.value; renderLessons();});
+    if (trainerEl) trainerEl.addEventListener("change", ({target}) => {state.filters.trainer = target.value; renderLessons();});
+    if (resetBtn)  resetBtn.addEventListener("click", ()=>{
       state.filters = {q:"",type:"",loc:"",trainer:""};
-      $("#search").value=""; $("#typeFilter").value=""; $("#locFilter").value=""; $("#trainerFilter").value="";
+      if (searchEl)  searchEl.value="";
+      if (typeEl)    typeEl.value="";
+      if (locEl)     locEl.value="";
+      if (trainerEl) trainerEl.value="";
       renderLessons();
     });
 
     // Quick link to profile section
-    $("#openProfile").addEventListener("click", ()=>{
+    const openProfile = $("#openProfile");
+    if (openProfile) openProfile.addEventListener("click", ()=>{
       window.scrollTo({top:0, behavior:"smooth"});
     });
   }
 
   // ---------- Render klant + honden ----------
   function renderDogs(){
+    if (!dogsList) return;
     dogsList.innerHTML = "";
     if(state.dogs.length===0){
       dogsList.innerHTML = `<li class="empty">Nog geen honden toegevoegd.</li>`;
@@ -158,13 +196,15 @@
           ${d.notes ? `<div class="muted">${escapeHtml(d.notes)}</div>`:""}
         </div>
         <div class="row-actions">
-          <button class="btn" data-act="edit">✎ Bewerken</button>
-          <button class="btn danger" data-act="del">🗑 Verwijderen</button>
+          <button class="btn" data-act="edit" type="button">✎ Bewerken</button>
+          <button class="btn danger" data-act="del" type="button">🗑 Verwijderen</button>
         </div>
       `;
-      li.querySelector('[data-act="edit"]').addEventListener("click", ()=> openDogDialog(d));
-      li.querySelector('[data-act="del"]').addEventListener("click", ()=>{
-        if(confirm(`Verwijder hond "${d.name}"?`)){
+      const editBtn = li.querySelector('[data-act="edit"]');
+      const delBtn  = li.querySelector('[data-act="del"]');
+      if (editBtn) editBtn.addEventListener("click", ()=> openDogDialog(d));
+      if (delBtn)  delBtn.addEventListener("click", ()=>{
+        if(confirm(`Verwijder hond "${d.name || ""}"?`)){
           state.dogs = state.dogs.filter(x=>x.id!==d.id);
           save(key.dogs, state.dogs); renderDogs();
         }
@@ -174,34 +214,38 @@
   }
 
   function openDogDialog(dog){
+    if (!dogDialog || !dogForm) return;
     dogForm.reset();
     if(dog){
-      dogForm.name.value = dog.name || "";
+      dogForm.name.value  = dog.name  || "";
       dogForm.breed.value = dog.breed || "";
-      dogForm.dob.value = dog.dob || "";
-      dogForm.sex.value = dog.sex || "";
-      dogForm.chip.value = dog.chip || "";
+      dogForm.dob.value   = dog.dob   || "";
+      dogForm.sex.value   = dog.sex   || "";
+      dogForm.chip.value  = dog.chip  || "";
       dogForm.notes.value = dog.notes || "";
       dogForm.dataset.editId = dog.id;
     }
-    dogDialog.showModal();
+    if (typeof dogDialog.showModal === "function") dogDialog.showModal();
+    else dogDialog.setAttribute("open",""); // fallback zonder dialog support
   }
 
   function fillClientForm(c={}){
+    if (!clientForm) return;
     clientForm.firstName.value = c.firstName || "";
-    clientForm.lastName.value = c.lastName || "";
-    clientForm.email.value = c.email || "";
-    clientForm.phone.value = c.phone || "";
-    clientForm.country.value = c.country || "";
-    clientForm.street.value = c.street || "";
-    clientForm.streetNo.value = c.streetNo || "";
-    clientForm.zip.value = c.zip || "";
-    clientForm.city.value = c.city || "";
-    clientForm.notes.value = c.notes || "";
+    clientForm.lastName.value  = c.lastName  || "";
+    clientForm.email.value     = c.email     || "";
+    clientForm.phone.value     = c.phone     || "";
+    clientForm.country.value   = c.country   || "";
+    clientForm.street.value    = c.street    || "";
+    clientForm.streetNo.value  = c.streetNo  || "";
+    clientForm.zip.value       = c.zip       || "";
+    clientForm.city.value      = c.city      || "";
+    clientForm.notes.value     = c.notes     || "";
   }
 
   // ---------- Render lessen ----------
   function renderLessons(){
+    if (!tableWrap) return;
     const list = applyFilters(LESSONS, state.filters);
     tableWrap.innerHTML = "";
     if(list.length===0){
@@ -209,34 +253,94 @@
       return;
     }
     const isMobile = matchMedia("(max-width: 860px)").matches;
+
     if(!isMobile){
-      const table = tableTpl.content.cloneNode(true);
-      const tb = table.querySelector("tbody");
-      list.forEach(lesson => tb.appendChild(renderRow(lesson)));
-      tableWrap.appendChild(table);
+      if (tableTpl && rowTpl) {
+        const tableFrag = tableTpl.content ? tableTpl.content.cloneNode(true) : null;
+        if (tableFrag) {
+          const tb = tableFrag.querySelector("tbody");
+          list.forEach(lesson => {
+            const rowFrag = renderRow(lesson);
+            if (rowFrag) tb.appendChild(rowFrag);
+          });
+          tableWrap.appendChild(tableFrag);
+        } else {
+          // fallback: simpele tabel renderen zonder <template>
+          const tbl = document.createElement("table");
+          tbl.className = "table";
+          const thead = document.createElement("thead");
+          thead.innerHTML = `<tr><th>Groep</th><th>Datum</th><th>Tijd</th><th>Locatie</th><th>Trainer(s)</th><th></th></tr>`;
+          const tbody = document.createElement("tbody");
+          list.forEach(lesson => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td class="caps"></td>
+              <td class="date"></td>
+              <td class="time"></td>
+              <td class="loc"></td>
+              <td class="trainer"></td>
+              <td class="row-actions"></td>
+            `;
+            tr.querySelector(".caps").textContent = `${lesson.type} • ${lesson.niveau} • ${lesson.groepCap} cap`;
+            tr.querySelector(".date").textContent = formatDate(lesson.date);
+            tr.querySelector(".time").textContent = `${lesson.start} – ${lesson.end}`;
+            tr.querySelector(".loc").innerHTML    = `<a href="${lesson.locatie.maps}" target="_blank" rel="noopener">${escapeHtml(lesson.locatie.name)}</a>`;
+            tr.querySelector(".trainer").textContent = lesson.trainers.join(", ");
+            tr.querySelector(".row-actions").append(...actionButtons(lesson));
+            tbody.appendChild(tr);
+          });
+          tbl.appendChild(thead); tbl.appendChild(tbody);
+          tableWrap.appendChild(tbl);
+        }
+      }
     } else {
-      list.forEach(lesson => tableWrap.appendChild(renderCard(lesson)));
+      if (cardTpl && cardTpl.content) {
+        list.forEach(lesson => {
+          const card = renderCard(lesson);
+          if (card) tableWrap.appendChild(card);
+        });
+      } else {
+        // fallback cards
+        list.forEach(lesson => {
+          const div = document.createElement("div");
+          div.className = "card";
+          div.innerHTML = `
+            <div class="title"></div>
+            <div class="meta"></div>
+            <div class="row-actions"></div>
+          `;
+          div.querySelector(".title").textContent = `${lesson.type} • ${lesson.niveau}`;
+          div.querySelector(".meta").innerHTML = `
+            ${formatDate(lesson.date)} • ${lesson.start}–${lesson.end}<br>
+            <a href="${lesson.locatie.maps}" target="_blank" rel="noopener">${escapeHtml(lesson.locatie.name)}</a> • ${lesson.trainers.join(", ")} • cap ${lesson.groepCap}
+          `;
+          div.querySelector(".row-actions").append(...actionButtons(lesson));
+          tableWrap.appendChild(div);
+        });
+      }
     }
     renderInterestDrawer();
   }
 
   function renderRow(lesson){
+    if (!rowTpl || !rowTpl.content) return null;
     const tr = rowTpl.content.cloneNode(true);
     tr.querySelector(".caps").textContent = `${lesson.type} • ${lesson.niveau} • ${lesson.groepCap} cap`;
     tr.querySelector(".date").textContent = formatDate(lesson.date);
     tr.querySelector(".time").textContent = `${lesson.start} – ${lesson.end}`;
-    tr.querySelector(".loc").innerHTML = `<a href="${lesson.locatie.maps}" target="_blank" rel="noopener">${lesson.locatie.name}</a>`;
+    tr.querySelector(".loc").innerHTML    = `<a href="${lesson.locatie.maps}" target="_blank" rel="noopener">${escapeHtml(lesson.locatie.name)}</a>`;
     tr.querySelector(".trainer").textContent = lesson.trainers.join(", ");
     tr.querySelector(".row-actions").append(...actionButtons(lesson));
     return tr;
   }
 
   function renderCard(lesson){
+    if (!cardTpl || !cardTpl.content) return null;
     const card = cardTpl.content.cloneNode(true);
     card.querySelector(".title").textContent = `${lesson.type} • ${lesson.niveau}`;
     card.querySelector(".meta").innerHTML = `
       ${formatDate(lesson.date)} • ${lesson.start}–${lesson.end}<br>
-      <a href="${lesson.locatie.maps}" target="_blank" rel="noopener">${lesson.locatie.name}</a> • ${lesson.trainers.join(", ")} • cap ${lesson.groepCap}
+      <a href="${lesson.locatie.maps}" target="_blank" rel="noopener">${escapeHtml(lesson.locatie.name)}</a> • ${lesson.trainers.join(", ")} • cap ${lesson.groepCap}
     `;
     card.querySelector(".row-actions").append(...actionButtons(lesson));
     return card;
@@ -258,7 +362,7 @@
     const signup = document.createElement("button");
     signup.className = "btn primary";
     signup.type="button";
-    signup.innerHTML = "Aanmelden";
+    signup.textContent = "Aanmelden";
     signup.addEventListener("click", ()=> signupFlow(lesson));
 
     const more = document.createElement("a");
@@ -271,16 +375,18 @@
   }
 
   function renderInterestDrawer(){
+    if (!interestDrawer || !interestPills) return;
     const ids = [...state.interest];
     if(ids.length===0){ interestDrawer.hidden = true; interestPills.innerHTML=""; return; }
     interestDrawer.hidden = false;
     interestPills.innerHTML = "";
-    ids.map(id => LESSONS.find(l=>l.id===id)).forEach(lesson=>{
+    ids.map(id => LESSONS.find(l=>l.id===id)).filter(Boolean).forEach(lesson=>{
       const pill = document.createElement("span");
       pill.className="pill";
-      pill.innerHTML = `<strong>${lesson.type}</strong> · ${formatDate(lesson.date)} · ${lesson.start}`;
+      pill.innerHTML = `<strong>${escapeHtml(lesson.type)}</strong> · ${formatDate(lesson.date)} · ${lesson.start}`;
       const x = document.createElement("button");
       x.setAttribute("aria-label","Verwijder interesse");
+      x.type = "button";
       x.textContent="✕";
       x.addEventListener("click", ()=>{ toggleInterest(lesson.id); renderLessons(); });
       pill.appendChild(x);
@@ -310,14 +416,12 @@
     if(!picked) return;
 
     // Hier zou je een echte POST doen naar backend
-    // fetch('/api/inschrijvingen', { method:'POST', headers:{'Content-Type':'application/json'},
-    //   body: JSON.stringify({ client:state.client, dogId:picked.id, lesId:lesson.id }) });
+    // fetch('/api/inschrijvingen', {...})
 
     flash(`✅ Inschrijving geregistreerd voor ${picked.name} – ${lesson.type} (${formatDate(lesson.date)} ${lesson.start}).`, 4500);
   }
 
   function promptSelectDog(dogs){
-    // Simpel chooser met prompt; kan later modal worden
     const label = dogs.map((d,i)=> `${i+1}) ${d.name} (${d.breed || "ras onbekend"})`).join("\n");
     const ans = prompt(`Welke hond inschrijven?\n${label}\nGeef het nummer (1–${dogs.length}):`, "1");
     const idx = parseInt(ans, 10) - 1;
@@ -327,21 +431,33 @@
 
   // ---------- Utilities ----------
   function applyFilters(list, f){
-    const q = f.q.trim().toLowerCase();
-    return list.filter(l=>{
-      const inQ = !q || [
-        l.type,l.niveau,l.locatie.name,l.trainers.join(" "), l.id, ...(l.tags||[])
-      ].join(" ").toLowerCase().includes(q);
-      const inType = !f.type || l.type===f.type;
-      const inLoc = !f.loc || l.locatie.name===f.loc;
-      const inTrainer = !f.trainer || l.trainers.includes(f.trainer);
-      return inQ && inType && inLoc && inTrainer;
-    }).sort((a,b)=> (a.date+a.start).localeCompare(b.date+b.start));
+    const q = (f.q || "").trim().toLowerCase();
+    return list
+      .filter(l=>{
+        const hay = [
+          l.type,l.niveau,l.locatie?.name || "",l.trainers?.join(" ") || "", l.id, ...(l.tags||[])
+        ].join(" ").toLowerCase();
+        const inQ       = !q || hay.includes(q);
+        const inType    = !f.type    || l.type===f.type;
+        const inLoc     = !f.loc     || (l.locatie?.name === f.loc);
+        const inTrainer = !f.trainer || (Array.isArray(l.trainers) && l.trainers.includes(f.trainer));
+        return inQ && inType && inLoc && inTrainer;
+      })
+      .sort((a,b)=> (a.date+a.start).localeCompare(b.date+b.start));
   }
+
   function formatDate(iso){
-    const d = new Date(iso+"T00:00:00");
-    return d.toLocaleDateString("nl-BE",{weekday:"short", day:"2-digit", month:"short", year:"numeric"});
+    // forceer locale; laat timezone aan browser (Brussels ok)
+    const d = new Date(`${iso}T00:00:00`);
+    try {
+      return new Intl.DateTimeFormat(LOCALE, {
+        weekday:"short", day:"2-digit", month:"short", year:"numeric"
+      }).format(d);
+    } catch {
+      return d.toLocaleDateString(LOCALE, {weekday:"short", day:"2-digit", month:"short", year:"numeric"});
+    }
   }
+
   function flash(msg, ms=2500){
     const n = document.createElement("div");
     n.textContent = msg;
@@ -352,17 +468,30 @@
     });
     document.body.appendChild(n);
     requestAnimationFrame(()=>{ n.style.transition="all .2s"; n.style.opacity="1"; n.style.transform="translateY(0)";});
-    setTimeout(()=>{ n.style.opacity="0"; n.style.transform="translateY(6px)";}, ms);
+    setTimeout(()=>{ n.style.opacity="0"; n.style.transform:"translateY(6px)";}, ms);
     setTimeout(()=> n.remove(), ms+220);
   }
+
   function formToObj(form){
     const fd = new FormData(form);
     return Object.fromEntries(fd.entries());
   }
-  function save(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
-  function load(k){ try{return JSON.parse(localStorage.getItem(k));}catch{ return null; } }
-  function uuid(){ return (crypto.randomUUID ? crypto.randomUUID() : 'id-'+Math.random().toString(36).slice(2)); }
-  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+
+  function save(k, v){
+    try { safeStorage.setItem(k, JSON.stringify(v)); }
+    catch (e) { console.warn("save error", e); }
+  }
+
+  function load(k){
+    try { const raw = safeStorage.getItem(k); return raw ? JSON.parse(raw) : null; }
+    catch { return null; }
+  }
+
+  function uuid(){ return (crypto?.randomUUID ? crypto.randomUUID() : 'id-'+Math.random().toString(36).slice(2)); }
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+  }
 
   // ---------- Mount ----------
   init();
