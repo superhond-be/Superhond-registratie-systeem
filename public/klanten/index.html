@@ -5,57 +5,17 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Klanten – Superhond</title>
   <meta name="theme-color" content="#1d4ed8" />
-<dialog id="modal" class="modal">
-  <form id="form" method="dialog">
-    <input type="hidden" id="fld-id" />
-    <div class="grid" style="display:grid;gap:.6rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
-      <label>Voornaam
-        <input id="fld-voornaam" class="input" type="text" autocomplete="given-name" />
-      </label>
-      <label>Achternaam
-        <input id="fld-achternaam" class="input" type="text" autocomplete="family-name" />
-      </label>
-      <label>E-mail
-        <input id="fld-email" class="input" type="email" autocomplete="email" />
-      </label>
-      <label>Telefoon
-        <input id="fld-telefoon" class="input" type="tel" autocomplete="tel" />
-      </label>
-      <label>Land
-        <input id="fld-land" class="input" type="text" value="BE" />
-      </label>
-      <label>Straat
-        <input id="fld-straat" class="input" type="text" />
-      </label>
-      <label>Nr
-        <input id="fld-huisnr" class="input" type="text" />
-      </label>
-      <label>Bus
-        <input id="fld-bus" class="input" type="text" />
-      </label>
-      <label>Postcode
-        <input id="fld-postcode" class="input" type="text" />
-      </label>
-      <label>Gemeente
-        <input id="fld-gemeente" class="input" type="text" />
-      </label>
-    </div>
-    <div class="toolbar" style="margin-top:.75rem;gap:.5rem">
-      <button type="button" id="btn-cancel" class="btn">Annuleren</button>
-      <span style="flex:1"></span>
-      <button type="button" id="btn-save" class="btn primary">Bewaren</button>
-    </div>
-  </form>
-</dialog>
-  <!-- Centrale UI -->
+
+  <!-- Styles -->
   <link rel="stylesheet" href="/css/style.css?v=0.21.8" />
   <link rel="stylesheet" href="/css/superhond.css?v=0.21.8" />
+  <link rel="stylesheet" href="/css/responsive.css?v=0.22.0" />
 
-  <!-- Layout (topbar/footer) -->
-  <script src="/js/layout.js?v=0.21.8" defer></script>
+  <!-- Layout (topbar/footer + centrale config) -->
+  <script src="/js/layout.js?v=0.22.1" defer></script>
 
-  <!-- Pagina-logic (absoluut pad; module laadt vanzelf "deferred") -->
-  <script type="module" src="/klanten/index.js?v=0.21.8"></script>
+  <!-- Pagina-logic -->
+  <script type="module" src="/klanten/index.js?v=0.22.7" defer></script>
 
   <noscript>
     <style>.requires-js{display:none!important}</style>
@@ -81,7 +41,7 @@
     <div id="loader" class="muted requires-js" role="status" aria-live="polite">⏳ Laden…</div>
     <div id="error" class="error requires-js" role="alert" style="display:none;"></div>
 
-    <!-- Debug (wordt door index.js getoond bij ?mode=... of fout) -->
+    <!-- Debug (getoond door index.js bij ?mode=... of fout) -->
     <section class="requires-js" aria-label="API debug" style="display:none;">
       <pre id="api-debug" class="debug-panel" style="display:none;overflow:auto;max-height:40vh;border:1px solid #e5e7eb;padding:.75rem;border-radius:.5rem;background:#0b1020;color:#d1e7ff;"></pre>
     </section>
@@ -108,73 +68,49 @@
   <footer id="footer" class="footer" role="contentinfo"></footer>
 
   <!-- Modal: klant aanmaken/bewerken -->
-  <dialog id="modal" class="requires-js" aria-labelledby="modal-title">
+  <dialog id="modal" class="modal requires-js" aria-labelledby="modal-title">
     <form id="form" method="dialog">
       <h3 id="modal-title">Klant</h3>
-      <input type="hidden" name="id" />
+      <input type="hidden" id="fld-id" name="id" />
 
-      <div class="row">
-        <label for="fld-naam">Naam (volledig)</label>
-        <input id="fld-naam" name="naam" placeholder="Tom Janssens" autocomplete="name" />
+      <div class="grid" style="display:grid;gap:.6rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
+        <label>Voornaam
+          <input id="fld-voornaam" class="input" type="text" name="voornaam" autocomplete="given-name" />
+        </label>
+        <label>Achternaam
+          <input id="fld-achternaam" class="input" type="text" name="achternaam" autocomplete="family-name" />
+        </label>
+        <label>E-mail
+          <input id="fld-email" class="input" type="email" name="email" autocomplete="email" />
+        </label>
+        <label>Telefoon
+          <input id="fld-telefoon" class="input" type="tel" name="telefoon" autocomplete="tel" />
+        </label>
+        <label>Land
+          <input id="fld-land" class="input" type="text" name="land" value="BE" />
+        </label>
+        <label>Straat
+          <input id="fld-straat" class="input" type="text" name="straat" autocomplete="address-line1" />
+        </label>
+        <label>Nr
+          <input id="fld-huisnr" class="input" type="text" name="huisnr" autocomplete="address-line2" />
+        </label>
+        <label>Bus
+          <input id="fld-bus" class="input" type="text" name="bus" />
+        </label>
+        <label>Postcode
+          <input id="fld-postcode" class="input" type="text" name="postcode" inputmode="numeric" autocomplete="postal-code" />
+        </label>
+        <label>Gemeente
+          <input id="fld-gemeente" class="input" type="text" name="gemeente" autocomplete="address-level2" />
+        </label>
       </div>
 
-      <div class="row">
-        <label for="fld-voornaam">Voornaam</label>
-        <input id="fld-voornaam" name="voornaam" autocomplete="given-name" />
-      </div>
-
-      <div class="row">
-        <label for="fld-achternaam">Achternaam</label>
-        <input id="fld-achternaam" name="achternaam" autocomplete="family-name" />
-      </div>
-
-      <div class="row">
-        <label for="fld-email">E-mail</label>
-        <input id="fld-email" name="email" type="email" inputmode="email" autocomplete="email" />
-      </div>
-
-      <div class="row">
-        <label for="fld-telefoon">Telefoon</label>
-        <input id="fld-telefoon" name="telefoon" type="tel" inputmode="tel" autocomplete="tel" />
-      </div>
-
-      <div class="row">
-        <label for="fld-land">Land</label>
-        <select name="land" id="fld-land" autocomplete="country">
-          <option value="BE" selected>BE</option>
-          <option value="NL">NL</option>
-        </select>
-      </div>
-
-      <div class="row">
-        <label for="fld-straat">Straat</label>
-        <input id="fld-straat" name="straat" autocomplete="address-line1" />
-      </div>
-
-      <div class="row">
-        <label for="fld-huisnr">Nr</label>
-        <input id="fld-huisnr" name="huisnr" style="max-width:12ch" autocomplete="address-line2" />
-      </div>
-
-      <div class="row">
-        <label for="fld-bus">Bus</label>
-        <input id="fld-bus" name="bus" style="max-width:10ch" />
-      </div>
-
-      <div class="row">
-        <label for="fld-postcode" id="lbl-postcode">Postcode</label>
-        <input id="fld-postcode" name="postcode" inputmode="numeric" autocomplete="postal-code" />
-      </div>
-
-      <div class="row">
-        <label for="fld-gemeente" id="lbl-gemeente">Gemeente</label>
-        <input id="fld-gemeente" name="gemeente" autocomplete="address-level2" />
-      </div>
-
-      <menu>
-        <button type="button" id="btn-cancel">Annuleren</button>
+      <div class="toolbar" style="margin-top:.75rem;gap:.5rem">
+        <button type="button" id="btn-cancel" class="btn">Annuleren</button>
+        <span style="flex:1"></span>
         <button type="button" id="btn-save" class="btn primary">Bewaren</button>
-      </menu>
+      </div>
     </form>
   </dialog>
 
@@ -182,7 +118,8 @@
   <script>
     window.addEventListener('DOMContentLoaded', () => {
       if (window.SuperhondUI?.mount) {
-        window.SuperhondUI.mount({ title: 'Klanten', icon: '👤', version: 'v0.21.8', back: '/' });
+        // showApiStatus kun je aanzetten als je de ping-badge wil zien
+        SuperhondUI.mount({ title: 'Klanten', icon: '👤', back: '/', showApiStatus: false });
       }
     });
   </script>
