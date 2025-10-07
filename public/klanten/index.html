@@ -14,7 +14,7 @@
   <!-- Layout (topbar/footer + centrale config) -->
   <script src="/js/layout.js?v=0.22.2" defer></script>
 
-  <!-- Pagina-logica -->
+  <!-- Pagina-logica (met refresh-knop & cache-bust) -->
   <script type="module" src="/klanten/index.js?v=0.23.4" defer></script>
 
   <noscript>
@@ -31,9 +31,12 @@
     <p><a class="btn" href="/" aria-label="Terug naar dashboard">⬅️ Terug naar dashboard</a></p>
 
     <!-- Toolbar -->
-    <div class="toolbar requires-js" role="region" aria-label="Zoeken en acties">
+    <div class="toolbar requires-js" role="region" aria-label="Zoeken en acties" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
       <label for="zoek" class="visually-hidden">Zoek</label>
       <input id="zoek" type="search" class="input" placeholder="Zoek naam of e-mail…" autocomplete="off" />
+
+      <span style="flex:1"></span>
+
       <button id="btn-reload" class="btn" type="button" title="Vernieuwen">↻ Vernieuwen</button>
       <button id="btn-nieuw" class="btn primary" type="button" aria-haspopup="dialog">+ Nieuwe klant</button>
     </div>
