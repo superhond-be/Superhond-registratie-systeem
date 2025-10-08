@@ -6,8 +6,8 @@
   <title>Superhond — Dashboard</title>
 
   <!-- Centrale UI -->
-  <link rel="stylesheet" href="../css/style.css?v=0.20.2" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.2" />
+  <link rel="stylesheet" href="../css/style.css?v=0.20.3" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.3" />
 
   <!-- Sheets-config: backward compatible fallback -->
   <script>
@@ -15,7 +15,22 @@
     window.SUPERHOND_SHEETS_URL = window.SUPERHOND_SHEETS_URL || 'https://script.google.com/macros/s/JOUW_EXEC_URL/exec';
   </script>
 
+  <!-- Dashboard-specifieke fixes: GELE topbar + breder op desktop -->
   <style>
+    /* 1) Dashboard altijd geel (overrulet eventuele subpage-styling elders) */
+    body.dashboard-page {
+      --topbar-bg: var(--accent) !important;
+      --topbar-ink: #000 !important;
+    }
+    /* 2) Breder op iMac/desktop, zonder andere pagina’s te beïnvloeden */
+    body.dashboard-page :root { --container-max: 1060px; }
+    @media (min-width: 1280px){
+      body.dashboard-page :root { --container-max: 1200px; }
+    }
+    @media (min-width: 1536px){
+      body.dashboard-page :root { --container-max: 1360px; }
+    }
+
     /* Kleine lokale tweaks voor dit scherm */
     .tabs{display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
     .tab{position:relative;padding:.4rem .8rem;border:1px solid #e5e7eb;border-radius:.5rem;background:#fff;cursor:pointer}
@@ -34,7 +49,7 @@
   </style>
 </head>
 <body class="dashboard-page">
-  <header id="topbar" class="topbar"></header>
+  <header id="topbar"></header>
 
   <main class="container" role="main">
     <h1 class="page-title">Hoofdmenu</h1>
@@ -54,7 +69,6 @@
         <span class="badge-dot" id="lessen-week-badge" aria-label="Aantal lessen">0</span>
       </a>
 
-      <!-- 📚 Klassen -->
       <a class="tile badged" href="../klassen/">
         <span class="tile-icon">📚</span>
         <div class="tile-body">
@@ -64,7 +78,6 @@
         <span class="badge-dot" id="klassen-badge" aria-label="Aantal actieve klassen">0</span>
       </a>
 
-      <!-- 📦 Lessenreeksen -->
       <a class="tile badged" href="../lessenreeks/">
         <span class="tile-icon">📦</span>
         <div class="tile-body">
@@ -118,10 +131,9 @@
   <footer id="footer" class="footer"></footer>
 
   <!-- Basis scripts -->
-  <script src="../js/layout.js?v=0.20.2" defer></script>
-  <script src="../js/agenda.js?v=0.20.2" defer></script>
-  <!-- Admin gate: toont/verbergt de Admin-tegel op basis van ?admin=1 (of sneltoets) -->
-  <script src="../js/admin-gate.js?v=0.20.2" defer></script>
+  <script src="../js/layout.js?v=0.20.3" defer></script>
+  <script src="../js/agenda.js?v=0.20.3" defer></script>
+  <script src="../js/admin-gate.js?v=0.20.3" defer></script>
 
   <!-- Tellers: Sheets-first (met baseUrl), fallback op store.js -->
   <script type="module">
@@ -130,8 +142,8 @@
       catch (e) { console.error(`Import mislukt: ${path}`, e); return {}; }
     };
 
-    const sheets = await safeImport('../js/sheets.js?v=0.20.2');
-    const store  = await safeImport('../js/store.js?v=0.20.2');
+    const sheets = await safeImport('../js/sheets.js?v=0.20.3');
+    const store  = await safeImport('../js/store.js?v=0.20.3');
 
     const fetchSheet     = sheets.fetchSheet     || (async () => { throw new Error('sheets.fetchSheet ontbreekt'); });
     const normStatus     = sheets.normStatus     || ((s) => String(s||'').toLowerCase());
@@ -142,12 +154,10 @@
     const getReeksen     = store.getReeksen      || (() => []);
     const isActiefStatus = store.isActiefStatus  || ((s) => String(s||'').toLowerCase()==='actief');
 
-    // heel belangrijk: sheets base-URL zetten (blijft werken met bestaande window.SUPERHOND_SHEETS_URL)
     if (window.SUPERHOND_SHEETS_URL) setBaseUrl(window.SUPERHOND_SHEETS_URL);
-    await initFromConfig(); // haalt centrale apiBase op (server/GAS/LS)
+    await initFromConfig(); // haalt centrale apiBase op
 
     async function updateBadges() {
-      // 1) probeer Sheets
       try {
         const [klassen, reeksen] = await Promise.all([
           fetchSheet('Klassen'),
@@ -161,7 +171,6 @@
         console.warn('Sheets-laden faalde, val terug op local store:', e?.message || e);
       }
 
-      // 2) fallback: lokale buckets
       try {
         ensureMigrated();
         const actKl = (getKlassen() || []).filter(k => isActiefStatus(k.status)).length;
