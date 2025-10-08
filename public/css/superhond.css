@@ -1,4 +1,4 @@
-/* Superhond UI – v0.18.10 (clean) */
+/* Superhond UI – v0.18.11 (clean + form errors + a11y tweaks) */
 
 /* ---------- Design tokens ---------- */
 :root {
@@ -90,7 +90,7 @@ body {
 
 .sidebar-title { margin:0 0 .5rem; font-weight:700; }
 
-/* Tabs */
+/* ---------- Tabs ---------- */
 .tabs { display:flex; gap:.5rem; flex-wrap:wrap; margin:.5rem 0 1rem; }
 .tab {
   padding:.35rem .7rem;
@@ -99,8 +99,9 @@ body {
   background:#fff;
   color:inherit;
   cursor:pointer;
-  transition:background .12s ease, border-color .12s ease, color .12s ease;
+  transition:background .12s ease, border-color .12s ease, color .12s ease, transform .12s ease;
 }
+.tab:hover { transform: translateY(-1px); }
 .tab:focus-visible { outline:2px solid rgba(0,0,0,.2); outline-offset:2px; }
 
 /* Actieve tab: altijd geel (matching dashboard accent) */
@@ -165,20 +166,31 @@ body {
   min-height:38px; padding:6px 10px;
   border:1px solid #d1d5db; border-radius:8px; background:#fff;
 }
-.input:focus,.select:focus { outline:2px solid rgba(30,112,255,.25); border-color:#9bbcff; }
+.input:focus-visible,.select:focus-visible { outline:2px solid rgba(30,112,255,.25); border-color:#9bbcff; }
 .input-nr { width:5.5rem; }
+
 .btn {
   display:inline-flex; align-items:center; gap:6px;
   padding:8px 12px; border:1px solid #d1d5db; border-radius:8px;
   background:#fff; text-decoration:none; color:#111827; cursor:pointer;
 }
 .btn:hover { background:#f8fafc; }
-.btn-xs { font-size:.85rem; padding:.2rem .45rem; }
+
+/* Compacte knop + util */
+.btn-xs { padding:.2rem .45rem; font-size:.8rem; }
+.nowrap { white-space: nowrap; }
+
+/* Foutstijlen bij formulier (gesynchroniseerd met style.css) */
+.input-error { border-color:#b91c1c !important; outline-color:#b91c1c !important; }
+.field-error { color:#b91c1c; font-size:.85rem; margin-top:.25rem; }
+
+/* Labels/badges */
 .badge { display:inline-block; padding:4px 8px; border-radius:999px; background:#eef2ff; color:#1e40af; }
 
+/* Status/feedback */
 .loader { padding:.5rem 0; color:var(--muted); }
-.error { color:#b00020; }
-.muted { color:var(--muted); font-size:.92em; }
+.error  { color:#b91c1c; }  /* geharmoniseerd met JS-foutlabels */
+.muted  { color:var(--muted); font-size:.92em; }
 
 /* ---------- Responsive ---------- */
 @media (max-width:900px){
@@ -188,3 +200,52 @@ body {
   .container { padding:12px; }
   .brand { font-size:18px; }
 }
+
+/* === Toast component (Superhond UI) === */
+.toast-container {
+  position: fixed;
+  bottom: 1.2rem;
+  right: 1.2rem;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: .5rem;
+}
+
+.toast {
+  min-width: 220px;
+  max-width: 360px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-left: 6px solid var(--accent);
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
+  border-radius: 8px;
+  padding: .75rem 1rem;
+  color: #111827;
+  font-size: .92rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  animation: fadeIn .25s ease;
+}
+
+.toast.success { border-left-color: #16a34a; } /* groen */
+.toast.error   { border-left-color: #b91c1c; } /* rood */
+.toast.info    { border-left-color: #2563eb; } /* blauw */
+
+.toast button {
+  background: none;
+  border: none;
+  color: #111827;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-left: .5rem;
+}
+.toast button:hover { opacity: .7; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
