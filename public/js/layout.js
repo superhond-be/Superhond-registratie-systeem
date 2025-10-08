@@ -14,7 +14,6 @@
  */
 
 (function () {
-  const $  = (sel, root = document) => root.querySelector(sel);
   const LS_ADMIN   = 'superhond:admin:enabled';
   const LS_DENSITY = 'superhond:density';
 
@@ -53,6 +52,11 @@
     } else {
       console[(type === 'warn' ? 'warn' : 'log')](msg);
     }
+  }
+  // Wacht tot DOM klaar is (voorkomt te vroege mount-calls)
+  function onReady(cb){
+    if (document.readyState !== 'loading') cb();
+    else document.addEventListener('DOMContentLoaded', cb, { once:true });
   }
 
   /* ───────── API ───────── */
@@ -223,20 +227,35 @@
 
   /* ───────── Mount ───────── */
   async function mount(opts = {}) {
+    // Wacht altijd tot DOM klaar is (en #topbar bestaat) → voorkomt race conditions
+    await new Promise(resolve => onReady(resolve));
+
     // Dichtheid toepassen vóór render
     applyDensityFromStorage();
 
     // Admin thema (rode topbar) direct toepassen
     document.body.classList.toggle('admin-page', isAdminEnabled());
 
-    const [cfg, online] = await Promise.all([fetchConfig(), pingBackend()]);
-    renderTopbar(document.getElementById('topbar'), opts, cfg, online);
-    renderFooter(document.getElementById('footer'), cfg);
+    // Als back niet is opgegeven: op subpagina’s standaard een terugknop
+    const isSub = document.body.classList.contains('subpage');
+    const finalOpts = Object.assign({ back: isSub ? true : null }, opts);
 
-    // Admin badge tonen indien nodig
+    // Render alleen als de ankers bestaan
+    const topbarEl = document.getElementById('topbar');
+    const footerEl = document.getElementById('footer');
+    if (!topbarEl && !footerEl) {
+      console.warn('[layout] Geen #topbar/#footer gevonden; mount() slaat rendering over.');
+      return;
+    }
+
+    const [cfg, online] = await Promise.all([fetchConfig(), pingBackend()]);
+    if (topbarEl) renderTopbar(topbarEl, finalOpts, cfg, online);
+    if (footerEl) renderFooter(footerEl, cfg);
+
+    // Admin badge tonen indien nodig (na topbar render)
     ensureAdminBadge();
   }
 
-  // Exporteer als global helper
+  // Exporteer als global helper (idempotent)
   window.SuperhondUI = Object.assign(window.SuperhondUI || {}, { mount });
 })();
