@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Superhond – API Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background:#fafafa;
+      padding:2rem;
+      color:#111;
+    }
+    h1 { margin-bottom:1rem; }
+    .card {
+      background:#fff;
+      border:1px solid #ddd;
+      border-radius:8px;
+      padding:1rem 1.5rem;
+      margin-bottom:1rem;
+      box-shadow:0 1px 2px rgba(0,0,0,.05);
+    }
+    button {
+      padding:.5rem 1rem;
+      border:1px solid #ccc;
+      border-radius:6px;
+      cursor:pointer;
+      background:#fff;
+    }
+    button:hover { background:#f3f4f6; }
+    pre {
+      background:#f9fafb;
+      padding:.75rem;
+      border-radius:6px;
+      font-size:.9rem;
+      overflow-x:auto;
+    }
+    .ok { color:#15803d; }
+    .fail { color:#b91c1c; }
+  </style>
+</head>
+<body>
+  <h1>🐶 Superhond – API Test</h1>
+  <p>Gebruik dit scherm om te controleren of de verbinding tussen <strong>Node</strong> en <strong>Google Apps Script</strong> werkt.</p>
+
+  <div class="card">
+    <h2>Snelle tests</h2>
+    <button id="btnPing">Ping</button>
+    <button id="btnCfg">Config ophalen</button>
+    <button id="btnSchema">Schema ophalen</button>
+    <button id="btnKlanten">Leden (Klanten)</button>
+    <div id="output"></div>
+  </div>
+
+  <script type="module">
+    async function runTest(name, url) {
+      const out = document.getElementById('output');
+      out.innerHTML = `<p>⏳ Test "${name}" bezig...</p>`;
+      try {
+        const r = await fetch(url);
+        const text = await r.text();
+        let json;
+        try { json = JSON.parse(text); } catch { json = { raw: text }; }
+        console.log(`[${name}]`, json);
+        out.innerHTML = `
+          <p class="${json.ok ? 'ok' : 'fail'}">✔️ ${name} — status: ${r.status}</p>
+          <pre>${JSON.stringify(json, null, 2)}</pre>`;
+      } catch (err) {
+        out.innerHTML = `<p class="fail">💥 ${name} mislukt: ${err}</p>`;
+      }
+    }
+
+    document.getElementById('btnPing').addEventListener('click', () =>
+      runTest('Ping', '/api/sheets?action=ping')
+    );
+    document.getElementById('btnCfg').addEventListener('click', () =>
+      runTest('Config ophalen', '/api/sheets?action=cfg.get')
+    );
+    document.getElementById('btnSchema').addEventListener('click', () =>
+      runTest('Schema ophalen', '/api/sheets?action=schema.get')
+    );
+    document.getElementById('btnKlanten').addEventListener('click', () =>
+      runTest('Klanten', '/api/sheets?action=getLeden')
+    );
+  </script>
+</body>
+</html>
