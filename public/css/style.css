@@ -1,61 +1,104 @@
-/* Superhond UI – style.css v0.20.5 (uniform widths + toolbar + desktop tuning) */
+/* Superhond UI – style.css v0.20.6 (uniform widths + topbar colors + a11y) */
 
+/* ---------- Tokens & basis ---------- */
 :root{
   --bg:#f6f8fb; --card:#fff; --ink:#111827; --muted:#6b7280; --border:#e5e7eb; --shadow:0 1px 2px rgba(0,0,0,.06);
-  --accent:#f4c400; --topbar-bg:var(--accent); --topbar-ink:#000;
-  --radius:12px; --container-max:1060px;
+  --accent:#f4c400;
+  --topbar-bg:var(--accent);  /* default: dashboard geel */
+  --topbar-ink:#000;
+  --radius:12px;
+  --container-max:1060px;
 }
+
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+
+/* Breedteregeling (gelijk op dashboard en subpagina’s) */
 .container{max-width:var(--container-max);margin:0 auto;padding:16px}
 #topbar .topbar-inner.container{max-width:var(--container-max);margin:0 auto}
 
+/* ---------- Kaarten & titels ---------- */
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
 .page-title,h2{margin:0 0 12px}
 
-/* Tiles */
+/* ---------- Tiles ---------- */
 .tiles{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 .tile{display:flex;align-items:center;gap:10px;padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);background:#fff;text-decoration:none;color:inherit;box-shadow:var(--shadow);transition:transform .12s ease,border-color .12s ease}
 .tile:hover{border-color:#d1d5db;transform:translateY(-1px)}
-.tile-icon{font-size:22px;line-height:1}.tile-body{display:grid;gap:2px}.tile-title{font-weight:700}.tile-sub{color:#6b7280}
+.tile-icon{font-size:22px;line-height:1}
+.tile-body{display:grid;gap:2px}
+.tile-title{font-weight:700}
+.tile-sub{color:#6b7280}
 
-/* Toolbar */
+/* ---------- Toolbar ---------- */
 .toolbar{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
-@media (max-width:430px){.toolbar{flex-direction:column;align-items:stretch}.toolbar .input,.toolbar .btn{width:100%}}
+@media (max-width:430px){
+  .toolbar{flex-direction:column;align-items:stretch}
+  .toolbar .input,.toolbar .btn{width:100%}
+}
 
-/* Table */
+/* ---------- Tabel ---------- */
 .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .table{width:100%;border-collapse:collapse}
 .table th,.table td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border)}
 .table thead th{font-weight:700;background:#fafafa}
 .table.compact th,.table.compact td{padding:.35rem .5rem}
 
-/* Forms */
+/* ---------- Form & buttons ---------- */
 .input,.select{min-height:38px;padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff}
 .input:focus-visible,.select:focus-visible{outline:2px solid rgba(30,112,255,.25);border-color:#9bbcff}
 .input-nr{width:5.5rem}
+
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;background:#fff;text-decoration:none;color:#111827;cursor:pointer}
 .btn:hover{background:#f8fafc}
 .btn-xs{padding:.2rem .45rem;font-size:.8rem}
 .nowrap{white-space:nowrap}
+
+/* Validatie */
 .input-error{border-color:#b91c1c!important;outline-color:#b91c1c!important}
 .field-error{color:#b91c1c;font-size:.85rem;margin-top:.25rem}
+
+/* Labels/badges */
 .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef2ff;color:#1e40af}
 
+/* Status/feedback */
 .loader{padding:.5rem 0;color:var(--muted)}
-.error{color:#b91c1c}.muted{color:var(--muted);font-size:.92em}
+.error{color:#b91c1c}
+.muted{color:var(--muted);font-size:.92em}
 
-/* Desktop tuning */
+/* ---------- Topbar (kleur via CSS-variabelen) ---------- */
+/* layout.js zet .topbar-inner; deze fallback houdt het consistent */
+#topbar{background:var(--topbar-bg);color:var(--topbar-ink)}
+/* back-knop – contrastrijke varianten per kleurthema */
+.btn-back{appearance:none;border:1px solid rgba(0,0,0,.15);background:#fff;color:#111827;border-radius:8px;padding:6px 10px;cursor:pointer}
+body.subpage .btn-back{border-color:#cbd5e1;background:#f8fafc;color:#0f172a}
+
+/* Dashboard = GEEL */
+body.dashboard-page{
+  --topbar-bg: var(--accent);
+  --topbar-ink:#000;
+}
+/* Subpagina’s = BLAUW met witten tekst */
+body.subpage{
+  --topbar-bg:#2563eb;
+  --topbar-ink:#fff;
+}
+/* Leesbaarheid status rechts in topbar verbeteren */
+body.subpage #topbar .tb-right .muted{color:rgba(255,255,255,.9)}
+body.dashboard-page #topbar .tb-right .muted{color:#1f2937}
+
+/* ---------- Desktop tuning ---------- */
 @media (min-width:1280px){
   :root{--container-max:1200px}
   html{font-size:17px}
-  .card{padding:18px}.tiles{gap:18px}.table th,.table td{padding:12px 14px}.input,.select{min-height:40px}.btn{padding:9px 14px}
+  .card{padding:18px}
+  .tiles{gap:18px}
+  .table th,.table td{padding:12px 14px}
+  .input,.select{min-height:40px}
+  .btn{padding:9px 14px}
 }
 @media (min-width:1536px){
   :root{--container-max:1360px}
   html{font-size:18px}
 }
-
-/* Topbar kleur wordt door layout.js hard gezet; dit blijft als fallback */
-#topbar{background:var(--topbar-bg);color:var(--topbar-ink)}
