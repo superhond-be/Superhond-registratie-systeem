@@ -1,235 +1,173 @@
-// Agenda – externe agenda + localStorage-lessen, tabs & filtering (kalenderweek)
-// /public/js/agenda.js
-(function () {
-  // ------- DOM refs -------
-  const TABS      = document.querySelectorAll('#agenda-tabs .tab');
-  const loader    = document.getElementById('agenda-loader');
-  const errorBox  = document.getElementById('agenda-error');
-  const tableWrap = document.getElementById('agenda-table-wrap');
-  const tbody     = document.querySelector('#agenda-table tbody');
+/**
+ * public/js/agenda.js — Agenda-weergave (week/alles) op dashboard
+ * - Haalt lessen via action=getLessen
+ * - Vult tellers & tabel
+ */
 
-  const S = v => String(v ?? '').trim();
+import { fetchAction } from './sheets.js';
 
-  // ------- Fetch helper -------
-  async function fetchJson(tryUrls) {
-    for (const u of tryUrls) {
-      try {
-        const url = u + (u.includes('?') ? '&' : '?') + 't=' + Date.now();
-        const r = await fetch(url, { cache: 'no-store' });
-        if (r.ok) return r.json();
-      } catch (_) {}
-    }
-    return null;
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+const els = {
+  loader:  $('#agenda-loader'),
+  error:   $('#agenda-error'),
+  tableWrap: $('#agenda-table-wrap'),
+  tbody:   $('#agenda-table tbody'),
+  dotWeek: $('#tab-week-dot'),
+  dotAll:  $('#tab-all-dot'),
+  dotNotes:$('#tab-notes-dot'),
+  subLessen: $('#lessen-week-sub'),
+  badgeLessen: $('#lessen-week-badge')
+};
+
+function show(el)   { if (el) el.style.display = ''; }
+function hide(el)   { if (el) el.style.display = 'none'; }
+function setText(el, txt) { if (el) el.textContent = String(txt); }
+
+/* ===== Datum helpers (week: ma-zo in lokale tijd) ===== */
+function startOfWeek(d = new Date()) {
+  const date = new Date(d);
+  const day = (date.getDay() + 6) % 7; // 0=ma
+  date.setHours(0,0,0,0);
+  date.setDate(date.getDate() - day);
+  return date;
+}
+function endOfWeek(d = new Date()) {
+  const start = startOfWeek(d);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
+  return end; // exclusief
+}
+function parseISOorDate(v) {
+  if (!v) return null;
+  const d = v instanceof Date ? v : new Date(String(v));
+  return isNaN(d.valueOf()) ? null : d;
+}
+function fmtDateTime(d) {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      weekday: 'short', day: '2-digit', month: 'short',
+      hour: '2-digit', minute: '2-digit'
+    }).format(d);
+  } catch {
+    return d.toLocaleString();
   }
+}
 
-  // ------- Normalisatie externe agenda -------
-  function normalizeAgenda(raw) {
-    if (!raw) return { lessons: [], notices: [] };
-
-    const arr =
-      Array.isArray(raw)       ? raw :
-      Array.isArray(raw?.items)? raw.items :
-      Array.isArray(raw?.data) ? raw.data : null;
-
-    if (arr) {
-      const lessons = [], notices = [];
-      for (const it of arr) {
-        const t = S(it.type || it.kind).toLowerCase();
-        if (t === 'mededeling' || t === 'notice') notices.push(it);
-        else lessons.push(it);
-      }
-      return { lessons, notices };
-    }
-    return {
-      lessons: Array.isArray(raw?.lessons) ? raw.lessons : [],
-      notices: Array.isArray(raw?.notices) ? raw.notices : []
-    };
+/* ===== Render ===== */
+function renderRows(items) {
+  if (!els.tbody) return;
+  els.tbody.innerHTML = '';
+  if (!items.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 4;
+    td.className = 'muted';
+    td.textContent = 'Geen lessen gevonden.';
+    tr.appendChild(td);
+    els.tbody.appendChild(tr);
+    return;
   }
+  for (const l of items) {
+    const d = parseISOorDate(l.date);
+    const tr = document.createElement('tr');
 
-  // ------- Lokale lessen: nieuwe bucket + legacy fallback -------
-  function loadBucketLessons() {
-    try {
-      const raw = localStorage.getItem('superhond-lessons');
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
-    } catch { return []; }
+    const naam = l.name || l.title || l.type || 'Les';
+    const locatie = l.location || l.locatie || '';
+    const trainer = l.trainer || l.trainers || '';
+
+    const tdNaam = document.createElement('td');   tdNaam.textContent = naam;
+    const tdDate = document.createElement('td');   tdDate.textContent = d ? fmtDateTime(d) : '—';
+    const tdLoc  = document.createElement('td');   tdLoc.textContent  = locatie || '—';
+    const tdTr   = document.createElement('td');   tdTr.textContent   = trainer || '—';
+
+    tr.append(tdNaam, tdDate, tdLoc, tdTr);
+    els.tbody.appendChild(tr);
   }
+}
 
-  function loadLegacyLessons() {
-    try {
-      const raw = localStorage.getItem('superhond-db');
-      const db  = raw ? JSON.parse(raw) : {};
-      return Array.isArray(db?.lessons) ? db.lessons : [];
-    } catch { return []; }
+function updateLessenBadge(n) {
+  if (els.badgeLessen) setText(els.badgeLessen, n);
+  if (els.subLessen) {
+    if (n === 0) setText(els.subLessen, 'geen deze week');
+    else if (n === 1) setText(els.subLessen, '1 deze week');
+    else setText(els.subLessen, `${n} deze week`);
   }
+}
 
-  function loadLocalLessons() {
-    const bucket = loadBucketLessons();
-    const legacy = loadLegacyLessons();
-    // beide samenvoegen (dedupe later in merge)
-    return [...bucket, ...legacy];
-  }
+/* ===== Data laden ===== */
+async function loadLessen() {
+  hide(els.error);
+  show(els.loader);
+  hide(els.tableWrap);
 
-  // ------- Merge: extern (primair) + lokaal (secundair), dedupe op id of start+title -------
-  function mergeLessons(ext = [], loc = []) {
-    const norm = (x) => ({
-      id:       S(x.id || ''),
-      title:    S(x.title || x.name || 'Les'),
-      startISO: S(x.startISO || x.start || x.startDate || x.begin || ''),
-      endISO:   S(x.endISO   || x.end   || x.endDate   || x.einde || ''),
-      location: (x.location && typeof x.location === 'object')
-        ? { name: S(x.location.name || x.location.naam || ''), mapsUrl: S(x.location.mapsUrl || '') || null }
-        : { name: S(x.locatie || ''), mapsUrl: S(x.mapsUrl || '') || null },
-      trainers: Array.isArray(x.trainers) ? x.trainers.slice() : []
+  try {
+    // Haal alle lessen (actief) via moderne action
+    const data = await fetchAction('getLessen'); // main.gs → doGet?action=getLessen
+    const all = Array.isArray(data) ? data : [];
+
+    // Filter soft-deleted
+    const actieve = all.filter(l => !(String(l.archived).toLowerCase() === 'true' || l.archived === true));
+
+    // Sorteer op datum
+    actieve.sort((a, b) => {
+      const da = parseISOorDate(a.date)?.getTime() ?? 0;
+      const db = parseISOorDate(b.date)?.getTime() ?? 0;
+      return da - db;
     });
 
-    const key = x => S(x.id) || (S(x.startISO) + '|' + S(x.title));
-    const map = new Map();
-    for (const e of ext.map(norm)) map.set(key(e), e);           // extern wint
-    for (const l of loc.map(norm)) if (!map.has(key(l))) map.set(key(l), l);
-    return [...map.values()];
-  }
-
-  // ------- Helpers -------
-  function toDate(x) { return x ? new Date(String(x).replace(' ', 'T')) : null; }
-
-  function fmtDateRange(startISO, endISO) {
-    const s = toDate(startISO), e = toDate(endISO);
-    if (!s || isNaN(s)) return '—';
-    const d2 = n => String(n).padStart(2, '0');
-    const date = `${d2(s.getDate())}/${d2(s.getMonth()+1)}/${s.getFullYear()}`;
-    const t1 = `${d2(s.getHours())}:${d2(s.getMinutes())}`;
-    if (e && !isNaN(e)) {
-      const t2 = `${d2(e.getHours())}:${d2(e.getMinutes())}`;
-      return `${date}, ${t1} — ${t2}`;
-    }
-    return `${date}, ${t1}`;
-  }
-
-  // Kalenderweek: maandag 00:00 t/m zondag 23:59
-  function isThisWeek(startISO) {
-    const s = toDate(startISO);
-    if (!s) return false;
+    // Split: week vs alles
     const now = new Date();
-    const day = (now.getDay() + 6) % 7;          // ma=0 ... zo=6
-    const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    weekStart.setDate(weekStart.getDate() - day); // maandag 00:00
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 7);       // volgende maandag (excl.)
-    return s >= weekStart && s < weekEnd;
-  }
+    const from = startOfWeek(now), to = endOfWeek(now);
+    const thisWeek = actieve.filter(l => {
+      const d = parseISOorDate(l.date);
+      return d && d >= from && d < to;
+    });
 
-  // ------- Rendering -------
-  function rowForLesson(item) {
-    const title   = S(item.title || item.name || 'Les');
-    const href    = item.id ? `../lessen/detail.html?id=${encodeURIComponent(item.id)}` : '#';
-    const locName = item.location?.name || '—';
-    const locUrl  = item.location?.mapsUrl || '';
-    const trainers = Array.isArray(item.trainers) ? item.trainers : [];
-    return `
-      <tr>
-        <td><a href="${href}">${title}</a></td>
-        <td>${fmtDateRange(item.startISO || item.start, item.endISO || item.end)}</td>
-        <td>${locUrl ? `<a href="${locUrl}" target="_blank" rel="noopener">${S(locName)}</a>` : S(locName)}</td>
-        <td>${trainers.length ? trainers.map(S).map(t=>`<span class="badge">${t}</span>`).join(' ') : '—'}</td>
-      </tr>
-    `;
-  }
+    // Update tellers
+    setText(els.dotWeek, thisWeek.length);
+    setText(els.dotAll, actieve.length);
+    setText(els.dotNotes, 0); // (placeholder, geen bron nu)
+    updateLessenBadge(thisWeek.length);
 
-  function rowForNotice(n) {
-    const title = S(n.title || n.name || 'Mededeling');
-    const href  = n.id ? `../mededeling/detail.html?id=${encodeURIComponent(n.id)}` : '#';
-    const when  = S(n.dateISO || n.date || n.datum || '—');
-    return `
-      <tr>
-        <td>📢 <a href="${href}">${title}</a></td>
-        <td>${when}</td>
-        <td>—</td>
-        <td>—</td>
-      </tr>
-    `;
-  }
+    // Initieel: toon week
+    renderRows(thisWeek);
 
-  function render(scope, data) {
-    let rows = '';
-    if (scope === 'mededelingen') {
-      rows = (data.notices || [])
-        .slice()
-        .sort((a,b) => S(b.dateISO||b.date||b.datum).localeCompare(S(a.dateISO||a.date||a.datum)))
-        .map(rowForNotice).join('');
-    } else {
-      const source = (data.lessons || [])
-        .slice()
-        .sort((a,b) => S(a.startISO||a.start).localeCompare(S(b.startISO||b.start)));
-      const filtered = (scope === 'week')
-        ? source.filter(x => isThisWeek(x.startISO || x.start))
-        : source;
-      rows = filtered.map(rowForLesson).join('');
+    // Tabs wisselen
+    initTabsSwitch({ thisWeek, all: actieve });
+
+    hide(els.loader);
+    show(els.tableWrap);
+  } catch (err) {
+    hide(els.loader);
+    setText(els.error, 'Fout bij laden van lessen: ' + (err?.message || String(err)));
+    show(els.error);
+  }
+}
+
+function initTabsSwitch(datasets) {
+  const tabs = $$('#agenda-tabs .tab');
+  function setActive(btn) {
+    tabs.forEach(t => {
+      const on = t === btn;
+      t.classList.toggle('active', on);
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.setAttribute('tabindex', on ? '0' : '-1');
+    });
+  }
+  tabs.forEach(t => t.addEventListener('click', () => {
+    setActive(t);
+    const key = t.getAttribute('data-tab');
+    switch (key) {
+      case 'week':  renderRows(datasets.thisWeek); break;
+      case 'alles': renderRows(datasets.all); break;
+      case 'mededelingen': renderRows([]); break; // geen bron nu
     }
+  }));
+}
 
-    tbody.innerHTML = rows || `<tr><td colspan="4" class="muted">Geen items gevonden.</td></tr>`;
-    loader.textContent = '';
-    errorBox.style.display = 'none';
-    tableWrap.style.display = 'block';
-  }
-
-  // Optioneel: badge-bolletjes op tabs bijwerken als die in de HTML aanwezig zijn
-  function updateTabDots(data) {
-    const allCount  = (data.lessons || []).length;
-    const weekCount = (data.lessons || []).filter(x => isThisWeek(x.startISO || x.start)).length;
-    const noteCount = (data.notices || []).length;
-
-    const w = document.getElementById('tab-week-dot');
-    const a = document.getElementById('tab-all-dot');
-    const n = document.getElementById('tab-notes-dot');
-    if (w) w.textContent = String(weekCount);
-    if (a) a.textContent = String(allCount);
-    if (n) n.textContent = String(noteCount);
-  }
-
-  // ------- Init -------
-  async function init() {
-    try {
-      loader.textContent = '⏳ Data laden…';
-      tableWrap.style.display = 'none';
-      errorBox.style.display = 'none';
-
-      // 1) Externe agenda
-      const extRaw = await fetchJson(['../api/agenda','/api/agenda','../data/agenda.json','/data/agenda.json']);
-      const ext = normalizeAgenda(extRaw);
-
-      // 2) Lokale lessen (bucket + legacy)
-      const localLessons = loadLocalLessons();
-
-      // 3) Merge & cache
-      const merged = {
-        lessons: mergeLessons(ext.lessons, localLessons),
-        notices: ext.notices || []
-      };
-
-      // 4) Altijd starten op 'week'
-      render('week', merged);
-
-      // 5) Tab events
-      TABS.forEach(btn => {
-        btn.addEventListener('click', () => {
-          TABS.forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          render(btn.dataset.tab, merged);
-        });
-      });
-
-      // 6) Tab-bolletjes
-      updateTabDots(merged);
-
-    } catch (e) {
-      console.error(e);
-      loader.textContent = '';
-      tableWrap.style.display = 'none';
-      errorBox.textContent = '⚠️ Kon agenda niet laden. ' + (e.message || e);
-      errorBox.style.display = 'block';
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', init);
-})();
+/* ===== Boot ===== */
+document.addEventListener('DOMContentLoaded', () => {
+  loadLessen();
+});
