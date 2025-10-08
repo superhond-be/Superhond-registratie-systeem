@@ -1,115 +1,146 @@
-// /public/js/store.js — lichte, snelle opslag + status-normalisatie + migratie
+/**
+ * public/js/store.js — Lichte datastore (localStorage) voor Superhond
+ * - ensureMigrated(): migreert oude keys → nieuwe schema
+ * - Getters/setters: Klassen & Reeksen
+ * - Helpers: isActiefStatus, upsertById, removeById, uuid
+ */
 
-/* =========================
-   Interne helpers
-   ========================= */
-function readBucket(key) {
-  try {
-    const raw = localStorage.getItem(key);
-    const val = raw ? JSON.parse(raw) : [];
-    return Array.isArray(val) ? val : [];
-  } catch {
-    return [];
-  }
-}
-function writeBucket(key, arr) {
-  try { localStorage.setItem(key, JSON.stringify(Array.isArray(arr) ? arr : [])); }
-  catch { /* stil falen */ }
-}
-function S(v) { return String(v ?? '').trim(); }
+const LS = {
+  KLASSEN: 'superhond:klassen',
+  REEKSEN: 'superhond:reeksen',
+  // legacy keys (voorbeeld)
+  LEGACY_KLASSEN: 'klassen',
+  LEGACY_REEKSEN: 'reeksen'
+};
 
-/** Normaliseer status naar exact 'actief' of 'inactief'. */
-function normalizeStatus(s) {
-  if (s === true || s === 1 || s === '1')  return 'actief';
-  if (s === false || s === 0 || s === '0') return 'inactief';
-  const v = S(s).toLowerCase().replace(/\s+/g, ' ').trim();
-  const ACTIVE_SET   = new Set(['actief','active','enabled','aan','on','true','waar','yes','y','1']);
-  const INACTIVE_SET = new Set(['inactief','inactive','disabled','uit','off','false','niet actief','nee','n','0']);
-  if (ACTIVE_SET.has(v))   return 'actief';
-  if (INACTIVE_SET.has(v)) return 'inactief';
-  return 'actief'; // fallback behoud gedrag
-}
-function normalizeArray(arr) {
-  return (Array.isArray(arr) ? arr : []).map(item => {
-    if (!item || typeof item !== 'object') return item;
-    const out = { ...item };
-    if (!('status' in out) && 'Status' in out) out.status = out.Status;
-    if ('status' in out) out.status = normalizeStatus(out.status);
-    if ('id' in out)      out.id    = S(out.id);
-    if ('naam' in out)    out.naam  = S(out.naam);
-    if ('name' in out)    out.name  = S(out.name);
-    return out;
-  });
-}
-function dedupeByIdOrName(list) {
-  const map = new Map();
-  for (const it of (list || [])) {
-    if (!it || typeof it !== 'object') continue;
-    const id   = S(it.id);
-    const name = S(it.naam || it.name);
-    const key  = id || name || Math.random().toString(36).slice(2);
-    map.set(key, it);
-  }
-  return [...map.values()];
+function safeParse(json, fallback) {
+  try { return JSON.parse(json); } catch { return fallback; }
 }
 
-/* =========================
-   Buckets API
-   ========================= */
-// Nieuw: klanten + honden
-export function getKlanten()  { return normalizeArray(readBucket('superhond-klanten')); }
-export function setKlanten(v) { writeBucket('superhond-klanten', v); }
+function readKey(key, fallback = []) {
+  const v = localStorage.getItem(key);
+  return v ? safeParse(v, fallback) : fallback;
+}
+function writeKey(key, val) {
+  localStorage.setItem(key, JSON.stringify(val));
+}
 
-export function getHonden()   { return normalizeArray(readBucket('superhond-honden')); }
-export function setHonden(v)  { writeBucket('superhond-honden', v); }
+/** ===== Helpers ===== */
+export function isActiefStatus(s) {
+  return String(s == null ? '' : s).trim().toLowerCase() === 'actief';
+}
+export function uuid() {
+  if (crypto?.randomUUID) return crypto.randomUUID();
+  // Fallback
+  return 'u-' + Math.random().toString(16).slice(2) + Date.now().toString(16);
+}
+export function upsertById(list, item) {
+  const id = String(item?.id || '');
+  if (!id) throw new Error('upsertById: item.id ontbreekt');
+  const idx = list.findIndex(x => String(x.id) === id);
+  if (idx >= 0) list[idx] = { ...list[idx], ...item };
+  else list.push(item);
+  return list;
+}
+export function removeById(list, id) {
+  const i = list.findIndex(x => String(x.id) === String(id));
+  if (i >= 0) list.splice(i, 1);
+  return list;
+}
 
-// Bestaand (klassen/reeksen/lessen)
-export function getKlassen()  { return normalizeArray(readBucket('superhond-classes')); }
-export function setKlassen(v) { writeBucket('superhond-classes', v); }
-
-export function getReeksen()  { return normalizeArray(readBucket('superhond-series')); }
-export function setReeksen(v) { writeBucket('superhond-series', v); }
-
-export function getLessen()   { return normalizeArray(readBucket('superhond-lessons')); }
-export function setLessen(v)  { writeBucket('superhond-lessons', v); }
-
-/* =========================
-   Migratie uit legacy 'superhond-db'
-   ========================= */
+/** ===== Migratie =====
+ * Verplaats legacy data naar nieuwe keys; milde normalisatie.
+ */
 export function ensureMigrated() {
-  try {
-    const raw = localStorage.getItem('superhond-db');
-    if (!raw) return;
-    const db = JSON.parse(raw) || {};
-
-    // legacy klanten/honden -> nieuwe buckets als nog leeg
-    if (!localStorage.getItem('superhond-klanten') && Array.isArray(db.klanten)) {
-      writeBucket('superhond-klanten', dedupeByIdOrName(db.klanten));
+  // Klassen
+  if (!localStorage.getItem(LS.KLASSEN)) {
+    const legacy = readKey(LS.LEGACY_KLASSEN, null);
+    if (legacy && Array.isArray(legacy)) {
+      writeKey(LS.KLASSEN, normalizeKlassen(legacy));
     }
-    if (!localStorage.getItem('superhond-honden') && Array.isArray(db.honden)) {
-      writeBucket('superhond-honden', dedupeByIdOrName(db.honden));
+  }
+  // Reeksen
+  if (!localStorage.getItem(LS.REEKSEN)) {
+    const legacy = readKey(LS.LEGACY_REEKSEN, null);
+    if (legacy && Array.isArray(legacy)) {
+      writeKey(LS.REEKSEN, normalizeReeksen(legacy));
     }
-
-    // klassen
-    if (!localStorage.getItem('superhond-classes')) {
-      const legacyClasses = []
-        .concat(Array.isArray(db.classes) ? db.classes : [])
-        .concat(Array.isArray(db.klassen) ? db.klassen : []);
-      if (legacyClasses.length) writeBucket('superhond-classes', dedupeByIdOrName(legacyClasses));
-    }
-    if (Array.isArray(db.series) && !localStorage.getItem('superhond-series')) {
-      writeBucket('superhond-series', dedupeByIdOrName(db.series));
-    }
-    if (Array.isArray(db.lessons) && !localStorage.getItem('superhond-lessons')) {
-      writeBucket('superhond-lessons', dedupeByIdOrName(db.lessons));
-    }
-    // legacy cleanup optioneel:
-    // localStorage.removeItem('superhond-db');
-  } catch { /* negeer migratiefouten */ }
+  }
 }
 
-/* =========================
-   Status helpers (voor UI)
-   ========================= */
-export function isActiefStatus(s) { return normalizeStatus(s) === 'actief'; }
-export function statusLabel(s)    { return isActiefStatus(s) ? 'Actief' : 'Inactief'; }
+function normalizeKlassen(arr) {
+  return arr.map(k => ({
+    id: k.id || uuid(),
+    naam: k.naam || k.name || 'Klas',
+    status: k.status || 'actief',
+    trainer: k.trainer || '',
+    niveau: k.niveau || k.level || '',
+    extra: k.extra || {}
+  }));
+}
+
+function normalizeReeksen(arr) {
+  return arr.map(r => ({
+    id: r.id || uuid(),
+    naam: r.naam || r.name || 'Reeks',
+    status: r.status || 'actief',
+    start: r.start || r.startDate || '',
+    einde: r.einde || r.endDate || '',
+    capacity: Number(r.capacity || 0),
+    extra: r.extra || {}
+  }));
+}
+
+/** ===== Klassen API ===== */
+export function getKlassen() {
+  return readKey(LS.KLASSEN, []);
+}
+export function setKlassen(list) {
+  writeKey(LS.KLASSEN, Array.isArray(list) ? list : []);
+}
+export function addKlas(klas) {
+  const list = getKlassen();
+  upsertById(list, { id: klas.id || uuid(), ...klas });
+  setKlassen(list);
+  return klas;
+}
+export function updateKlas(partial) {
+  const list = getKlassen();
+  upsertById(list, partial);
+  setKlassen(list);
+}
+export function removeKlas(id) {
+  const list = getKlassen();
+  removeById(list, id);
+  setKlassen(list);
+}
+
+/** ===== Reeksen API ===== */
+export function getReeksen() {
+  return readKey(LS.REEKSEN, []);
+}
+export function setReeksen(list) {
+  writeKey(LS.REEKSEN, Array.isArray(list) ? list : []);
+}
+export function addReeks(reeks) {
+  const list = getReeksen();
+  upsertById(list, { id: reeks.id || uuid(), ...reeks });
+  setReeksen(list);
+  return reeks;
+}
+export function updateReeks(partial) {
+  const list = getReeksen();
+  upsertById(list, partial);
+  setReeksen(list);
+}
+export function removeReeks(id) {
+  const list = getReeksen();
+  removeById(list, id);
+  setReeksen(list);
+}
+
+/** ===== Utilities ===== */
+export function clearAllStore() {
+  localStorage.removeItem(LS.KLASSEN);
+  localStorage.removeItem(LS.REEKSEN);
+}
