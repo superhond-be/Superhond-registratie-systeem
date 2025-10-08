@@ -3,21 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Superhond — Lessen</title>
-  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+  <title>Lessen – Superhond</title>
+
+  <!-- Centrale stijlen -->
+  <link rel="stylesheet" href="../css/style.css?v=0.20.2" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.2" />
 </head>
-<body class="page-lessen">
-  <header id="topbar" class="topbar"></header>
+
+<body class="subpage page-lessen">
+  <header id="topbar"></header>
 
   <main class="container">
     <h1 class="page-title">Lessen</h1>
 
+    <!-- Overzicht -->
     <section class="card">
       <div class="row" style="display:flex;gap:.5rem;align-items:center">
-        <input id="search" class="input" placeholder="Zoek op naam/type/locatie…" />
-        <button id="refresh" class="btn">Ververs</button>
-        <a href="../dashboard/" class="btn btn-secondary">← Terug</a>
+        <input id="search" class="input" placeholder="Zoek op naam, type of locatie…" />
+        <button id="refresh" class="btn">🔄 Ververs</button>
       </div>
 
       <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
@@ -25,34 +28,58 @@
       <div class="table-wrap" style="margin-top:.5rem">
         <table class="table" id="tbl">
           <thead>
-            <tr><th>Naam</th><th>Datum</th><th>Locatie</th><th>Trainer</th><th>Cap.</th><th style="width:1%"></th></tr>
+            <tr>
+              <th>Naam</th>
+              <th>Datum</th>
+              <th>Locatie</th>
+              <th>Trainer</th>
+              <th>Cap.</th>
+              <th style="width:1%"></th>
+            </tr>
           </thead>
-          <tbody><!-- rows --></tbody>
+          <tbody><!-- dynamische rijen --></tbody>
         </table>
       </div>
     </section>
 
+    <!-- Nieuwe les toevoegen -->
     <section class="card" style="margin-top:1rem">
       <h2>Nieuwe les toevoegen</h2>
-      <form id="form-add" class="form-grid">
+
+      <form id="form-add" class="form-grid" autocomplete="off">
         <input name="type" class="input" placeholder="Type / Naam" required />
         <input name="trainer" class="input" placeholder="Trainer" />
         <input name="location" class="input" placeholder="Locatie" />
         <input name="capacity" class="input" type="number" min="0" step="1" placeholder="Capaciteit" />
+
         <div class="row" style="display:flex;gap:.5rem">
           <input name="date" class="input" type="date" required />
           <input name="time" class="input" type="time" required />
         </div>
+
         <input name="notes" class="input" placeholder="Notities" />
-        <button class="btn" type="submit">Opslaan</button>
+
+        <button class="btn" type="submit">💾 Opslaan</button>
       </form>
-      <div id="form-msg" class="muted" style="margin-top:.5rem"></div>
+
+      <div id="form-msg" class="field-error" style="display:none;"></div>
     </section>
   </main>
 
-  <footer id="footer" class="footer"></footer>
+  <footer id="footer"></footer>
 
-  <script src="../js/layout.js?v=0.20.0" defer></script>
-  <script type="module" src="../js/lessen.js?v=0.20.0"></script>
+  <!-- Scripts -->
+  <script src="../js/layout.js?v=0.20.2" defer></script>
+  <script type="module" src="../js/lessen.js?v=0.20.2"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      SuperhondUI.mount({
+        title: 'Lessen',
+        icon: '📅',
+        back: '../dashboard/'
+      });
+    });
+  </script>
 </body>
 </html>
