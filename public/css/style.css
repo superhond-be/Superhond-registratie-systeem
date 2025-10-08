@@ -216,3 +216,15 @@ body {
 /* 4) Topbar: kleur over volle breedte, inhoud gecentreerd */
 #topbar { background: var(--topbar-bg); color: var(--topbar-ink); }
 #topbar .topbar-inner.container { margin: 0 auto; }
+
+/* --- Dashboard specifieke kleur (gele topbar) --- */
+body.dashboard-page {
+  --topbar-bg: var(--accent);
+  --topbar-ink: #000;
+}
+
+/* Subpagina's blijven blauw (zoals klanten, honden, klassen...) */
+body.subpage {
+  --topbar-bg: #2563eb;
+  --topbar-ink: #fff;
+}
