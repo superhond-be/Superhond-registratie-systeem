@@ -14,8 +14,10 @@ const els = {
 
 let CACHE = [];
 let editingId = null;
+let undoTimer = null;
+let lastArchived = null; // { entity:'Hond', id, snapshot }
 
-/* ----------------- Helpers ----------------- */
+// ───── shared UI helpers (errors + toast) ─────
 function setState(txt, isError = false) {
   if (!els.state) return;
   els.state.textContent = txt;
@@ -28,6 +30,56 @@ function fmtDate(s) { if (!s) return '—'; const d = new Date(s); return isNaN(
 function required(v) { return String(v ?? '').trim().length > 0; }
 function validDate(s) { if (!s) return true; const d = new Date(s); return !isNaN(d); }
 
+function setFieldError(input, message = '') {
+  if (!input) return;
+  let hint = input.nextElementSibling;
+  const need = message && message.length;
+  if (!hint || !hint.classList.contains('field-error')) {
+    hint = document.createElement('div');
+    hint.className = 'field-error';
+    hint.style.color = '#b91c1c';
+    hint.style.fontSize = '.85rem';
+    hint.style.marginTop = '.25rem';
+    input.insertAdjacentElement('afterend', hint);
+  }
+  hint.textContent = message || '';
+  hint.style.display = need ? '' : 'none';
+  input.classList.toggle('input-error', !!need);
+}
+
+function ensureToastStyles() {
+  if (document.getElementById('toast-styles')) return;
+  const s = document.createElement('style');
+  s.id = 'toast-styles';
+  s.textContent = `
+  .toast-wrap{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:9999;display:flex;gap:.5rem;flex-direction:column;align-items:center}
+  .toast{background:#111827;color:#fff;padding:.6rem .9rem;border-radius:.5rem;box-shadow:0 6px 18px rgba(0,0,0,.25);display:flex;gap:.75rem;align-items:center;max-width:90vw}
+  .toast button{background:#fff;color:#111827;border:none;border-radius:.35rem;padding:.35rem .6rem;cursor:pointer}
+  .toast .muted{opacity:.8}
+  `;
+  document.head.appendChild(s);
+}
+function showToast(msg, { actionLabel, onAction, duration = 10_000 } = {}) {
+  ensureToastStyles();
+  let wrap = document.querySelector('.toast-wrap');
+  if (!wrap) { wrap = document.createElement('div'); wrap.className = 'toast-wrap'; document.body.appendChild(wrap); }
+  const el = document.createElement('div'); el.className = 'toast';
+  const span = document.createElement('span'); span.textContent = msg; el.appendChild(span);
+  let timer; const close = () => { clearTimeout(timer); el.remove(); };
+  if (actionLabel && onAction) {
+    const btn = document.createElement('button'); btn.textContent = actionLabel;
+    btn.addEventListener('click', () => { onAction(); close(); });
+    el.appendChild(btn);
+  } else {
+    const m = document.createElement('span'); m.className = 'muted'; m.textContent = ' '; el.appendChild(m);
+  }
+  const x = document.createElement('button'); x.textContent = '×'; x.setAttribute('aria-label','Sluiten'); x.addEventListener('click', close); el.appendChild(x);
+  document.body.querySelector('.toast-wrap').appendChild(el);
+  timer = setTimeout(close, duration);
+  return { close };
+}
+
+// ───── list helpers ─────
 function filterRows(list, q) {
   const ql = (q || '').trim().toLowerCase();
   if (!ql) return list;
@@ -38,22 +90,7 @@ function filterRows(list, q) {
   );
 }
 
-function btn(label, cls='btn', attrs={}) {
-  const b = document.createElement('button'); b.className = cls; b.type = attrs.type || 'button';
-  b.textContent = label; Object.entries(attrs).forEach(([k,v]) => { if(k!=='type') b.setAttribute(k,v); });
-  return b;
-}
-function input(name, value='', { type='text', required=false, placeholder='' }={}) {
-  const el = document.createElement('input');
-  el.name = name; el.value = value ?? '';
-  el.className = 'input';
-  el.type = type;
-  if (placeholder) el.placeholder = placeholder;
-  if (required) el.required = true;
-  return el;
-}
-
-/* ----------------- Row render ----------------- */
+// ───── render ─────
 function displayRow(h) {
   const tr = document.createElement('tr');
   tr.dataset.id = h.id || '';
@@ -69,37 +106,45 @@ function displayRow(h) {
   `;
   return tr;
 }
-
 function editRow(h) {
   const tr = document.createElement('tr');
   tr.dataset.id = h.id || '';
 
   const tdName = document.createElement('td');
-  const inName = input('name', h.name || '', { required:true, placeholder:'Naam' });
+  const inName = mkInput('name', h.name || '', 'Naam', true);
   tdName.append(inName);
 
   const tdBreed = document.createElement('td');
-  const inBreed = input('breed', h.breed || '', { placeholder:'Ras' });
+  const inBreed = mkInput('breed', h.breed || '', 'Ras');
   tdBreed.append(inBreed);
 
   const tdBirth = document.createElement('td');
-  const inBirth = input('birthdate', (h.birthdate || '').slice(0,10), { type:'date' });
+  const inBirth = mkInput('birthdate', (h.birthdate || '').slice(0,10), 'Geboortedatum', false, 'date');
   tdBirth.append(inBirth);
 
   const tdOwner = document.createElement('td');
-  const inOwner = input('ownerId', h.ownerId || '', { required:true, placeholder:'Lid-id' });
+  const inOwner = mkInput('ownerId', h.ownerId || '', 'Eigenaar (Lid-id)', true);
   tdOwner.append(inOwner);
 
   const tdAct = document.createElement('td'); tdAct.className='nowrap';
-  const bSave = btn('Opslaan', 'btn btn-primary btn-xs act-save');
-  const bCancel= btn('Annuleer','btn btn-secondary btn-xs act-cancel');
+  const bSave = mkBtn('Opslaan','btn btn-primary btn-xs act-save');
+  const bCancel= mkBtn('Annuleer','btn btn-secondary btn-xs act-cancel');
   tdAct.append(bSave, bCancel);
 
   tr.append(tdName, tdBreed, tdBirth, tdOwner, tdAct);
   return tr;
 }
+function mkInput(name, value='', placeholder='', required=false, type='text'){
+  const w = document.createElement('div');
+  const el = document.createElement('input');
+  el.name = name; el.value = value ?? ''; el.placeholder = placeholder;
+  el.className = 'input'; el.type = type; if (required) el.required = true;
+  w.appendChild(el);
+  return w;
+}
+function mkBtn(label, cls){ const b=document.createElement('button'); b.type='button'; b.className=cls; b.textContent=label; return b; }
 
-/* ----------------- Load & render ----------------- */
+// ───── data flow ─────
 async function load() {
   try {
     setState('⏳ Laden…');
@@ -113,7 +158,6 @@ async function load() {
     setState('Fout bij laden van honden: ' + (err?.message || String(err)), true);
   }
 }
-
 function render() {
   if (!els.tbody) return;
   els.tbody.innerHTML = '';
@@ -130,22 +174,29 @@ function render() {
   }
 }
 
-/* ----------------- Events ----------------- */
+// ───── events ─────
 els.search?.addEventListener('input', render);
 els.refresh?.addEventListener('click', load);
 
+// Toevoegen met inline errors
 els.form?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const fd = new FormData(els.form);
   const payload = Object.fromEntries(fd.entries());
-  if (!required(payload.name) || !required(payload.ownerId)) {
-    els.formMsg.textContent = '❌ Naam en Eigenaar ID zijn verplicht';
-    return;
-  }
-  if (!validDate(payload.birthdate)) {
-    els.formMsg.textContent = '❌ Ongeldige geboortedatum';
-    return;
-  }
+
+  const fName  = els.form.querySelector('input[name="name"]');
+  const fOwner = els.form.querySelector('input[name="ownerId"]');
+  const fBirth = els.form.querySelector('input[name="birthdate"]');
+
+  setFieldError(fName,''); setFieldError(fOwner,''); setFieldError(fBirth,'');
+
+  let ok = true;
+  if (!required(payload.name))     { setFieldError(fName,'Naam is verplicht'); ok=false; }
+  if (!required(payload.ownerId))  { setFieldError(fOwner,'Eigenaar ID is verplicht'); ok=false; }
+  if (!validDate(payload.birthdate)) { setFieldError(fBirth,'Ongeldige datum'); ok=false; }
+
+  if (!ok) { els.formMsg.textContent = '❌ Corrigeer de gemarkeerde velden'; return; }
+
   try {
     els.formMsg.textContent = 'Opslaan…';
     await postAction('Hond', 'add', payload);
@@ -157,6 +208,7 @@ els.form?.addEventListener('submit', async (e) => {
   }
 });
 
+// Inline acties + undo
 els.tbody?.addEventListener('click', async (e) => {
   const btn = e.target.closest('button'); if (!btn) return;
   const tr = btn.closest('tr'); const id = tr?.dataset.id; if (!id) return;
@@ -175,8 +227,14 @@ els.tbody?.addEventListener('click', async (e) => {
     const birth = $('input[name="birthdate"]', tr)?.value || '';
     const owner = $('input[name="ownerId"]', tr)?.value || '';
 
-    if (!required(name) || !required(owner)) { setState('❌ Naam en Eigenaar ID verplicht', true); return; }
-    if (!validDate(birth)) { setState('❌ Ongeldige geboortedatum', true); return; }
+    const iName=$('input[name="name"]', tr), iBirth=$('input[name="birthdate"]', tr), iOwner=$('input[name="ownerId"]', tr);
+    setFieldError(iName,''); setFieldError(iBirth,''); setFieldError(iOwner,'');
+
+    let ok = true;
+    if (!required(name)) { setFieldError(iName,'Verplicht'); ok=false; }
+    if (!required(owner)) { setFieldError(iOwner,'Verplicht'); ok=false; }
+    if (!validDate(birth)) { setFieldError(iBirth,'Ongeldige datum'); ok=false; }
+    if (!ok) { setState('❌ Corrigeer de gemarkeerde velden', true); return; }
 
     btn.disabled = true; btn.textContent = 'Opslaan…';
     try {
@@ -191,15 +249,29 @@ els.tbody?.addEventListener('click', async (e) => {
   else if (btn.classList.contains('act-archive')) {
     if (!confirm('Archiveer deze hond?')) return;
     try {
+      lastArchived = { entity:'Hond', id, snapshot: { ...h, archived:false } };
       await postAction('Hond', 'delete', { id });
       await load();
+
+      if (undoTimer) clearTimeout(undoTimer);
+      const t = showToast('Hond gearchiveerd', {
+        actionLabel: 'Ongedaan maken',
+        onAction: async () => {
+          if (!lastArchived) return;
+          try { await postAction('Hond', 'update', lastArchived.snapshot); await load(); }
+          catch (e) { setState('❌ Ongedaan maken faalde: ' + (e?.message || e), true); }
+          finally { lastArchived = null; }
+        },
+        duration: 10_000
+      });
+      undoTimer = setTimeout(() => { lastArchived = null; t?.close?.(); }, 10_000);
     } catch (err) {
       setState('❌ Archiveren mislukt: ' + (err?.message || String(err)), true);
     }
   }
 });
 
-/* ----------------- Boot ----------------- */
+// Boot
 document.addEventListener('DOMContentLoaded', async () => {
   if (window.SuperhondUI?.mount) SuperhondUI.mount({ title: 'Honden', icon: '🐶' });
   await load();
