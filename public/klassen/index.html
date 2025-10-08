@@ -3,58 +3,51 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Klassen – Superhond</title>
-
-  <!-- Styles -->
-  <link rel="stylesheet" href="../css/style.css?v=0.22.2" />
-  <link rel="stylesheet" href="../css/responsive.css?v=0.22.2" />
-
-  <!-- Layout (topbar/footer + centrale config) -->
-  <script src="../js/layout.js?v=0.22.2" defer></script>
-
-  <!-- Page logic -->
-  <script type="module" src="./index.js?v=0.22.2" defer></script>
-
-  <noscript><style>.requires-js{display:none!important}</style></noscript>
+  <title>Superhond — Klassen</title>
+  <link rel="stylesheet" href="../css/style.css?v=0.20.1" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.1" />
 </head>
-<body class="subpage">
-  <!-- Topbar -->
+<body class="page-klassen">
   <header id="topbar" class="topbar"></header>
 
   <main class="container">
-    <h1 class="page-title">Klassen <small id="count" class="muted"></small></h1>
+    <h1 class="page-title">Klassen</h1>
 
-    <!-- Toolbar -->
-    <div class="toolbar requires-js" role="region" aria-label="Zoeken en acties" style="margin-bottom:.5rem">
-      <a class="btn" href="./nieuw.html">➕ Nieuwe klas</a>
-      <input id="zoek" type="search" class="input" placeholder="Zoek naam, type of thema…" autocomplete="off" />
-    </div>
+    <section class="card">
+      <div class="row" style="display:flex;gap:.5rem;align-items:center">
+        <input id="search" class="input" placeholder="Zoek op naam/niveau/trainer/status…" />
+        <button id="refresh" class="btn">Ververs</button>
+        <a href="../dashboard/" class="btn btn-secondary">← Terug</a>
+      </div>
 
-    <!-- States -->
-    <div id="loader" class="muted requires-js">⏳ Laden…</div>
-    <div id="error" class="error requires-js" style="display:none"></div>
+      <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
 
-    <!-- Tabel -->
-    <div id="wrap" class="table-wrap requires-js" style="display:none">
-      <table class="table" aria-describedby="tabel-caption">
-        <caption id="tabel-caption" class="visually-hidden">Overzicht van klassen</caption>
-        <thead>
-          <tr>
-            <th scope="col">Naam</th>
-            <th scope="col">Type</th>
-            <th scope="col">Thema</th>
-            <th scope="col">Strippen</th>
-            <th scope="col">Geldigheid</th>
-            <th scope="col">Status</th>
-            <th scope="col" aria-label="Acties">Acties</th>
-          </tr>
-        </thead>
-        <tbody id="tabelBody"><!-- gevuld door /klassen/index.js --></tbody>
-      </table>
-    </div>
+      <div class="table-wrap" style="margin-top:.5rem">
+        <table class="table" id="tbl">
+          <thead>
+            <tr><th>Naam</th><th>Niveau</th><th>Trainer</th><th>Status</th><th style="width:1%"></th></tr>
+          </thead>
+          <tbody><!-- rows --></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:1rem">
+      <h2>Nieuwe klas toevoegen</h2>
+      <form id="form-add" class="form-grid">
+        <input name="naam" class="input" placeholder="Naam" required />
+        <input name="niveau" class="input" placeholder="Niveau (bv. Puppy, Gevorderd…)" />
+        <input name="trainer" class="input" placeholder="Trainer" />
+        <input name="status" class="input" placeholder="Status (actief/inactief)" value="actief" />
+        <button class="btn" type="submit">Opslaan</button>
+      </form>
+      <div id="form-msg" class="muted" style="margin-top:.5rem"></div>
+    </section>
   </main>
 
-  <!-- Footer -->
   <footer id="footer" class="footer"></footer>
+
+  <script src="../js/layout.js?v=0.20.1" defer></script>
+  <script type="module" src="../js/klassen.js?v=0.20.1"></script>
 </body>
 </html>
