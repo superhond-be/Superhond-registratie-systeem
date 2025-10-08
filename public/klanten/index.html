@@ -3,128 +3,52 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Klanten – Superhond</title>
-  <meta name="theme-color" content="#1d4ed8" />
-
-  <!-- Styles -->
-  <link rel="stylesheet" href="/css/style.css?v=0.21.8" />
-  <link rel="stylesheet" href="/css/superhond.css?v=0.21.8" />
-  <link rel="stylesheet" href="/css/responsive.css?v=0.22.0" />
-
-  <!-- Layout (topbar/footer + centrale config) -->
-  <script src="/js/layout.js?v=0.22.2" defer></script>
-
-  <!-- Pagina-logica (met refresh-knop & cache-bust) -->
-  <script type="module" src="/klanten/index.js?v=0.23.4" defer></script>
-
-  <noscript>
-    <style>.requires-js{display:none!important}</style>
-  </noscript>
+  <title>Superhond — Klanten</title>
+  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
 </head>
-<body class="subpage">
-  <!-- Topbar -->
-  <header id="topbar" class="topbar" role="banner"></header>
+<body class="page-klanten">
+  <header id="topbar" class="topbar"></header>
 
-  <main class="container" role="main">
+  <main class="container">
     <h1 class="page-title">Klanten</h1>
 
-    <p><a class="btn" href="/" aria-label="Terug naar dashboard">⬅️ Terug naar dashboard</a></p>
+    <section class="card">
+      <div class="row" style="display:flex;gap:.5rem;align-items:center">
+        <input id="search" class="input" placeholder="Zoek op naam of e-mail…" />
+        <button id="refresh" class="btn">Ververs</button>
+        <a href="../dashboard/" class="btn btn-secondary">← Terug</a>
+      </div>
 
-    <!-- Toolbar -->
-    <div class="toolbar requires-js" role="region" aria-label="Zoeken en acties" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
-      <label for="zoek" class="visually-hidden">Zoek</label>
-      <input id="zoek" type="search" class="input" placeholder="Zoek naam of e-mail…" autocomplete="off" />
+      <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
 
-      <span style="flex:1"></span>
-
-      <button id="btn-reload" class="btn" type="button" title="Vernieuwen">↻ Vernieuwen</button>
-      <button id="btn-nieuw" class="btn primary" type="button" aria-haspopup="dialog">+ Nieuwe klant</button>
-    </div>
-
-    <!-- States -->
-    <div id="loader" class="muted requires-js" role="status" aria-live="polite">⏳ Laden…</div>
-    <div id="error" class="error requires-js" role="alert" style="display:none;"></div>
-
-    <!-- Debug (getoond door index.js bij ?mode=... of fout) -->
-    <section class="requires-js" aria-label="API debug" style="display:none;">
-      <pre id="api-debug" class="debug-panel" style="display:none;overflow:auto;max-height:40vh;border:1px solid #e5e7eb;padding:.75rem;border-radius:.5rem;background:#0b1020;color:#d1e7ff;"></pre>
+      <div class="table-wrap" style="margin-top:.5rem">
+        <table class="table" id="tbl">
+          <thead>
+            <tr><th>Naam</th><th>E-mail</th><th>Telefoon</th><th>Status</th><th style="width:1%"></th></tr>
+          </thead>
+          <tbody><!-- rows --></tbody>
+        </table>
+      </div>
     </section>
 
-    <!-- Tabel -->
-    <div class="table-wrap requires-js" id="wrap" style="display:none;">
-      <table id="tabel" class="table" aria-describedby="tabel-caption">
-        <caption id="tabel-caption" class="visually-hidden">Overzicht van klanten</caption>
-        <thead>
-          <tr>
-            <th scope="col">Naam</th>
-            <th scope="col">E-mail</th>
-            <th scope="col">Telefoon</th>
-            <th scope="col">Honden</th>
-            <th scope="col" class="right">Acties</th>
-          </tr>
-        </thead>
-        <tbody><!-- gevuld door /klanten/index.js --></tbody>
-      </table>
-    </div>
+    <section class="card" style="margin-top:1rem">
+      <h2>Nieuw lid toevoegen</h2>
+      <form id="form-add" class="form-grid">
+        <input name="voornaam" class="input" placeholder="Voornaam" required />
+        <input name="achternaam" class="input" placeholder="Achternaam" required />
+        <input name="email" class="input" type="email" placeholder="E-mail" />
+        <input name="telefoon" class="input" placeholder="Telefoon" />
+        <input name="status" class="input" placeholder="Status (actief)" value="actief" />
+        <button class="btn" type="submit">Opslaan</button>
+      </form>
+      <div id="form-msg" class="muted" style="margin-top:.5rem"></div>
+    </section>
   </main>
 
-  <!-- Footer -->
-  <footer id="footer" class="footer" role="contentinfo"></footer>
+  <footer id="footer" class="footer"></footer>
 
-  <!-- Modal: klant aanmaken/bewerken -->
-  <dialog id="modal" class="modal requires-js" aria-labelledby="modal-title">
-    <form id="form" method="dialog">
-      <h3 id="modal-title">Klant</h3>
-      <input type="hidden" id="fld-id" name="id" />
-
-      <div class="grid" style="display:grid;gap:.6rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
-        <label>Voornaam
-          <input id="fld-voornaam" class="input" type="text" name="voornaam" autocomplete="given-name" />
-        </label>
-        <label>Achternaam
-          <input id="fld-achternaam" class="input" type="text" name="achternaam" autocomplete="family-name" />
-        </label>
-        <label>E-mail
-          <input id="fld-email" class="input" type="email" name="email" autocomplete="email" />
-        </label>
-        <label>Telefoon
-          <input id="fld-telefoon" class="input" type="tel" name="telefoon" autocomplete="tel" />
-        </label>
-        <label>Land
-          <input id="fld-land" class="input" type="text" name="land" value="BE" />
-        </label>
-        <label>Straat
-          <input id="fld-straat" class="input" type="text" name="straat" autocomplete="address-line1" />
-        </label>
-        <label>Nr
-          <input id="fld-huisnr" class="input" type="text" name="huisnr" autocomplete="address-line2" />
-        </label>
-        <label>Bus
-          <input id="fld-bus" class="input" type="text" name="bus" />
-        </label>
-        <label>Postcode
-          <input id="fld-postcode" class="input" type="text" name="postcode" inputmode="numeric" autocomplete="postal-code" />
-        </label>
-        <label>Gemeente
-          <input id="fld-gemeente" class="input" type="text" name="gemeente" autocomplete="address-level2" />
-        </label>
-      </div>
-
-      <div class="toolbar" style="margin-top:.75rem;gap:.5rem">
-        <button type="button" id="btn-cancel" class="btn">Annuleren</button>
-        <span style="flex:1"></span>
-        <button type="button" id="btn-save" class="btn primary">Bewaren</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- Mount topbar/footer -->
-  <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      if (window.SuperhondUI?.mount) {
-        SuperhondUI.mount({ title: 'Klanten', icon: '👤', back: '/', showApiStatus: false });
-      }
-    });
-  </script>
+  <script src="../js/layout.js?v=0.20.0" defer></script>
+  <script type="module" src="../js/klanten.js?v=0.20.0"></script>
 </body>
 </html>
