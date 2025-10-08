@@ -3,21 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Superhond — Honden</title>
-  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+  <title>Honden – Superhond</title>
+
+  <!-- Centrale stijlen -->
+  <link rel="stylesheet" href="../css/style.css?v=0.20.2" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.2" />
 </head>
-<body class="page-honden">
-  <header id="topbar" class="topbar"></header>
+
+<body class="subpage page-honden">
+  <header id="topbar"></header>
 
   <main class="container">
     <h1 class="page-title">Honden</h1>
 
+    <!-- Overzicht -->
     <section class="card">
       <div class="row" style="display:flex;gap:.5rem;align-items:center">
-        <input id="search" class="input" placeholder="Zoek op naam/ras/eigenaar…" />
-        <button id="refresh" class="btn">Ververs</button>
-        <a href="../dashboard/" class="btn btn-secondary">← Terug</a>
+        <input id="search" class="input" placeholder="Zoek op naam, ras of eigenaar…" />
+        <button id="refresh" class="btn">🔄 Ververs</button>
       </div>
 
       <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
@@ -25,31 +28,49 @@
       <div class="table-wrap" style="margin-top:.5rem">
         <table class="table" id="tbl">
           <thead>
-            <tr><th>Naam</th><th>Ras</th><th>Geboorte</th><th>Eigenaar (ID)</th><th style="width:1%"></th></tr>
+            <tr>
+              <th>Naam</th>
+              <th>Ras</th>
+              <th>Geboorte</th>
+              <th>Eigenaar (ID)</th>
+              <th style="width:1%"></th>
+            </tr>
           </thead>
-          <tbody><!-- rows --></tbody>
+          <tbody><!-- dynamische rijen --></tbody>
         </table>
       </div>
     </section>
 
+    <!-- Toevoegen -->
     <section class="card" style="margin-top:1rem">
       <h2>Nieuwe hond toevoegen</h2>
-      <form id="form-add" class="form-grid">
+      <form id="form-add" class="form-grid" autocomplete="off">
         <input name="name" class="input" placeholder="Naam" required />
         <input name="breed" class="input" placeholder="Ras" />
         <input name="birthdate" class="input" type="date" placeholder="Geboortedatum" />
         <input name="ownerId" class="input" placeholder="Eigenaar ID (lid-id)" required />
         <input name="chip" class="input" placeholder="Chipnummer" />
         <input name="notes" class="input" placeholder="Notities" />
-        <button class="btn" type="submit">Opslaan</button>
+        <button class="btn" type="submit">💾 Opslaan</button>
       </form>
-      <div id="form-msg" class="muted" style="margin-top:.5rem"></div>
+      <div id="form-msg" class="field-error" style="display:none;"></div>
     </section>
   </main>
 
-  <footer id="footer" class="footer"></footer>
+  <footer id="footer"></footer>
 
-  <script src="../js/layout.js?v=0.20.0" defer></script>
-  <script type="module" src="../js/honden.js?v=0.20.0"></script>
+  <!-- Scripts -->
+  <script src="../js/layout.js?v=0.20.2" defer></script>
+  <script type="module" src="../js/honden.js?v=0.20.2"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      SuperhondUI.mount({
+        title: 'Honden',
+        icon: '🐶',
+        back: '../dashboard/'
+      });
+    });
+  </script>
 </body>
 </html>
