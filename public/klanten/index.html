@@ -3,21 +3,24 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Superhond — Klanten</title>
-  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+  <title>Klanten – Superhond</title>
+
+  <!-- Centrale stijlen -->
+  <link rel="stylesheet" href="../css/style.css?v=0.20.2" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.2" />
 </head>
-<body class="page-klanten">
-  <header id="topbar" class="topbar"></header>
+
+<body class="subpage page-klanten">
+  <header id="topbar"></header>
 
   <main class="container">
     <h1 class="page-title">Klanten</h1>
 
+    <!-- Overzicht -->
     <section class="card">
       <div class="row" style="display:flex;gap:.5rem;align-items:center">
         <input id="search" class="input" placeholder="Zoek op naam of e-mail…" />
-        <button id="refresh" class="btn">Ververs</button>
-        <a href="../dashboard/" class="btn btn-secondary">← Terug</a>
+        <button id="refresh" class="btn">🔄 Ververs</button>
       </div>
 
       <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
@@ -25,30 +28,48 @@
       <div class="table-wrap" style="margin-top:.5rem">
         <table class="table" id="tbl">
           <thead>
-            <tr><th>Naam</th><th>E-mail</th><th>Telefoon</th><th>Status</th><th style="width:1%"></th></tr>
+            <tr>
+              <th>Naam</th>
+              <th>E-mail</th>
+              <th>Telefoon</th>
+              <th>Status</th>
+              <th style="width:1%"></th>
+            </tr>
           </thead>
-          <tbody><!-- rows --></tbody>
+          <tbody><!-- dynamische rijen --></tbody>
         </table>
       </div>
     </section>
 
+    <!-- Toevoegen -->
     <section class="card" style="margin-top:1rem">
       <h2>Nieuw lid toevoegen</h2>
-      <form id="form-add" class="form-grid">
+      <form id="form-add" class="form-grid" autocomplete="off">
         <input name="voornaam" class="input" placeholder="Voornaam" required />
         <input name="achternaam" class="input" placeholder="Achternaam" required />
         <input name="email" class="input" type="email" placeholder="E-mail" />
         <input name="telefoon" class="input" placeholder="Telefoon" />
         <input name="status" class="input" placeholder="Status (actief)" value="actief" />
-        <button class="btn" type="submit">Opslaan</button>
+        <button class="btn" type="submit">💾 Opslaan</button>
       </form>
-      <div id="form-msg" class="muted" style="margin-top:.5rem"></div>
+      <div id="form-msg" class="field-error" style="display:none;"></div>
     </section>
   </main>
 
-  <footer id="footer" class="footer"></footer>
+  <footer id="footer"></footer>
 
-  <script src="../js/layout.js?v=0.20.0" defer></script>
-  <script type="module" src="../js/klanten.js?v=0.20.0"></script>
+  <!-- Scripts -->
+  <script src="../js/layout.js?v=0.20.2" defer></script>
+  <script type="module" src="../js/klanten.js?v=0.20.2"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      SuperhondUI.mount({
+        title: 'Klanten',
+        icon: '👤',
+        back: '../dashboard/'
+      });
+    });
+  </script>
 </body>
 </html>
