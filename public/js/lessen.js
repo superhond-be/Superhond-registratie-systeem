@@ -14,8 +14,10 @@ const els = {
 
 let CACHE = [];
 let editingId = null;
+let undoTimer = null;
+let lastArchived = null; // { entity:'Les', id, snapshot }
 
-/* ----------------- Helpers ----------------- */
+// ───── helpers ─────
 function setState(txt, isError = false) {
   if (!els.state) return;
   els.state.textContent = txt;
@@ -28,26 +30,23 @@ function required(v) { return String(v ?? '').trim().length > 0; }
 function nonNegInt(v) { const n = Number(v); return Number.isFinite(n) && n >= 0 && Math.floor(n) === n; }
 function parseISO(v){ const d = new Date(v); return isNaN(d)?null:d; }
 function fmtDT(d) {
-  try {
-    return new Intl.DateTimeFormat(undefined, { weekday:'short', day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }).format(d);
-  } catch { return d.toLocaleString(); }
+  try { return new Intl.DateTimeFormat(undefined,{weekday:'short',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}).format(d); }
+  catch { return d.toLocaleString(); }
 }
-/** Bouw ISO van lokale date+time (UTC) */
 function buildIso(dateStr, timeStr) {
   if (!dateStr || !timeStr) return '';
   const local = new Date(`${dateStr}T${timeStr}`);
   if (isNaN(local)) return '';
   return new Date(local.getTime() - local.getTimezoneOffset()*60000).toISOString();
 }
-/** Split ISO naar yyyy-mm-dd + HH:MM lokale tijd */
 function splitIso(iso) {
   const d = parseISO(iso); if (!d) return { date:'', time:'' };
   const pad = (n) => String(n).padStart(2,'0');
-  const y = d.getFullYear(), m = pad(d.getMonth()+1), da = pad(d.getDate());
-  const hh = pad(d.getHours()), mm = pad(d.getMinutes());
-  return { date: `${y}-${m}-${da}`, time: `${hh}:${mm}` };
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`
+  };
 }
-
 function filterRows(list, q) {
   const ql = (q || '').trim().toLowerCase();
   if (!ql) return list;
@@ -57,23 +56,55 @@ function filterRows(list, q) {
     (l.trainer || l.trainers || '').toLowerCase().includes(ql)
   );
 }
-
-function btn(label, cls='btn', attrs={}) {
-  const b = document.createElement('button'); b.className = cls; b.type = attrs.type || 'button';
-  b.textContent = label; Object.entries(attrs).forEach(([k,v]) => { if(k!=='type') b.setAttribute(k,v); });
-  return b;
+function setFieldError(input, message = '') {
+  if (!input) return;
+  let hint = input.nextElementSibling;
+  const need = message && message.length;
+  if (!hint || !hint.classList.contains('field-error')) {
+    hint = document.createElement('div');
+    hint.className = 'field-error';
+    hint.style.color = '#b91c1c';
+    hint.style.fontSize = '.85rem';
+    hint.style.marginTop = '.25rem';
+    input.insertAdjacentElement('afterend', hint);
+  }
+  hint.textContent = message || '';
+  hint.style.display = need ? '' : 'none';
+  input.classList.toggle('input-error', !!need);
 }
-function input(name, value='', { type='text', required=false, placeholder='' }={}) {
-  const el = document.createElement('input');
-  el.name = name; el.value = value ?? '';
-  el.className = 'input';
-  el.type = type;
-  if (placeholder) el.placeholder = placeholder;
-  if (required) el.required = true;
-  return el;
+function ensureToastStyles() {
+  if (document.getElementById('toast-styles')) return;
+  const s = document.createElement('style');
+  s.id = 'toast-styles';
+  s.textContent = `
+  .toast-wrap{position:fixed;left:50%;transform:translateX(-50%);bottom:16px;z-index:9999;display:flex;gap:.5rem;flex-direction:column;align-items:center}
+  .toast{background:#111827;color:#fff;padding:.6rem .9rem;border-radius:.5rem;box-shadow:0 6px 18px rgba(0,0,0,.25);display:flex;gap:.75rem;align-items:center;max-width:90vw}
+  .toast button{background:#fff;color:#111827;border:none;border-radius:.35rem;padding:.35rem .6rem;cursor:pointer}
+  .toast .muted{opacity:.8}
+  `;
+  document.head.appendChild(s);
+}
+function showToast(msg, { actionLabel, onAction, duration = 10_000 } = {}) {
+  ensureToastStyles();
+  let wrap = document.querySelector('.toast-wrap');
+  if (!wrap) { wrap = document.createElement('div'); wrap.className = 'toast-wrap'; document.body.appendChild(wrap); }
+  const el = document.createElement('div'); el.className = 'toast';
+  const span = document.createElement('span'); span.textContent = msg; el.appendChild(span);
+  let timer; const close = () => { clearTimeout(timer); el.remove(); };
+  if (actionLabel && onAction) {
+    const btn = document.createElement('button'); btn.textContent = actionLabel;
+    btn.addEventListener('click', () => { onAction(); close(); });
+    el.appendChild(btn);
+  } else {
+    const m = document.createElement('span'); m.className = 'muted'; m.textContent = ' '; el.appendChild(m);
+  }
+  const x = document.createElement('button'); x.textContent = '×'; x.setAttribute('aria-label','Sluiten'); x.addEventListener('click', close); el.appendChild(x);
+  document.body.querySelector('.toast-wrap').appendChild(el);
+  timer = setTimeout(close, duration);
+  return { close };
 }
 
-/* ----------------- Row render ----------------- */
+// ───── render ─────
 function displayRow(l) {
   const tr = document.createElement('tr');
   tr.dataset.id = l.id || '';
@@ -95,45 +126,52 @@ function displayRow(l) {
   `;
   return tr;
 }
-
 function editRow(l) {
   const tr = document.createElement('tr');
   tr.dataset.id = l.id || '';
 
   const tdType = document.createElement('td');
-  const inType = input('type', l.type || l.name || l.title || '', { required:true, placeholder:'Type/Naam' });
+  const inType = mkInput('type', l.type || l.name || l.title || '', 'Type/Naam', true);
   tdType.append(inType);
 
   const tdDT = document.createElement('td');
   const { date, time } = splitIso(l.date);
-  const inDate = input('date', date, { type:'date', required:true });
-  const inTime = input('time', time, { type:'time', required:true });
+  const inDate = mkInput('date', date, 'Datum', true, 'date');
+  const inTime = mkInput('time', time, 'Tijd', true, 'time');
   const wrap = document.createElement('div'); wrap.style.display='grid'; wrap.style.gridTemplateColumns='1fr 1fr'; wrap.style.gap='.4rem';
   wrap.append(inDate, inTime); tdDT.append(wrap);
 
   const tdLoc = document.createElement('td');
-  const inLoc = input('location', l.location || l.locatie || '', { placeholder:'Locatie' });
+  const inLoc = mkInput('location', l.location || l.locatie || '', 'Locatie');
   tdLoc.append(inLoc);
 
   const tdTr = document.createElement('td');
-  const inTr = input('trainer', l.trainer || l.trainers || '', { placeholder:'Trainer' });
+  const inTr = mkInput('trainer', l.trainer || l.trainers || '', 'Trainer');
   tdTr.append(inTr);
 
   const tdCap = document.createElement('td');
-  const inCap = input('capacity', String(l.capacity ?? 0), { type:'number', placeholder:'Cap.', });
-  inCap.min = '0'; inCap.step = '1';
+  const inCap = mkInput('capacity', String(l.capacity ?? 0), 'Cap.', false, 'number'); inCap.querySelector('input').min='0'; inCap.querySelector('input').step='1';
   tdCap.append(inCap);
 
   const tdAct = document.createElement('td'); tdAct.className='nowrap';
-  const bSave = btn('Opslaan', 'btn btn-primary btn-xs act-save');
-  const bCancel= btn('Annuleer','btn btn-secondary btn-xs act-cancel');
+  const bSave = mkBtn('Opslaan','btn btn-primary btn-xs act-save');
+  const bCancel= mkBtn('Annuleer','btn btn-secondary btn-xs act-cancel');
   tdAct.append(bSave, bCancel);
 
   tr.append(tdType, tdDT, tdLoc, tdTr, tdCap, tdAct);
   return tr;
 }
+function mkInput(name, value='', placeholder='', required=false, type='text'){
+  const w = document.createElement('div');
+  const el = document.createElement('input');
+  el.name = name; el.value = value ?? ''; el.placeholder = placeholder;
+  el.className = 'input'; el.type = type; if (required) el.required = true;
+  w.appendChild(el);
+  return w;
+}
+function mkBtn(label, cls){ const b=document.createElement('button'); b.type='button'; b.className=cls; b.textContent=label; return b; }
 
-/* ----------------- Load & render ----------------- */
+// ───── data flow ─────
 async function load() {
   try {
     setState('⏳ Laden…');
@@ -148,7 +186,6 @@ async function load() {
     setState('Fout bij laden van lessen: ' + (err?.message || String(err)), true);
   }
 }
-
 function render() {
   if (!els.tbody) return;
   els.tbody.innerHTML = '';
@@ -165,10 +202,11 @@ function render() {
   }
 }
 
-/* ----------------- Events ----------------- */
+// ───── events ─────
 els.search?.addEventListener('input', render);
 els.refresh?.addEventListener('click', load);
 
+// Toevoegen + inline fouten
 els.form?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const fd = new FormData(els.form);
@@ -180,12 +218,23 @@ els.form?.addEventListener('submit', async (e) => {
   const time = fd.get('time') || '';
   const notes = fd.get('notes') || '';
 
-  if (!required(type)) { els.formMsg.textContent = '❌ Type is verplicht'; return; }
-  if (!required(date) || !required(time)) { els.formMsg.textContent = '❌ Datum en tijd zijn verplicht'; return; }
-  if (capacity !== '' && !nonNegInt(capacity)) { els.formMsg.textContent = '❌ Capaciteit moet een geheel getal ≥ 0 zijn'; return; }
+  const fType = els.form.querySelector('input[name="type"]');
+  const fDate = els.form.querySelector('input[name="date"]');
+  const fTime = els.form.querySelector('input[name="time"]');
+  const fCap  = els.form.querySelector('input[name="capacity"]');
 
-  const iso = buildIso(date, time);
-  if (!iso) { els.formMsg.textContent = '❌ Ongeldige datum/tijd'; return; }
+  setFieldError(fType,''); setFieldError(fDate,''); setFieldError(fTime,''); setFieldError(fCap,'');
+
+  let ok = true;
+  if (!required(type)) { setFieldError(fType,'Type is verplicht'); ok=false; }
+  if (!required(date)) { setFieldError(fDate,'Datum is verplicht'); ok=false; }
+  if (!required(time)) { setFieldError(fTime,'Tijd is verplicht'); ok=false; }
+  if (capacity !== '' && !nonNegInt(capacity)) { setFieldError(fCap,'Geheel getal ≥ 0'); ok=false; }
+
+  const iso = ok ? buildIso(date, time) : '';
+  if (ok && !iso) { setFieldError(fDate,'Ongeldige datum/tijd'); setFieldError(fTime,'Ongeldige datum/tijd'); ok=false; }
+
+  if (!ok) { els.formMsg.textContent = '❌ Corrigeer de gemarkeerde velden'; return; }
 
   try {
     els.formMsg.textContent = 'Opslaan…';
@@ -198,6 +247,7 @@ els.form?.addEventListener('submit', async (e) => {
   }
 });
 
+// Inline bewerken + undo
 els.tbody?.addEventListener('click', async (e) => {
   const btn = e.target.closest('button'); if (!btn) return;
   const tr = btn.closest('tr'); const id = tr?.dataset.id; if (!id) return;
@@ -218,12 +268,20 @@ els.tbody?.addEventListener('click', async (e) => {
     const trainer = $('input[name="trainer"]', tr)?.value || '';
     const capacity = $('input[name="capacity"]', tr)?.value || '';
 
-    if (!required(type)) { setState('❌ Type is verplicht', true); return; }
-    if (!required(date) || !required(time)) { setState('❌ Datum en tijd verplicht', true); return; }
-    if (capacity !== '' && !nonNegInt(capacity)) { setState('❌ Capaciteit moet een geheel getal ≥ 0 zijn', true); return; }
+    const iType=$('input[name="type"]', tr), iDate=$('input[name="date"]', tr),
+          iTime=$('input[name="time"]', tr), iCap=$('input[name="capacity"]', tr);
+    setFieldError(iType,''); setFieldError(iDate,''); setFieldError(iTime,''); setFieldError(iCap,'');
 
-    const iso = buildIso(date, time);
-    if (!iso) { setState('❌ Ongeldige datum/tijd', true); return; }
+    let ok = true;
+    if (!required(type)) { setFieldError(iType,'Verplicht'); ok=false; }
+    if (!required(date)) { setFieldError(iDate,'Verplicht'); ok=false; }
+    if (!required(time)) { setFieldError(iTime,'Verplicht'); ok=false; }
+    if (capacity !== '' && !nonNegInt(capacity)) { setFieldError(iCap,'Geheel getal ≥ 0'); ok=false; }
+
+    const iso = ok ? buildIso(date, time) : '';
+    if (ok && !iso) { setFieldError(iDate,'Ongeldige datum/tijd'); setFieldError(iTime,'Ongeldige datum/tijd'); ok=false; }
+
+    if (!ok) { setState('❌ Corrigeer de gemarkeerde velden', true); return; }
 
     btn.disabled = true; btn.textContent = 'Opslaan…';
     try {
@@ -238,15 +296,29 @@ els.tbody?.addEventListener('click', async (e) => {
   else if (btn.classList.contains('act-archive')) {
     if (!confirm('Archiveer deze les?')) return;
     try {
+      lastArchived = { entity:'Les', id, snapshot: { ...l, archived:false } };
       await postAction('Les', 'delete', { id });
       await load();
+
+      if (undoTimer) clearTimeout(undoTimer);
+      const t = showToast('Les gearchiveerd', {
+        actionLabel: 'Ongedaan maken',
+        onAction: async () => {
+          if (!lastArchived) return;
+          try { await postAction('Les', 'update', lastArchived.snapshot); await load(); }
+          catch (e) { setState('❌ Ongedaan maken faalde: ' + (e?.message || e), true); }
+          finally { lastArchived = null; }
+        },
+        duration: 10_000
+      });
+      undoTimer = setTimeout(() => { lastArchived = null; t?.close?.(); }, 10_000);
     } catch (err) {
       setState('❌ Archiveren mislukt: ' + (err?.message || String(err)), true);
     }
   }
 });
 
-/* ----------------- Boot ----------------- */
+// Boot
 document.addEventListener('DOMContentLoaded', async () => {
   if (window.SuperhondUI?.mount) SuperhondUI.mount({ title: 'Lessen', icon: '📅' });
   await load();
