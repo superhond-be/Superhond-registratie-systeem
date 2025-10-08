@@ -1,112 +1,121 @@
-/* v0.21.1 – Hondenlijst via Google Apps Script API (stabiel + config support) */
-(async () => {
-  // === 🔗 Google Apps Script Web-App URL ===
-  // Probeer eerst een centrale config (config.js met window.SUPERHOND_DATA.API_BASE)
-  // Val anders terug op jouw vaste web-app URL.
-  const API_BASE =
-    (window.SUPERHOND_DATA && window.SUPERHOND_DATA.API_BASE) ||
-    "https://script.google.com/macros/s/AKfycbzprHaU1ukJT03YLQ6I5EzR1LOq_45tzWNLo-d92rJuwtRat6Qf_b8Ydt-0qoZBIctVNA/exec";
+import { fetchAction, postAction, initFromConfig } from './sheets.js';
 
-  // === 🧩 DOM-elementen ===
-  const els = {
-    body:   document.querySelector("#honden-tbody"),
-    meta:   document.querySelector("#honden-meta"),
-    loader: document.querySelector("#honden-loader"),
-    error:  document.querySelector("#honden-error")
-  };
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => Array.from(document.querySelectorAll(s));
 
-  // === 💬 UI helpers ===
-  function showLoader(on = true) {
-    if (els.loader) els.loader.hidden = !on;
-  }
-  function showError(msg = "") {
-    if (els.error) {
-      els.error.textContent = msg;
-      els.error.hidden = !msg;
-    }
-  }
+const els = {
+  state: $('#state'),
+  tbody: $('#tbl tbody'),
+  search: $('#search'),
+  refresh: $('#refresh'),
+  form: $('#form-add'),
+  formMsg: $('#form-msg')
+};
 
-  // === 🌐 API helper ===
-  async function apiGet(mode, params = {}) {
-    if (!API_BASE) throw new Error("API_BASE ontbreekt (config.js niet geladen?)");
-    const usp = new URLSearchParams({ mode, t: Date.now(), ...params });
+function setState(txt, isError = false) {
+  if (!els.state) return;
+  els.state.textContent = txt;
+  els.state.classList.toggle('error', isError);
+}
 
-    let res;
-    try {
-      res = await fetch(`${API_BASE}?${usp.toString()}`, { method: "GET", cache: "no-store" });
-    } catch {
-      throw new Error("Geen verbinding met de API");
-    }
+function fmtDate(s) {
+  if (!s) return '—';
+  try { return new Date(s).toLocaleDateString(); } catch { return s; }
+}
 
-    const txt = await res.text();
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    let j;
-    try { j = JSON.parse(txt); } catch { throw new Error("Ongeldige JSON van API"); }
-    if (!j.ok) throw new Error(j.error || "Onbekende API-fout");
-    return j.data;
-  }
+function row(h) {
+  const tr = document.createElement('tr');
+  tr.dataset.id = h.id || '';
+  tr.innerHTML = `
+    <td>${escapeHtml(h.name || '—')}</td>
+    <td>${escapeHtml(h.breed || '—')}</td>
+    <td>${escapeHtml(fmtDate(h.birthdate))}</td>
+    <td>${escapeHtml(h.ownerId || '—')}</td>
+    <td><button class="btn btn-danger btn-xs act-archive">Archiveer</button></td>
+  `;
+  return tr;
+}
 
-  // === 🧠 Normalisatie (Sheet → UI-model) ===
-  function normKlant(k) {
-    const full = String(k.naam || "").trim();
-    const [voornaam, ...rest] = full.split(/\s+/);
-    const achternaam = rest.join(" ");
-    let plaats = "";
-    if (k.adres) {
-      const parts = String(k.adres).split(",");
-      plaats = (parts[1] || parts[0] || "").trim();
-    }
-    return { id: k.id || "", voornaam, achternaam, plaats };
-  }
+function escapeHtml(s='') {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
-  function normHond(h) {
-    return {
-      id: h.id || "",
-      eigenaarId: h.eigenaar_id || h.eigenaarId || "",
-      naam: h.naam || "",
-      ras: h.ras || "",
-      geboortedatum: h.geboortedatum || "",
-    };
-  }
+function filterRows(list, q) {
+  const ql = q.trim().toLowerCase();
+  if (!ql) return list;
+  return list.filter(h =>
+    (h.name || '').toLowerCase().includes(ql) ||
+    (h.breed || '').toLowerCase().includes(ql) ||
+    (h.ownerId || '').toLowerCase().includes(ql)
+  );
+}
 
-  // === 🚀 Main ===
+async function load() {
   try {
-    showLoader(true);
-    showError("");
-
-    // Haal data rechtstreeks uit Apps Script (in parallel)
-    const [dogsRaw, klantenRaw] = await Promise.all([
-      apiGet("honden"),
-      apiGet("klanten")
-    ]);
-
-    const honden = dogsRaw.map(normHond);
-    const klanten = klantenRaw.map(normKlant);
-    const kById = Object.fromEntries(klanten.map(k => [k.id, k]));
-
-    // === 🧾 Tabelrendering ===
-    els.body.innerHTML = honden.map(h => {
-      const e = kById[h.eigenaarId];
-      const eigenaarNaam = e ? `${e.voornaam || ""} ${e.achternaam || ""}`.trim() : "—";
-      const plaats = e?.plaats || "";
-      return `
-        <tr>
-          <td><a href="/honden/detail.html?id=${h.id}"><strong>${h.naam || "—"}</strong></a></td>
-          <td>${h.ras || "—"}</td>
-          <td>${h.geboortedatum || "—"}</td>
-          <td>${
-            e
-              ? `<a href="/klanten/detail.html?id=${e.id}">${eigenaarNaam || "(naam onbekend)"}</a> <small class="muted">${plaats}</small>`
-              : "—"
-          }</td>
-        </tr>`;
-    }).join("");
-
-    if (els.meta) els.meta.textContent = `✅ Geladen: ${honden.length} honden`;
-    showLoader(false);
+    setState('⏳ Laden…');
+    await initFromConfig();
+    const data = await fetchAction('getHonden');
+    const active = (data || []).filter(h => String(h.archived).toLowerCase() !== 'true');
+    render(active);
+    setState(`✔️ ${active.length} honden`);
   } catch (err) {
-    console.error("❌ Fout bij laden van honden:", err);
-    showLoader(false);
-    showError("Fout bij laden van honden: " + err.message);
+    console.error(err);
+    setState('Fout bij laden van honden: ' + (err?.message || String(err)), true);
   }
-})();
+}
+
+function render(list) {
+  if (!els.tbody) return;
+  els.tbody.innerHTML = '';
+  const q = els.search?.value || '';
+  const filtered = filterRows(list, q);
+  if (!filtered.length) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="5" class="muted">Geen resultaten.</td>`;
+    els.tbody.appendChild(tr);
+    return;
+  }
+  for (const h of filtered) {
+    els.tbody.appendChild(row(h));
+  }
+  // bind archive knoppen
+  $$('.act-archive').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('tr')?.dataset.id;
+      if (!id) return;
+      if (!confirm('Archiveer deze hond?')) return;
+      try {
+        await postAction('Hond', 'delete', { id });
+        await load();
+      } catch (e) {
+        alert('Archiveren mislukt: ' + (e?.message || e));
+      }
+    });
+  });
+}
+
+els.search?.addEventListener('input', () => load());
+els.refresh?.addEventListener('click', () => load());
+
+els.form?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(els.form);
+  const payload = Object.fromEntries(fd.entries());
+  try {
+    els.formMsg.textContent = 'Opslaan…';
+    await postAction('Hond', 'add', payload);
+    els.form.reset();
+    els.formMsg.textContent = '✔️ Toegevoegd';
+    await load();
+  } catch (err) {
+    els.formMsg.textContent = '❌ ' + (err?.message || String(err));
+  }
+});
+
+// Boot
+document.addEventListener('DOMContentLoaded', async () => {
+  if (window.SuperhondUI?.mount) {
+    SuperhondUI.mount({ title: 'Honden', icon: '🐶' });
+  }
+  await load();
+});
