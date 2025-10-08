@@ -1,217 +1,125 @@
-/* Superhond UI – v0.20.4 (synced with style.css: admin + toast + density + a11y) */
+/* Superhond UI – v0.18.12 (componenten, geen container overrides) */
 
-/* ---------- Design tokens ---------- */
+/* ---------- Design tokens / variabelen ---------- */
+/* (breedte en topbar-kleuren komen uit style.css via body-classes) */
 :root {
-  --bg:#f6f8fb;
-  --card:#ffffff;
   --ink:#111827;
   --muted:#6b7280;
   --border:#e5e7eb;
   --shadow:0 1px 2px rgba(0,0,0,.06);
-  --primary:#1e70ff;
-  --primary-ink:#fff;
-
-  --accent:#f4c400;                 /* Superhond geel (accent) */
-  --topbar-bg: var(--accent);       /* standaard geel */
-  --topbar-ink:#000;
-
+  --accent:#f4c400; /* Superhond geel */
   --radius:12px;
 
-  /* Dashboard sections */
   --public-accent:#dbeafe; /* lichtblauw */
   --public-border:#93c5fd;
   --admin-accent:#fee2e2;  /* lichtrood */
   --admin-border:#fca5a5;
 }
 
-/* Subpagina’s: blauwe topbar */
-body.subpage {
-  --topbar-bg:#2563eb;    /* blauw */
-  --topbar-ink:#fff;
-}
+/* ---------- Basis (zonder layout-conflicten) ---------- */
+* { box-sizing: border-box; }
+.page-title, h2 { margin: 0 0 12px; }
 
-/* Beheer/Admin: rode topbar (via layout.js -> body.admin-page) */
-body.admin-page {
-  --topbar-bg:#dc2626;    /* rood */
-  --topbar-ink:#fff;
-}
+/* Topbar: alleen visuele details, geen kleur/breedte (die komt uit style.css) */
+.topbar { /* kleur en bg via #topbar uit style.css */ }
+#topbar .topbar-inner.container { /* breedte via style.css */ }
 
-/* ---------- Global base ---------- */
-* { box-sizing:border-box; }
-html,body { height:100%; }
-body {
-  margin:0;
-  background:var(--bg);
-  color:var(--ink);
-  font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-}
-
-.container { max-width:1060px; margin:0 auto; padding:16px; }
-
-.card {
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  padding:16px;
-}
-
-.page-title, h2 { margin:0 0 12px; }
-
-/* ---------- Topbar ---------- */
-.topbar { background:var(--topbar-bg); color:var(--topbar-ink); }
-.topbar .container {
-  position:relative;
-  display:flex; align-items:center; gap:12px;
-  min-height:56px;
-}
-.brand { margin:0; font-weight:800; font-size:20px; text-decoration:none; color:inherit; }
-.brand--center { text-align:center; width:100%; }
-
-.btn-back {
-  text-decoration:none; color:var(--topbar-ink);
-  background:#fff; border:1px solid #d1d5db;
-  padding:6px 10px; border-radius:8px;
-}
-
-.version-badge, .badge-version{
-  position:absolute; right:16px; top:50%; transform:translateY(-50%);
-  background:#111827; color:#fff; border-radius:999px; padding:4px 10px; font-size:12px;
-}
-
-/* Online/offline indicator in topbar (layout.js) */
-.status-dot {
-  width:.6rem; height:.6rem; border-radius:999px; display:inline-block; vertical-align:middle;
-  background:#16a34a;
-}
-
-/* 🔒 Admin badge (met sluitknop) */
-.admin-badge {
-  position:absolute; right:16px; top:8px;
-  display:flex; align-items:center; gap:6px;
-  padding:4px 10px;
-  background:#dc2626; color:#fff;
-  font-size:.8rem; border-radius:999px;
-  box-shadow:0 1px 2px rgba(0,0,0,.15);
-  z-index:10; animation:fadeIn .3s ease-out;
-}
-.admin-badge .btn-exit {
-  all:unset; cursor:pointer; font-size:.85rem; line-height:1;
-  padding:2px 4px; border-radius:4px; background:rgba(255,255,255,.15); color:#fff;
-  transition:background .15s;
-}
-.admin-badge .btn-exit:hover { background:rgba(255,255,255,.3); }
-
-@keyframes fadeIn { from{opacity:0; transform:translateY(-3px);} to{opacity:1; transform:translateY(0);} }
-
-/* ---------- Footer ---------- */
-.footer { border-top:1px solid var(--border); color:var(--muted); }
-.footer .container { padding:14px 16px; }
-
-/* ---------- Dashboard grid/sections ---------- */
-.dash-grid {
-  display:grid;
-  grid-template-columns:280px 1fr;
-  gap:16px;
-}
-.sidebar-title { margin:0 0 .5rem; font-weight:700; }
+/* Footer */
+.footer { border-top: 1px solid var(--border); color: var(--muted); }
+.footer .container { padding: 14px 16px; }
 
 /* ---------- Tabs ---------- */
-.tabs { display:flex; gap:.5rem; flex-wrap:wrap; margin:.5rem 0 1rem; }
+.tabs { display: flex; gap: .5rem; flex-wrap: wrap; margin: .5rem 0 1rem; }
 .tab {
-  padding:.35rem .7rem;
-  border:1px solid var(--border);
-  border-radius:999px;
-  background:#fff;
-  color:inherit;
-  cursor:pointer;
-  transition:background .12s ease, border-color .12s ease, color .12s ease, transform .12s ease;
+  padding: .35rem .7rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff; cursor: pointer;
+  transition: background .12s ease, border-color .12s ease, transform .12s ease;
 }
 .tab:hover { transform: translateY(-1px); }
-.tab:focus-visible { outline:2px solid rgba(0,0,0,.2); outline-offset:2px; }
+.tab.active, [aria-pressed="true"].tab { background: var(--accent); border-color: var(--accent); font-weight: 600; }
 
-/* Actieve tab: altijd geel (matching dashboard accent) */
-.tab.active,
-[aria-pressed="true"].tab,
-#agenda-tabs .tab.active {
-  background:var(--accent);
-  border-color:var(--accent);
-  color:#000;
-  font-weight:600;
-}
-
-.table.compact th,.table.compact td { padding:.35rem .5rem; }
-
-.section { padding:16px; }
-.section-header { display:flex; align-items:baseline; gap:10px; margin-bottom:10px; }
-.section-header h2 { margin:0; }
-.section-sub { color:#6b7280; font-size:.95rem; }
-
+/* ---------- Sections ---------- */
+.section { padding: 16px; }
+.section-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.section-header h2 { margin: 0; }
+.section-sub { color: var(--muted); font-size: .95rem; }
 .section--public {
   border:1px solid var(--public-border);
-  background:linear-gradient(0deg,#fff,#fff), var(--public-accent);
+  background: linear-gradient(0deg,#fff,#fff), var(--public-accent);
 }
 .section--admin {
   border:1px solid var(--admin-border);
-  background:linear-gradient(0deg,#fff,#fff), var(--admin-accent);
+  background: linear-gradient(0deg,#fff,#fff), var(--admin-accent);
 }
 
 /* ---------- Tiles ---------- */
 .tiles {
-  display:grid; gap:16px;
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  display: grid; gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 .tile {
-  display:flex; align-items:center; gap:10px;
-  padding:14px 16px;
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  background:var(--card);
-  text-decoration:none; color:inherit;
-  box-shadow:var(--shadow);
-  transition:transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #fff;
+  text-decoration: none; color: inherit;
+  box-shadow: var(--shadow);
+  transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
 }
-.tile:hover { border-color:#d1d5db; transform:translateY(-1px); }
-.tile-icon { font-size:22px; line-height:1; }
-.tile-body { display:grid; gap:2px; }
-.tile-title { font-weight:700; }
-.tile-sub { color:#6b7280; }
+.tile:hover { border-color: #d1d5db; transform: translateY(-1px); }
+.tile-icon { font-size: 22px; line-height: 1; }
+.tile-body { display: grid; gap: 2px; }
+.tile-title { font-weight: 700; }
+.tile-sub { color: var(--muted); }
 
-.btn.full { display:block; width:100%; text-align:center; margin-top:12px; }
+/* Badged tile */
+.tile.badged { position: relative; }
+.tile .badge-dot{
+  position:absolute; top:8px; right:10px; min-width:22px; height:22px; padding:0 6px;
+  display:inline-flex; align-items:center; justify-content:center;
+  border-radius:999px; font-size:12px; line-height:1;
+  background: var(--accent); color:#000; border:1px solid rgba(0,0,0,.08);
+  box-shadow:0 1px 2px rgba(0,0,0,.08);
+}
+
+/* ---------- Toolbar ---------- */
+.toolbar{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+@media (max-width:430px){
+  .toolbar{flex-direction:column;align-items:stretch}
+  .toolbar .input,.toolbar .btn{width:100%}
+}
 
 /* ---------- Table ---------- */
-.table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-.table { width:100%; border-collapse:collapse; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table { width: 100%; border-collapse: collapse; }
 .table th,.table td {
-  text-align:left; padding:10px 12px; border-bottom:1px solid var(--border);
+  text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border);
 }
-.table thead th { font-weight:700; background:#fafafa; }
+.table thead th { font-weight: 700; background: #fafafa; }
+.table.compact th, .table.compact td { padding: .35rem .5rem; }
 
-/* ---------- Forms & tags ---------- */
+/* ---------- Form elements ---------- */
 .input,.select {
   min-height:38px; padding:6px 10px;
   border:1px solid #d1d5db; border-radius:8px; background:#fff;
-  transition:border-color .12s, box-shadow .12s;
 }
-.input:focus-visible,.select:focus-visible {
-  outline:2px solid rgba(30,112,255,.25);
-  border-color:#9bbcff;
-}
+.input:focus-visible,.select:focus-visible { outline:2px solid rgba(30,112,255,.25); border-color:#9bbcff; }
 .input-nr { width:5.5rem; }
 
 .btn {
   display:inline-flex; align-items:center; gap:6px;
   padding:8px 12px; border:1px solid #d1d5db; border-radius:8px;
   background:#fff; text-decoration:none; color:#111827; cursor:pointer;
-  transition:background .12s, border-color .12s, box-shadow .12s;
 }
 .btn:hover { background:#f8fafc; }
-
-/* Compacte knop + util */
-.btn-xs { padding:.2rem .45rem; font-size:.8rem; }
+.btn.full { display:block; width:100%; text-align:center; margin-top:12px; }
+.btn-xs { padding:.2rem .45rem; font-size:.8rem; } /* compact variant */
 .nowrap { white-space: nowrap; }
 
-/* Foutstijlen bij formulier (gesynchroniseerd met style.css) */
+/* Form errors */
 .input-error { border-color:#b91c1c !important; outline-color:#b91c1c !important; }
 .field-error { color:#b91c1c; font-size:.85rem; margin-top:.25rem; }
 
@@ -220,55 +128,52 @@ body {
 
 /* Status/feedback */
 .loader { padding:.5rem 0; color:var(--muted); }
-.error  { color:#b91c1c; }  /* geharmoniseerd met JS-foutlabels */
+.error  { color:#b91c1c; }
 .muted  { color:var(--muted); font-size:.92em; }
 
-/* ---------- Density (compacte modus via html[data-density="compact"]) ---------- */
-html[data-density="compact"] .table th,
-html[data-density="compact"] .table td { padding:6px 8px; }
-
-html[data-density="compact"] .input,
-html[data-density="compact"] .select { min-height:34px; padding:4px 8px; }
-
-html[data-density="compact"] .btn { padding:6px 10px; }
-
-/* ---------- Toastmeldingen (zelfde als style.css; gebruikt door public/js/toast.js) ---------- */
-.toast-box {
+/* ---------- Toast component ---------- */
+.toast-container {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  bottom: 1.2rem;
+  right: 1.2rem;
+  z-index: 9999;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  z-index: 9999;
+  align-items: flex-end;
+  gap: .5rem;
 }
 .toast {
-  background: #111827;
-  color: #fff;
-  padding: 8px 12px;
+  min-width: 220px;
+  max-width: 360px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-left: 6px solid var(--accent);
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
   border-radius: 8px;
-  font-size: .9rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,.2);
-  opacity: 0;
-  transform: translateY(10px);
-  animation: toastIn .3s forwards;
-  transition: opacity .4s, transform .4s;
+  padding: .75rem 1rem;
+  color: #111827;
+  font-size: .92rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  animation: fadeIn .25s ease;
 }
-.toast-ok   { background: #16a34a; }  /* groen */
-.toast-warn { background: #b91c1c; }  /* rood */
-.toast-info { background: #2563eb; }  /* blauw */
-.toast.hide { opacity: 0; transform: translateY(20px); }
-
-@keyframes toastIn {
+.toast.success { border-left-color: #16a34a; } /* groen */
+.toast.error   { border-left-color: #b91c1c; } /* rood */
+.toast.info    { border-left-color: #2563eb; } /* blauw */
+.toast button {
+  background: none; border: none; color: #111827; font-size: 1rem; cursor: pointer; margin-left: .5rem;
+}
+.toast button:hover { opacity: .7; }
+@keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ---------- Responsive ---------- */
+/* ---------- Responsive details ---------- */
 @media (max-width:900px){
   .dash-grid { grid-template-columns:1fr; }
 }
 @media (max-width:720px){
-  .container { padding:12px; }
   .brand { font-size:18px; }
 }
