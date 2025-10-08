@@ -79,7 +79,7 @@
   }
   function ensureAdminBadge() {
     if (!isAdminEnabled()) return;
-    const topbarWrap = $('#topbar .container');
+    const topbarWrap = document.querySelector('#topbar .container');
     if (!topbarWrap) return;
 
     let badge = document.querySelector('.admin-badge');
@@ -119,7 +119,10 @@
 
   /* ───────── Renderers ───────── */
 
-  // 🔧 Jouw bijgewerkte renderTopbar met back-knop
+  // status-dot class helper
+  function statusClass(ok) { return ok ? 'is-online' : 'is-offline'; }
+
+  // Topbar met inner .container en back-knop
   function renderTopbar(container, opts, cfg, online) {
     if (!container) return;
     container.innerHTML = '';
@@ -142,27 +145,33 @@
       }
     }
 
+    // inner container (belangrijk voor juiste layout + admin-badge anchoring)
+    const wrap = el('div', { class: 'container' });
+
     const left = el('div', { class: 'topbar-left' },
       backEl,
       home
         ? el('a', { class: 'brand', href: '../dashboard/' }, `${icon} ${title}`)
         : el('span', { class: 'brand' }, `${icon} ${title}`)
     );
-
     const mid = el('div', { class: 'topbar-mid' });
 
     const statusDot = el('span', {
-      class: 'status-dot',
+      class: `status-dot ${statusClass(online)}`,
       title: online ? 'Online' : 'Offline'
-    }, '');
+    });
 
-    // Eenmalige basis-styles (rest zit in CSS)
+    // basis-topbar CSS (eenmalig)
     onceStyle('sh-topbar-style', `
-      .topbar{display:flex;align-items:center;gap:.75rem;padding:.6rem 1rem;border-bottom:1px solid #e5e7eb;position:sticky;top:0;z-index:10}
+      .topbar{background:var(--topbar-bg);color:var(--topbar-ink)}
+      .topbar .container{display:flex;align-items:center;gap:.75rem;padding:.6rem 1rem;border-bottom:1px solid #e5e7eb;position:sticky;top:0;z-index:10}
       .brand{font-weight:700;color:inherit;text-decoration:none}
       .topbar-right{margin-left:auto;display:flex;align-items:center;gap:.5rem;font-size:.9rem}
+      .status-dot{width:.6rem;height:.6rem;border-radius:999px;display:inline-block;vertical-align:middle;background:#9ca3af}
+      .status-dot.is-online{background:#16a34a}
+      .status-dot.is-offline{background:#ef4444}
       .muted{opacity:.7}
-      @media (prefers-color-scheme: dark){ .topbar{border-bottom-color:#374151} }
+      @media (prefers-color-scheme: dark){ .topbar .container{border-bottom-color:#374151} }
     `);
 
     const right = el('div', { class: 'topbar-right' },
@@ -173,7 +182,8 @@
     );
 
     container.classList.add('topbar');
-    container.append(left, mid, right);
+    wrap.append(left, mid, right);
+    container.appendChild(wrap);
   }
 
   function renderFooter(container, cfg) {
