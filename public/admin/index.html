@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Superhond — Admin</title>
+  <link rel="stylesheet" href="../css/style.css?v=0.20.2" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.2" />
+</head>
+<body class="subpage admin-page">
+  <header id="topbar" class="topbar"></header>
+  <main class="container">
+    <h1 class="page-title">Admin</h1>
+
+    <!-- Config -->
+    <section class="card section--admin" style="margin-bottom:1rem">
+      <div class="section-header">
+        <h2>Centrale Config</h2>
+        <span class="section-sub">GAS /exec URL</span>
+      </div>
+      <div id="cfg-state" class="muted">⏳ Laden…</div>
+      <form id="cfg-form" class="form-grid" style="margin-top:.5rem">
+        <input name="apiBase" class="input" placeholder="https://script.google.com/macros/s/.../exec" required />
+        <input name="token" class="input" placeholder="CFG_TOKEN (alleen admin)" required />
+        <button class="btn" type="submit">Opslaan</button>
+      </form>
+    </section>
+
+    <!-- Schema -->
+    <section class="card section--admin">
+      <div class="section-header">
+        <h2>Schema</h2>
+        <span class="section-sub">Headers, kolommen toevoegen & hernoemen</span>
+      </div>
+
+      <div class="tabs" id="tabs">
+        <button class="tab active" data-tab="headers">Headers</button>
+        <button class="tab" data-tab="ensure">Ensure</button>
+        <button class="tab" data-tab="rename">Hernoemen</button>
+      </div>
+
+      <div id="tab-headers">
+        <div class="row" style="display:flex;gap:.5rem;align-items:center;margin:.5rem 0">
+          <button id="btn-load-headers" class="btn">Ververs headers</button>
+          <button id="btn-ensure-all" class="btn">Ensure alle tabs</button>
+        </div>
+        <div id="headers-out" class="muted">Nog niets geladen.</div>
+      </div>
+
+      <div id="tab-ensure" style="display:none">
+        <form id="ensure-form" class="form-grid" style="margin-top:.5rem">
+          <input name="tab" class="input" placeholder="Tab (bv. Klanten)" required />
+          <input name="columns" class="input" placeholder="Kolommen, komma-gescheiden (bv. geboortedatum,iban)" />
+          <button class="btn" type="submit">Ensure</button>
+        </form>
+        <div id="ensure-state" class="muted" style="margin-top:.5rem"></div>
+      </div>
+
+      <div id="tab-rename" style="display:none">
+        <form id="rename-form" class="form-grid" style="margin-top:.5rem">
+          <input name="tab" class="input" placeholder="Tab (bv. Klanten)" required />
+          <input name="from" class="input" placeholder="Van (oude headernaam)" required />
+          <input name="to" class="input" placeholder="Naar (nieuwe headernaam)" required />
+          <button class="btn" type="submit">Hernoemen</button>
+        </form>
+        <div id="rename-state" class="muted" style="margin-top:.5rem"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer id="footer" class="footer"></footer>
+
+  <script src="../js/layout.js?v=0.20.2" defer></script>
+  <script type="module" src="./admin.js?v=0.20.2"></script>
+</body>
+</html>
