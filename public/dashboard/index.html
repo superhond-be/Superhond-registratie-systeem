@@ -15,31 +15,17 @@
     window.SUPERHOND_SHEETS_URL = window.SUPERHOND_SHEETS_URL || 'https://script.google.com/macros/s/JOUW_EXEC_URL/exec';
   </script>
 
-  <!-- Dashboard-specifiek: GELE topbar + breder op desktop (alleen op dashboard) -->
+  <!-- Dashboard-specifiek: GELE topbar hard-forceren -->
   <style>
-    /* 1) Topbar altijd geel op het dashboard (overrulet blauw van subpages) */
-    body.dashboard-page #topbar {
+    /* Altijd geel op dashboard, zowel header als inner bar */
+    body.dashboard-page #topbar,
+    body.dashboard-page #topbar .topbar-inner {
       background: var(--accent) !important;
       color: #000 !important;
     }
     /* (optioneel) back-knop stijl op geel */
     body.dashboard-page .btn-back {
       border-color:#e5e7eb; background:#fff; color:#111827;
-    }
-
-    /* 2) Breder op iMac/desktop, enkel voor dashboard */
-    body.dashboard-page .container { max-width: 1060px; }
-    body.dashboard-page #topbar .topbar-inner.container { max-width: 1080px; margin: 0 auto; }
-
-    @media (min-width: 1280px){
-      body.dashboard-page .container { max-width: 1200px; }
-      body.dashboard-page #topbar .topbar-inner.container { max-width: 1220px; }
-      html { font-size: 17px; }
-    }
-    @media (min-width: 1536px){
-      body.dashboard-page .container { max-width: 1400px; }
-      body.dashboard-page #topbar .topbar-inner.container { max-width: 1420px; }
-      html { font-size: 18px; }
     }
 
     /* Kleine lokale tweaks voor dit scherm */
