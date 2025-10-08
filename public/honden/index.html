@@ -2,109 +2,54 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Honden – Superhond</title>
-
-  <!-- Centrale UI (relatief tov /honden/) -->
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Superhond — Honden</title>
   <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
-
-  <!-- Layout (topbar/footer) -->
-  <script src="../js/layout.js?v=0.20.0" defer></script>
-
-  <!-- Pagina-logic -->
-  <script type="module" src="./index.js" defer></script>
 </head>
-<body>
-  <!-- Topbar -->
+<body class="page-honden">
   <header id="topbar" class="topbar"></header>
 
   <main class="container">
     <h1 class="page-title">Honden</h1>
 
-    <p><a class="btn" href="../">⬅️ Terug naar dashboard</a></p>
+    <section class="card">
+      <div class="row" style="display:flex;gap:.5rem;align-items:center">
+        <input id="search" class="input" placeholder="Zoek op naam/ras/eigenaar…" />
+        <button id="refresh" class="btn">Ververs</button>
+        <a href="../dashboard/" class="btn btn-secondary">← Terug</a>
+      </div>
 
-    <!-- Toolbar -->
-    <div class="toolbar" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-      <input id="zoek" class="input" type="search" placeholder="Zoek hond of ras…" />
-      <select id="ownerFilter" class="select">
-        <option value="">— Filter op eigenaar —</option>
-      </select>
-      <button id="btn-nieuw" class="btn primary">+ Nieuwe hond</button>
-    </div>
+      <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
 
-    <!-- Loader + fouten -->
-    <div id="loader" class="muted">⏳ Laden…</div>
-    <div id="error" class="error" style="display:none;"></div>
+      <div class="table-wrap" style="margin-top:.5rem">
+        <table class="table" id="tbl">
+          <thead>
+            <tr><th>Naam</th><th>Ras</th><th>Geboorte</th><th>Eigenaar (ID)</th><th style="width:1%"></th></tr>
+          </thead>
+          <tbody><!-- rows --></tbody>
+        </table>
+      </div>
+    </section>
 
-    <!-- Tabel -->
-    <div class="table-wrap" id="wrap" style="display:none;">
-      <table id="tabel" class="table">
-        <thead>
-          <tr>
-            <th>Naam</th>
-            <th>Ras</th>
-            <th>Geboortedatum</th>
-            <th>Eigenaar</th>
-            <th class="right"></th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
+    <section class="card" style="margin-top:1rem">
+      <h2>Nieuwe hond toevoegen</h2>
+      <form id="form-add" class="form-grid">
+        <input name="name" class="input" placeholder="Naam" required />
+        <input name="breed" class="input" placeholder="Ras" />
+        <input name="birthdate" class="input" type="date" placeholder="Geboortedatum" />
+        <input name="ownerId" class="input" placeholder="Eigenaar ID (lid-id)" required />
+        <input name="chip" class="input" placeholder="Chipnummer" />
+        <input name="notes" class="input" placeholder="Notities" />
+        <button class="btn" type="submit">Opslaan</button>
+      </form>
+      <div id="form-msg" class="muted" style="margin-top:.5rem"></div>
+    </section>
   </main>
 
-  <!-- Footer -->
   <footer id="footer" class="footer"></footer>
 
-  <!-- Modal (iPad/Safari-proof) -->
-  <dialog id="modal">
-    <form id="form" method="dialog">
-      <h3 id="modal-title">Hond</h3>
-
-      <input type="hidden" name="id" />
-
-      <div class="row">
-        <label for="fld-naam">Naam</label>
-        <input id="fld-naam" name="naam" required />
-      </div>
-
-      <div class="row">
-        <label for="fld-ras">Ras</label>
-        <input id="fld-ras" name="ras" />
-      </div>
-
-      <div class="row">
-        <label for="fld-geboorte">Geboortedatum</label>
-        <input id="fld-geboorte" name="geboortedatum" type="date" />
-      </div>
-
-      <div class="row">
-        <label for="fld-chip">Chip</label>
-        <input id="fld-chip" name="chip" />
-      </div>
-
-      <div class="row">
-        <label for="sel-eigenaar">Eigenaar</label>
-        <select id="sel-eigenaar" name="eigenaarId" required>
-          <option value="">— Kies eigenaar —</option>
-        </select>
-      </div>
-
-      <menu>
-        <button type="button" id="btn-cancel">Annuleren</button>
-        <button type="button" id="btn-save" class="btn primary">Bewaren</button>
-      </menu>
-    </form>
-  </dialog>
-
-  <!-- Mount topbar/footer -->
-  <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      if (window.SuperhondUI?.mount) {
-        SuperhondUI.mount({ title: 'Honden', icon: '🐶', version: 'v0.20.0', back: '../' });
-      }
-    });
-  </script>
+  <script src="../js/layout.js?v=0.20.0" defer></script>
+  <script type="module" src="../js/honden.js?v=0.20.0"></script>
 </body>
 </html>
