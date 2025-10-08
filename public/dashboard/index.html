@@ -6,29 +6,25 @@
   <title>Superhond — Dashboard</title>
 
   <!-- Centrale UI -->
-  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+  <link rel="stylesheet" href="../css/style.css?v=0.20.2" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.2" />
 
-  <!-- SEO/crawlers: dit is de echte pagina -->
-  <meta name="robots" content="index, follow" />
-  <meta name="theme-color" content="#0a7" />
-  <meta name="color-scheme" content="light dark" />
-
-  <!-- Optioneel ingestelde GAS /exec URL (fallback). Laat leeg als je via proxy gaat. -->
+  <!-- Sheets-config: backward compatible fallback -->
   <script>
-    window.SUPERHOND_SHEETS_URL = window.SUPERHOND_SHEETS_URL || '';
+    // Voorbeeld: 'https://script.google.com/macros/s/AKfycb.../exec'
+    window.SUPERHOND_SHEETS_URL = window.SUPERHOND_SHEETS_URL || 'https://script.google.com/macros/s/JOUW_EXEC_URL/exec';
   </script>
 
   <style>
-    :root { color-scheme: light dark; }
-    .tabs { display:flex; gap:.5rem; margin:1rem 0; flex-wrap:wrap }
-    .tab { position:relative; padding:.45rem .8rem; border:1px solid #e5e7eb; border-radius:.5rem; background:#fff; cursor:pointer }
-    .tab.active { background:var(--accent,#f4c400); font-weight:600 }
-    .tab .dot { position:absolute; top:-6px; right:-6px; min-width:18px; height:18px; padding:0 6px; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; font-size:11px; line-height:1; background:#111827; color:#fff }
-    .muted { color:#6b7280 }
-    .error { color:#b91c1c }
-    .tile.badged { position:relative }
-    .tile .badge-dot {
+    /* Kleine lokale tweaks voor dit scherm */
+    .tabs{display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
+    .tab{position:relative;padding:.4rem .8rem;border:1px solid #e5e7eb;border-radius:.5rem;background:#fff;cursor:pointer}
+    .tab.active{background:var(--accent,#f4c400);font-weight:600}
+    .tab .dot{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;font-size:11px;line-height:1;background:#111827;color:#fff}
+    .muted{color:#6b7280}
+    .error{color:#b91c1c}
+    .tile.badged{position:relative}
+    .tile .badge-dot{
       position:absolute; top:8px; right:10px; min-width:22px; height:22px; padding:0 6px;
       display:inline-flex; align-items:center; justify-content:center;
       border-radius:999px; font-size:12px; line-height:1;
@@ -40,17 +36,17 @@
 <body class="dashboard-page">
   <header id="topbar" class="topbar"></header>
 
-  <main class="container">
+  <main class="container" role="main">
     <h1 class="page-title">Hoofdmenu</h1>
 
     <!-- TEGELS -->
     <nav class="tiles" aria-label="Hoofdmenu">
-      <a class="tile" href="../klanten/"><span aria-hidden="true">👤</span> Klanten</a>
-      <a class="tile" href="../honden/"><span aria-hidden="true">🐶</span> Honden</a>
-      <a class="tile" href="../strippenkaarten/"><span aria-hidden="true">🎫</span> Strippenkaarten</a>
+      <a class="tile" href="../klanten/"><span class="tile-icon">👤</span><div class="tile-body"><span class="tile-title">Klanten</span></div></a>
+      <a class="tile" href="../honden/"><span class="tile-icon">🐶</span><div class="tile-body"><span class="tile-title">Honden</span></div></a>
+      <a class="tile" href="../strippenkaarten/"><span class="tile-icon">🎫</span><div class="tile-body"><span class="tile-title">Strippenkaarten</span></div></a>
 
       <a class="tile badged" href="../lessen/">
-        <span aria-hidden="true">📅</span>
+        <span class="tile-icon">📅</span>
         <div class="tile-body">
           <span class="tile-title">Lessen</span>
           <span class="tile-sub" id="lessen-week-sub">—</span>
@@ -60,7 +56,7 @@
 
       <!-- 📚 Klassen -->
       <a class="tile badged" href="../klassen/">
-        <span aria-hidden="true">📚</span>
+        <span class="tile-icon">📚</span>
         <div class="tile-body">
           <span class="tile-title">Klassen</span>
           <span class="tile-sub" id="klassen-sub">—</span>
@@ -70,7 +66,7 @@
 
       <!-- 📦 Lessenreeksen -->
       <a class="tile badged" href="../lessenreeks/">
-        <span aria-hidden="true">📦</span>
+        <span class="tile-icon">📦</span>
         <div class="tile-body">
           <span class="tile-title">Lessenreeksen</span>
           <span class="tile-sub" id="reeksen-sub">—</span>
@@ -78,32 +74,35 @@
         <span class="badge-dot" id="reeksen-badge" aria-label="Aantal actieve reeksen">0</span>
       </a>
 
-      <a class="tile" href="../mededeling/"><span aria-hidden="true">📢</span> Mededelingen</a>
-      <a class="tile" href="../trainers/"><span aria-hidden="true">🧑‍🏫</span> Trainers</a>
-      <a class="tile" href="../rapporten/"><span aria-hidden="true">📈</span> Rapporten</a>
-      <a class="tile" href="../instellingen/"><span aria-hidden="true">⚙️</span> Instellingen</a>
-      <a class="tile" href="../over/"><span aria-hidden="true">ℹ️</span> Over</a>
-      <a class="tile" href="../lessen/beheer.html"><span aria-hidden="true">⚙️</span> Lessenbeheer</a>
+      <a class="tile" href="../mededeling/"><span class="tile-icon">📢</span><div class="tile-body"><span class="tile-title">Mededelingen</span></div></a>
+      <a class="tile" href="../trainers/"><span class="tile-icon">🧑‍🏫</span><div class="tile-body"><span class="tile-title">Trainers</span></div></a>
+      <a class="tile" href="../rapporten/"><span class="tile-icon">📈</span><div class="tile-body"><span class="tile-title">Rapporten</span></div></a>
+      <a class="tile" href="../instellingen/"><span class="tile-icon">⚙️</span><div class="tile-body"><span class="tile-title">Instellingen</span></div></a>
+      <a class="tile" href="../over/"><span class="tile-icon">ℹ️</span><div class="tile-body"><span class="tile-title">Over</span></div></a>
+      <a class="tile" href="../lessen/beheer.html"><span class="tile-icon">⚙️</span><div class="tile-body"><span class="tile-title">Lessenbeheer</span></div></a>
+
+      <!-- 🛡️ Admin (verborgen tenzij admin-modus aan) -->
+      <a class="tile" href="../admin/" data-admin-only style="display:none">
+        <span class="tile-icon">🛡️</span>
+        <div class="tile-body">
+          <span class="tile-title">Admin</span>
+          <span class="tile-sub">Config & Schema</span>
+        </div>
+      </a>
     </nav>
 
     <!-- AGENDA -->
     <section class="card" style="margin-top:1rem">
       <h2 style="margin:0 0 .5rem">Agenda</h2>
 
-      <div class="tabs" id="agenda-tabs" role="tablist" aria-label="Agenda tabs">
-        <button class="tab active" data-tab="week" role="tab" aria-selected="true" tabindex="0">
-          Deze week <span class="dot" id="tab-week-dot">0</span>
-        </button>
-        <button class="tab" data-tab="alles" role="tab" aria-selected="false" tabindex="-1">
-          Alles <span class="dot" id="tab-all-dot">0</span>
-        </button>
-        <button class="tab" data-tab="mededelingen" role="tab" aria-selected="false" tabindex="-1">
-          Mededelingen <span class="dot" id="tab-notes-dot">0</span>
-        </button>
+      <div class="tabs" id="agenda-tabs" role="tablist" aria-label="Agendaweergave">
+        <button class="tab active" data-tab="week" role="tab" aria-selected="true">Deze week <span class="dot" id="tab-week-dot">0</span></button>
+        <button class="tab" data-tab="alles" role="tab" aria-selected="false">Alles <span class="dot" id="tab-all-dot">0</span></button>
+        <button class="tab" data-tab="mededelingen" role="tab" aria-selected="false">Mededelingen <span class="dot" id="tab-notes-dot">0</span></button>
       </div>
 
-      <div id="agenda-loader" class="muted" role="status" aria-live="polite">⏳ Laden…</div>
-      <div id="agenda-error" class="error" style="display:none" role="alert"></div>
+      <div id="agenda-loader" class="muted">⏳ Laden…</div>
+      <div id="agenda-error" class="error" style="display:none"></div>
 
       <div class="table-wrap" id="agenda-table-wrap" style="display:none;">
         <table id="agenda-table" class="table">
@@ -119,68 +118,36 @@
   <footer id="footer" class="footer"></footer>
 
   <!-- Basis scripts -->
-  <script src="../js/layout.js?v=0.20.0" defer></script>
-  <script src="../js/agenda.js?v=0.20.0" defer></script>
+  <script src="../js/layout.js?v=0.20.2" defer></script>
+  <script src="../js/agenda.js?v=0.20.2" defer></script>
+  <!-- Admin gate: toont/verbergt de Admin-tegel op basis van ?admin=1 (of sneltoets) -->
+  <script src="../js/admin-gate.js?v=0.20.2" defer></script>
 
-  <!-- Dashboard init -->
+  <!-- Tellers: Sheets-first (met baseUrl), fallback op store.js -->
   <script type="module">
-    // Robuuste import helper
     const safeImport = async (path) => {
       try { return await import(path); }
       catch (e) { console.error(`Import mislukt: ${path}`, e); return {}; }
     };
 
-    // Probeer config-gedreven base discovery → fallback naar window var
-    async function resolveSheetsBase() {
-      try {
-        const r = await fetch('../../api/config', { cache: 'no-store' });
-        if (r.ok) {
-          const cfg = await r.json();
-          if (cfg?.apiBase) return String(cfg.apiBase);
-        }
-      } catch {/* ignore */}
-      return window.SUPERHOND_SHEETS_URL || '';
-    }
+    const sheets = await safeImport('../js/sheets.js?v=0.20.2');
+    const store  = await safeImport('../js/store.js?v=0.20.2');
 
-    const sheets = await safeImport('../js/sheets.js');
-    const store  = await safeImport('../js/store.js');
+    const fetchSheet     = sheets.fetchSheet     || (async () => { throw new Error('sheets.fetchSheet ontbreekt'); });
+    const normStatus     = sheets.normStatus     || ((s) => String(s||'').toLowerCase());
+    const setBaseUrl     = sheets.setBaseUrl     || (() => {});
+    const initFromConfig = sheets.initFromConfig || (async () => {});
+    const ensureMigrated = store.ensureMigrated  || (() => {});
+    const getKlassen     = store.getKlassen      || (() => []);
+    const getReeksen     = store.getReeksen      || (() => []);
+    const isActiefStatus = store.isActiefStatus  || ((s) => String(s||'').toLowerCase()==='actief');
 
-    const { setBaseUrl, fetchSheet, normStatus } = {
-      setBaseUrl: sheets.setBaseUrl || (() => {}),
-      fetchSheet: sheets.fetchSheet || (async () => { throw new Error('sheets.fetchSheet ontbreekt'); }),
-      normStatus: sheets.normStatus || ((s) => String(s||'').toLowerCase())
-    };
-
-    const {
-      ensureMigrated = () => {},
-      getKlassen = () => [],
-      getReeksen = () => [],
-      isActiefStatus = (s) => String(s||'').toLowerCase() === 'actief'
-    } = store;
-
-    // Zet base URL voor sheets: /api/config → apiBase → fallback window var
-    const baseUrl = await resolveSheetsBase();
-    if (baseUrl) setBaseUrl(baseUrl);
-
-    function labelActief(n) {
-      if (n === 0) return 'geen actief';
-      if (n === 1) return '1 actief';
-      return `${n} actief`;
-    }
-
-    function setBadges(klCount, rsCount){
-      const kc = document.getElementById('klassen-badge');
-      const ks = document.getElementById('klassen-sub');
-      const rc = document.getElementById('reeksen-badge');
-      const rs = document.getElementById('reeksen-sub');
-      if (kc) kc.textContent = String(klCount);
-      if (ks) ks.textContent = labelActief(klCount);
-      if (rc) rc.textContent = String(rsCount);
-      if (rs) rs.textContent = labelActief(rsCount);
-    }
+    // heel belangrijk: sheets base-URL zetten (blijft werken met bestaande window.SUPERHOND_SHEETS_URL)
+    if (window.SUPERHOND_SHEETS_URL) setBaseUrl(window.SUPERHOND_SHEETS_URL);
+    await initFromConfig(); // haalt centrale apiBase op (server/GAS/LS)
 
     async function updateBadges() {
-      // 1) probeer Sheets (remote)
+      // 1) probeer Sheets
       try {
         const [klassen, reeksen] = await Promise.all([
           fetchSheet('Klassen'),
@@ -205,34 +172,21 @@
       }
     }
 
-    // Tabs: minimale a11y
-    function initTabs() {
-      const tabs = Array.from(document.querySelectorAll('#agenda-tabs .tab'));
-      const setActive = (btn) => {
-        tabs.forEach(t => {
-          const on = t === btn;
-          t.classList.toggle('active', on);
-          t.setAttribute('aria-selected', on ? 'true' : 'false');
-          t.setAttribute('tabindex', on ? '0' : '-1');
-        });
-      };
-      tabs.forEach(t => t.addEventListener('click', () => setActive(t)));
-      tabs.forEach(t => t.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-          e.preventDefault();
-          const i = tabs.indexOf(document.activeElement);
-          const dir = e.key === 'ArrowRight' ? 1 : -1;
-          const next = tabs[(i + dir + tabs.length) % tabs.length];
-          next.focus(); setActive(next);
-        }
-      }));
+    function setBadges(klCount, rsCount){
+      const kc = document.getElementById('klassen-badge');
+      const ks = document.getElementById('klassen-sub');
+      const rc = document.getElementById('reeksen-badge');
+      const rs = document.getElementById('reeksen-sub');
+      if (kc) kc.textContent = String(klCount);
+      if (ks) ks.textContent = `${klCount} actief`;
+      if (rc) rc.textContent = String(rsCount);
+      if (rs) rs.textContent = `${rsCount} actief`;
     }
 
     document.addEventListener('DOMContentLoaded', () => {
       if (window.SuperhondUI?.mount) {
         SuperhondUI.mount({ title: 'Superhond', icon: '🐾', home: true });
       }
-      initTabs();
       updateBadges();
     });
   </script>
