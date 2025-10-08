@@ -15,20 +15,31 @@
     window.SUPERHOND_SHEETS_URL = window.SUPERHOND_SHEETS_URL || 'https://script.google.com/macros/s/JOUW_EXEC_URL/exec';
   </script>
 
-  <!-- Dashboard-specifieke fixes: GELE topbar + breder op desktop -->
+  <!-- Dashboard-specifiek: GELE topbar + breder op desktop (alleen op dashboard) -->
   <style>
-    /* 1) Dashboard altijd geel (overrulet eventuele subpage-styling elders) */
-    body.dashboard-page {
-      --topbar-bg: var(--accent) !important;
-      --topbar-ink: #000 !important;
+    /* 1) Topbar altijd geel op het dashboard (overrulet blauw van subpages) */
+    body.dashboard-page #topbar {
+      background: var(--accent) !important;
+      color: #000 !important;
     }
-    /* 2) Breder op iMac/desktop, zonder andere pagina’s te beïnvloeden */
-    body.dashboard-page :root { --container-max: 1060px; }
+    /* (optioneel) back-knop stijl op geel */
+    body.dashboard-page .btn-back {
+      border-color:#e5e7eb; background:#fff; color:#111827;
+    }
+
+    /* 2) Breder op iMac/desktop, enkel voor dashboard */
+    body.dashboard-page .container { max-width: 1060px; }
+    body.dashboard-page #topbar .topbar-inner.container { max-width: 1080px; margin: 0 auto; }
+
     @media (min-width: 1280px){
-      body.dashboard-page :root { --container-max: 1200px; }
+      body.dashboard-page .container { max-width: 1200px; }
+      body.dashboard-page #topbar .topbar-inner.container { max-width: 1220px; }
+      html { font-size: 17px; }
     }
     @media (min-width: 1536px){
-      body.dashboard-page :root { --container-max: 1360px; }
+      body.dashboard-page .container { max-width: 1400px; }
+      body.dashboard-page #topbar .topbar-inner.container { max-width: 1420px; }
+      html { font-size: 18px; }
     }
 
     /* Kleine lokale tweaks voor dit scherm */
@@ -69,6 +80,7 @@
         <span class="badge-dot" id="lessen-week-badge" aria-label="Aantal lessen">0</span>
       </a>
 
+      <!-- 📚 Klassen -->
       <a class="tile badged" href="../klassen/">
         <span class="tile-icon">📚</span>
         <div class="tile-body">
@@ -78,6 +90,7 @@
         <span class="badge-dot" id="klassen-badge" aria-label="Aantal actieve klassen">0</span>
       </a>
 
+      <!-- 📦 Lessenreeksen -->
       <a class="tile badged" href="../lessenreeks/">
         <span class="tile-icon">📦</span>
         <div class="tile-body">
@@ -179,17 +192,6 @@
       } catch (e) {
         console.error('Badges updaten mislukt:', e);
       }
-    }
-
-    function setBadges(klCount, rsCount){
-      const kc = document.getElementById('klassen-badge');
-      const ks = document.getElementById('klassen-sub');
-      const rc = document.getElementById('reeksen-badge');
-      const rs = document.getElementById('reeksen-sub');
-      if (kc) kc.textContent = String(klCount);
-      if (ks) ks.textContent = `${klCount} actief`;
-      if (rc) rc.textContent = String(rsCount);
-      if (rs) rs.textContent = `${rsCount} actief`;
     }
 
     document.addEventListener('DOMContentLoaded', () => {
