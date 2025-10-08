@@ -1,5 +1,3 @@
-/server/index.js
-```js
 // server/index.js — Superhond API & static server (ESM, Render/Node ready)
 import 'dotenv/config';
 import express from 'express';
@@ -7,6 +5,9 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs/promises';
+import helmet from 'helmet';
+import compression from 'compression';
+import morgan from 'morgan';
 
 import sheetsRouter from './api/sheets.js'; // Google Apps Script proxy (GET/POST)
 
@@ -14,51 +15,60 @@ import sheetsRouter from './api/sheets.js'; // Google Apps Script proxy (GET/POS
 // Config
 // ────────────────────────────────────────────────────────────────────────────────
 const app = express();
-const PORT        = process.env.PORT || 3000;
-const ORIGIN      = process.env.CORS_ORIGIN || '*';
-const API_BASE    = (process.env.SUPERHOND_API_BASE || '').trim(); // jouw GAS /exec
-const NODE_ENV    = process.env.NODE_ENV || 'production';
+const PORT     = process.env.PORT || 3000;
+const ORIGIN   = process.env.CORS_ORIGIN || '*';
+const API_BASE = (process.env.SUPERHOND_API_BASE || '').trim(); // jouw GAS /exec
+const NODE_ENV = process.env.NODE_ENV || 'production';
+const IS_PROD  = NODE_ENV === 'production';
 
 // __dirname equivalent in ESM
-const __filename  = fileURLToPath(import.meta.url);
-const __dirname   = path.dirname(__filename);
-const PUBLIC_DIR  = path.join(__dirname, '..', 'public');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname  = path.dirname(__filename);
+const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
 // ────────────────────────────────────────────────────────────────────────────────
-// Middleware
+/** Middleware */
 // ────────────────────────────────────────────────────────────────────────────────
 app.set('trust proxy', true);
 
+// Security headers
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' } // i.v.m. assets via CDN/Render
+}));
+
 // CORS voor frontend & API
 app.use(cors({ origin: ORIGIN }));
-
 // Preflight voor alle /api/* routes
 app.options('/api/*', cors({ origin: ORIGIN }));
 
-// JSON body parser (voor eigen API's)
-app.use(express.json({ limit: '1mb' }));
+// Compressie (gzip/brotli indien ondersteund)
+app.use(compression());
 
-// Text body parser voor proxied POSTs (GAS accepteert text/plain om preflight te vermijden)
+// Logging
+app.use(morgan(IS_PROD ? 'combined' : 'dev'));
+
+// Parsers
+app.use(express.json({ limit: '1mb' })); // JSON body parser voor eigen API's
+// Text body parser specifiek voor proxied POSTs (GAS accepteert ook text/plain)
 app.use('/api/sheets', express.text({ type: '*/*', limit: '1mb' }));
 
-// Statische frontend (public/)
-// - extensions:["html"] laat /pad zonder trailing slash ook index.html vinden
-app.use(
-  express.static(PUBLIC_DIR, {
-    etag: false,
-    maxAge: 0,
-    extensions: ['html']
-  })
-);
+// Static files (public/)
+app.use(express.static(PUBLIC_DIR, {
+  etag: true,
+  // Static assets (css/js/img) mogen door de browser gecachet worden.
+  // HTML zelf serveren we met no-store verderop.
+  maxAge: IS_PROD ? '1d' : 0,
+  extensions: ['html']
+}));
 
 // ────────────────────────────────────────────────────────────────────────────────
-// Health & ping
+/** Health & ping */
 // ────────────────────────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.status(200).send('OK'));
 app.get('/api/ping', (_req, res) => res.json({ ok: true, t: Date.now() }));
 
 // ────────────────────────────────────────────────────────────────────────────────
-// Centrale config (gebruikt door /public/js/layout.js → resolveApiBase())
+/** Centrale config voor frontend (bv. footer, api discovery) */
 // ────────────────────────────────────────────────────────────────────────────────
 app.get('/api/config', async (_req, res) => {
   let version = '';
@@ -66,40 +76,40 @@ app.get('/api/config', async (_req, res) => {
     const vPath = path.join(__dirname, '..', 'version.json');
     const raw = await fs.readFile(vPath, 'utf8');
     version = JSON.parse(raw)?.version || '';
-  } catch { /* version optional */ }
-
+  } catch {
+    // version.json is optioneel
+  }
   res.set('Cache-Control', 'no-store'); // altijd vers
-  res.json({
-    ok: true,
-    apiBase: API_BASE,   // GAS /exec URL uit env
-    version,             // handig voor footer/topbar
-    env: NODE_ENV
-  });
+  res.json({ ok: true, apiBase: API_BASE, version, env: NODE_ENV });
 });
 
 // ────────────────────────────────────────────────────────────────────────────────
-// API routes
+/** API routes */
 // ────────────────────────────────────────────────────────────────────────────────
 app.use('/api/sheets', sheetsRouter); // Google Sheets proxy (CORS-vrij naar GAS)
 
 // ────────────────────────────────────────────────────────────────────────────────
-// Static fallback: serveer submap-indexen (bv. /klanten/, /dashboard/)
+/** Static HTML fallback: submap index (bv. /klanten/, /honden/, /dashboard/) */
 // ────────────────────────────────────────────────────────────────────────────────
 app.use(async (req, res, next) => {
   // Alleen non-API requests
   if (req.path.startsWith('/api/')) return next();
 
-  // Probeer /public/<path>/index.html te serveren
-  // - werkt voor /klanten/, /honden/, /dashboard/ etc.
+  // Als het een HTML request lijkt, zet no-store
+  if (req.accepts('html')) {
+    res.set('Cache-Control', 'no-store');
+  }
+
+  // Probeer /public/<path>/index.html
   try {
     const candidate = path.join(PUBLIC_DIR, req.path, 'index.html');
     const stat = await fs.stat(candidate).catch(() => null);
     if (stat && stat.isFile()) {
-      res.set('Cache-Control', 'no-store');
       return res.sendFile(candidate);
     }
-  } catch { /* ignore */ }
-
+  } catch {
+    // ignore
+  }
   return next();
 });
 
@@ -114,19 +124,23 @@ app.use((req, res, next) => {
 });
 
 // ────────────────────────────────────────────────────────────────────────────────
-// Generic error handler
+/** Generic error handler (JSON voor API) */
 // ────────────────────────────────────────────────────────────────────────────────
-app.use((err, _req, res, _next) => {
+app.use((err, req, res, _next) => {
   console.error('💥 Server error:', err);
-  res.status(500).json({ ok: false, error: err?.message || String(err) });
+  if (req.path.startsWith('/api/')) {
+    return res.status(500).json({ ok: false, error: err?.message || String(err) });
+  }
+  // Voor non-API: toon eenvoudige tekst/error
+  res.status(500).send('Server error');
 });
 
 // ────────────────────────────────────────────────────────────────────────────────
-// Start
+/** Start */
 // ────────────────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`🐶 Superhond server draait op http://localhost:${PORT}`);
-  console.log(`   CORS_ORIGIN: ${ORIGIN}`);
+  console.log(`   NODE_ENV: ${NODE_ENV} | CORS_ORIGIN: ${ORIGIN}`);
   if (!API_BASE) {
     console.log('⚠️  SUPERHOND_API_BASE is niet gezet. Zet deze env var op je GAS /exec URL.');
     console.log('   Frontend kan tijdelijk ?apiBase=… gebruiken of /api/config mocken.');
