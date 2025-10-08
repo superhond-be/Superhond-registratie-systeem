@@ -1,34 +1,342 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Instellingen – Superhond</title>
-  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Superhond — Instellingen</title>
+
+  <!-- Centrale UI (project-standaard) -->
+  <link rel="stylesheet" href="../css/style.css?v=0.20.3" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.3" />
 </head>
-<body>
+
+<body class="subpage">
+  <header id="topbar" class="topbar"></header>
+
   <main class="container">
-    <section class="card">
-      <h2>Instellingen</h2>
-      <div style="display:grid;gap:10px;grid-template-columns:1fr 1fr;max-width:680px">
-        <label> Themakleur
-          <select class="select" id="theme">
+    <h1 class="page-title">Instellingen</h1>
+
+    <!-- Publieke/gebruikers-instellingen -->
+    <section class="card section--public" aria-labelledby="sec-app">
+      <div class="section-header">
+        <h2 id="sec-app">App</h2>
+        <span class="section-sub">Algemene voorkeuren</span>
+      </div>
+
+      <div class="dash-grid" style="grid-template-columns:1fr">
+        <div>
+          <label class="sidebar-title" for="theme">Themakleur</label>
+          <select class="select" id="theme" aria-label="Thema">
             <option value="light">Licht</option>
             <option value="dark" disabled>Donker (binnenkort)</option>
           </select>
-        </label>
-        <label> Tabel dichtheid
-          <select class="select" id="density">
+        </div>
+
+        <div>
+          <label class="sidebar-title" for="density">Tabel-dichtheid</label>
+          <select class="select" id="density" aria-label="Tabel-dichtheid">
             <option value="normal">Normaal</option>
             <option value="compact">Compact</option>
           </select>
-        </label>
+        </div>
+
+        <div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap">
+          <button id="btnSave" class="btn">Bewaren</button>
+          <button id="btnReset" class="btn">Herstellen naar standaard</button>
+          <span id="saveState" class="muted" role="status" aria-live="polite"></span>
+        </div>
+
+        <p class="muted" style="margin-top:.25rem">
+          Je voorkeuren worden lokaal bewaard in <code>localStorage</code> en automatisch toegepast op deze site.
+        </p>
       </div>
-      <p class="muted" style="margin-top:8px;">(Bewaren in <code>localStorage</code> — volgt)</p>
+    </section>
+
+    <!-- 🛡️ Admin-sectie (alleen zichtbaar in admin-modus) -->
+    <section class="card section--admin" id="admin-section" style="display:none; margin-top:1rem" aria-labelledby="sec-admin">
+      <div class="section-header">
+        <h2 id="sec-admin">🛡️ Admin</h2>
+        <span class="section-sub">Centrale Config & Sheet-schema</span>
+      </div>
+
+      <!-- Config -->
+      <div class="card" style="margin:0 0 1rem">
+        <h3 style="margin-top:0">Centrale Config</h3>
+        <div id="cfg-state" class="muted">⏳ Laden…</div>
+        <form id="cfg-form" class="form-grid" style="margin-top:.5rem">
+          <input name="apiBase" class="input" placeholder="https://script.google.com/macros/s/.../exec" required />
+          <input name="token"   class="input" placeholder="CFG_TOKEN (admin)" required />
+          <button class="btn" type="submit">Opslaan</button>
+        </form>
+      </div>
+
+      <!-- Schema -->
+      <div class="card" style="margin:0">
+        <h3 style="margin-top:0">Sheet Schema</h3>
+
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-tab="headers">Headers</button>
+          <button class="tab" data-tab="ensure">Kolommen toevoegen</button>
+          <button class="tab" data-tab="rename">Hernoemen</button>
+        </div>
+
+        <!-- HEADERS -->
+        <div id="tab-headers">
+          <div style="display:flex;gap:.5rem;align-items:center;margin:.5rem 0">
+            <button id="btn-load-headers" class="btn">Ververs headers</button>
+            <button id="btn-ensure-all" class="btn">Ensure alle tabs</button>
+          </div>
+          <pre id="headers-out" class="muted" style="white-space:pre-wrap">Nog niets geladen.</pre>
+        </div>
+
+        <!-- ENSURE -->
+        <div id="tab-ensure" style="display:none">
+          <form id="ensure-form" class="form-grid" style="margin-top:.5rem">
+            <input name="tab"     class="input" placeholder="Tabnaam (bv. Klanten)" required />
+            <input name="columns" class="input" placeholder="Nieuwe kolommen, komma-gescheiden" />
+            <button class="btn" type="submit">Toevoegen</button>
+          </form>
+          <div id="ensure-state" class="muted" style="margin-top:.5rem"></div>
+        </div>
+
+        <!-- RENAME -->
+        <div id="tab-rename" style="display:none">
+          <form id="rename-form" class="form-grid" style="margin-top:.5rem">
+            <input name="tab"  class="input" placeholder="Tabnaam (bv. Klanten)" required />
+            <input name="from" class="input" placeholder="Van (oude header)" required />
+            <input name="to"   class="input" placeholder="Naar (nieuwe header)" required />
+            <button class="btn" type="submit">Hernoemen</button>
+          </form>
+          <div id="rename-state" class="muted" style="margin-top:.5rem"></div>
+        </div>
+      </div>
     </section>
   </main>
 
-  <script src="/ui/layout.js?v=0.18.9"></script>
-  <script>SuperhondUI.mount({ title:'Instellingen', icon:'⚙️', back:'/' });</script>
+  <footer id="footer" class="footer"></footer>
+
+  <!-- Layout (topbar/footer) -->
+  <script src="../js/layout.js?v=0.20.3" defer></script>
+
+  <!-- Pagina-logica -->
+  <script type="module">
+    // ---------- Helpers ----------
+    const $  = (s,r=document)=>r.querySelector(s);
+    const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
+    const LS_THEME   = 'superhond:theme';
+    const LS_DENSITY = 'superhond:density';
+
+    function setMsg(el, txt, isErr=false){
+      if (!el) return;
+      el.textContent = txt;
+      el.classList.toggle('error', !!isErr);
+      el.classList.toggle('muted', !isErr);
+    }
+    async function getJSON(url, init){
+      const r = await fetch(url, init);
+      const j = await r.json().catch(()=>({}));
+      if (!r.ok || j?.ok===false) throw new Error(j?.error || \`HTTP \${r.status}\`);
+      return j.data;
+    }
+
+    // ---------- Gebruikers-instellingen ----------
+    const selTheme   = $('#theme');
+    const selDensity = $('#density');
+    const btnSave    = $('#btnSave');
+    const btnReset   = $('#btnReset');
+    const saveState  = $('#saveState');
+
+    function applyPrefs(theme, density){
+      // (voor nu enkel density live toepassen; dark thema volgt later)
+      document.documentElement.dataset.density = density || 'normal';
+      // je kunt hier ook een body class togglen als je wil: body.classList.toggle('compact', density==='compact')
+    }
+    function loadPrefs(){
+      const theme   = localStorage.getItem(LS_THEME)   || 'light';
+      const density = localStorage.getItem(LS_DENSITY) || 'normal';
+      selTheme.value = theme;
+      selDensity.value = density;
+      applyPrefs(theme, density);
+    }
+    function savePrefs(){
+      localStorage.setItem(LS_THEME, selTheme.value);
+      localStorage.setItem(LS_DENSITY, selDensity.value);
+      applyPrefs(selTheme.value, selDensity.value);
+      setMsg(saveState, '✔️ Bewaard.');
+      setTimeout(()=> setMsg(saveState,''), 1500);
+    }
+    function resetPrefs(){
+      localStorage.removeItem(LS_THEME);
+      localStorage.removeItem(LS_DENSITY);
+      selTheme.value   = 'light';
+      selDensity.value = 'normal';
+      applyPrefs('light','normal');
+      setMsg(saveState, 'Hersteld naar standaard.');
+      setTimeout(()=> setMsg(saveState,''), 1500);
+    }
+
+    btnSave?.addEventListener('click', savePrefs);
+    btnReset?.addEventListener('click', resetPrefs);
+    loadPrefs();
+
+    // Mount UI frame
+    document.addEventListener('DOMContentLoaded', ()=>{
+      if (window.SuperhondUI?.mount) {
+        SuperhondUI.mount({ title: 'Instellingen', icon: '⚙️' });
+      }
+    });
+
+    // ---------- Admin gate (UI zichtbaar maken) ----------
+    (function gate(){
+      const LS_KEY = 'superhond:admin:enabled';
+      const qs = new URLSearchParams(location.search);
+      if (qs.get('admin') === '1') localStorage.setItem(LS_KEY, '1');
+      const enabled = localStorage.getItem(LS_KEY) === '1';
+      const adminSection = $('#admin-section');
+      if (adminSection) adminSection.style.display = enabled ? '' : 'none';
+
+      // Sneltoets: Shift + Ctrl + A
+      window.addEventListener('keydown', (e)=>{
+        if (e.shiftKey && e.ctrlKey && e.key.toLowerCase()==='a'){
+          localStorage.setItem(LS_KEY, enabled ? '0' : '1');
+          location.reload();
+        }
+      });
+    })();
+
+    // ---------- Admin: Config + Schema ----------
+    const cfgForm = $('#cfg-form');
+    const cfgState= $('#cfg-state');
+
+    const tabs = $('#tabs');
+    const headersOut = $('#headers-out');
+    const btnLoadHeaders = $('#btn-load-headers');
+    const btnEnsureAll   = $('#btn-ensure-all');
+    const ensureForm = $('#ensure-form');
+    const ensureState= $('#ensure-state');
+    const renameForm = $('#rename-form');
+    const renameState= $('#rename-state');
+
+    // Tabs
+    tabs?.addEventListener('click', (e)=>{
+      const b = e.target.closest('.tab'); if(!b) return;
+      $$('.tab').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      ['headers','ensure','rename'].forEach(t=>{
+        $('#tab-'+t).style.display = (b.dataset.tab===t) ? '' : 'none';
+      });
+    });
+
+    // Config load
+    async function loadCfg(){
+      if (!cfgForm) return;
+      try{
+        setMsg(cfgState,'⏳ Laden…');
+        const data = await getJSON('../api/sheets?action=cfg.get', { cache:'no-store' });
+        cfgForm.apiBase.value = data?.apiBase || '';
+        const when = data?.updatedAt ? new Date(data.updatedAt).toLocaleString() : '—';
+        setMsg(cfgState, \`Huidig: \${data?.apiBase || '—'} (laatst gewijzigd: \${when})\`);
+      }catch(e){
+        setMsg(cfgState, '❌ '+e.message, true);
+      }
+    }
+    cfgForm?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      try{
+        setMsg(cfgState, 'Opslaan…');
+        const body = { entity:'Config', action:'set', payload:{
+          apiBase: cfgForm.apiBase.value.trim(),
+          token:   cfgForm.token.value.trim()
+        }};
+        await getJSON('../api/sheets', {
+          method:'POST', headers:{ 'Content-Type':'text/plain' }, body: JSON.stringify(body)
+        });
+        setMsg(cfgState, '✔️ Opgeslagen.');
+      }catch(e){
+        setMsg(cfgState, '❌ '+e.message, true);
+      }
+    });
+
+    // Headers tonen
+    async function loadHeaders(){
+      if (!headersOut) return;
+      try{
+        headersOut.textContent = '⏳ Laden…';
+        const data = await getJSON('../api/sheets?action=schema.get', { cache:'no-store' });
+        headersOut.textContent = Object.entries(data)
+          .map(([tab,h]) => \`• \${tab}: \${(h||[]).join(', ') || '—'}\`).join('\\n');
+      }catch(e){
+        headersOut.textContent = '❌ '+e.message;
+        headersOut.classList.add('error');
+      }
+    }
+    btnLoadHeaders?.addEventListener('click', loadHeaders);
+
+    // Ensure alle tabs (vereist token)
+    btnEnsureAll?.addEventListener('click', async ()=>{
+      if (!cfgForm) return;
+      const token = cfgForm.token.value.trim();
+      try{
+        headersOut.textContent = '⏳ Ensure alle tabs…';
+        const body = { entity:'Schema', action:'ensureAll', payload:{ token } };
+        await getJSON('../api/sheets', {
+          method:'POST', headers:{ 'Content-Type':'text/plain' }, body: JSON.stringify(body)
+        });
+        headersOut.textContent = '✔️ Klaar.'; setTimeout(loadHeaders, 400);
+      }catch(e){
+        headersOut.textContent = '❌ '+e.message;
+        headersOut.classList.add('error');
+      }
+    });
+
+    // Ensure specifieke tab (vereist token)
+    ensureForm?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      if (!cfgForm) return;
+      try{
+        setMsg(ensureState, '⏳ Uitvoeren…');
+        const tab  = ensureForm.tab.value.trim();
+        const cols = ensureForm.columns.value.split(',').map(s=>s.trim()).filter(Boolean);
+        const token= cfgForm.token.value.trim();
+        const body = { entity:'Schema', action:'ensure', payload:{ tab, columns: cols, token } };
+        await getJSON('../api/sheets', {
+          method:'POST', headers:{ 'Content-Type':'text/plain' }, body: JSON.stringify(body)
+        });
+        setMsg(ensureState, '✔️ Klaar.'); setTimeout(loadHeaders, 400);
+      }catch(e){
+        setMsg(ensureState, '❌ '+e.message, true);
+      }
+    });
+
+    // Hernoemen (vereist token)
+    renameForm?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      if (!cfgForm) return;
+      try{
+        setMsg(renameState, '⏳ Uitvoeren…');
+        const tab  = renameForm.tab.value.trim();
+        const from = renameForm.from.value.trim();
+        const to   = renameForm.to.value.trim();
+        const token= cfgForm.token.value.trim();
+        const body = { entity:'Schema', action:'rename', payload:{ tab, from, to, token } };
+        await getJSON('../api/sheets', {
+          method:'POST', headers:{ 'Content-Type':'text/plain' }, body: JSON.stringify(body)
+        });
+        setMsg(renameState, '✔️ Klaar.'); setTimeout(loadHeaders, 400);
+      }catch(e){
+        setMsg(renameState, '❌ '+e.message, true);
+      }
+    });
+
+    // Boot Admin (alleen als sectie zichtbaar is)
+    if ($('#admin-section') && $('#admin-section').style.display !== 'none') {
+      loadCfg();
+      loadHeaders();
+    }
+  </script>
+
+  <noscript>
+    <p style="padding:1rem;color:#b91c1c">JavaScript is vereist om instellingen te beheren.</p>
+  </noscript>
 </body>
 </html>
