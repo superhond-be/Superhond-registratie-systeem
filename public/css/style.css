@@ -1,4 +1,4 @@
-/* Superhond UI – v0.18.10 (clean) */
+/* Superhond UI – v0.18.11 (clean + form errors + tweaks) */
 
 /* ---------- Design tokens ---------- */
 :root {
@@ -148,20 +148,32 @@ body {
   min-height:38px; padding:6px 10px;
   border:1px solid #d1d5db; border-radius:8px; background:#fff;
 }
-.input:focus,.select:focus { outline:2px solid rgba(30,112,255,.25); border-color:#9bbcff; }
+.input:focus-visible,.select:focus-visible {
+  outline:2px solid rgba(30,112,255,.25);
+  border-color:#9bbcff;
+}
 .input-nr { width:5.5rem; }
+
 .btn {
   display:inline-flex; align-items:center; gap:6px;
   padding:8px 12px; border:1px solid #d1d5db; border-radius:8px;
   background:#fff; text-decoration:none; color:#111827; cursor:pointer;
 }
 .btn:hover { background:#f8fafc; }
-.btn-xs { font-size:.85rem; padding:.2rem .45rem; }
+.btn-xs { padding:.2rem .45rem; font-size:.8rem; } /* compact variant conform verzoek */
+.nowrap { white-space: nowrap; }                  /* tekst niet afbreken in cellen */
+
+/* Foutstijlen bij formulier (conform verzoek) */
+.input-error { border-color:#b91c1c !important; outline-color:#b91c1c !important; }
+.field-error { color:#b91c1c; font-size:.85rem; margin-top:.25rem; }
+
+/* Labels/badges */
 .badge { display:inline-block; padding:4px 8px; border-radius:999px; background:#eef2ff; color:#1e40af; }
 
+/* Status/feedback */
 .loader { padding:.5rem 0; color:var(--muted); }
-.error { color:#b00020; }
-.muted { color:var(--muted); font-size:.92em; }
+.error  { color:#b91c1c; }  /* rood geharmoniseerd */
+.muted  { color:var(--muted); font-size:.92em; }
 
 /* ---------- Responsive ---------- */
 @media (max-width:900px){
