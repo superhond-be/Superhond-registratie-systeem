@@ -3,44 +3,56 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Superhond — Lessenmodule</title>
-  <link rel="stylesheet" href="/css/style.css?v=0.20.0" />
-  <style>
-    .pilltabs{display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0 1rem}
-    .pilltabs .pill{padding:.45rem .8rem;border:1px solid var(--border,#e5e7eb);border-radius:999px;background:#fff;cursor:pointer}
-    .pill[aria-current="page"]{background:#ffe082;border-color:#ffd54f;font-weight:600}
-    .muted{color:#6b7280}
-  </style>
-  <script src="/js/layout.js" defer></script>
-  <script type="module" src="/js/lessen.tabs.js" defer></script>
+  <title>Superhond — Lessen</title>
+  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
 </head>
-<body>
-<header id="topbar" class="topbar"></header>
+<body class="page-lessen">
+  <header id="topbar" class="topbar"></header>
 
-<main class="container">
-  <h1 class="page-title">Lessenmodule</h1>
+  <main class="container">
+    <h1 class="page-title">Lessen</h1>
 
-  <!-- tabs -->
-  <nav class="pilltabs" id="tabs">
-    <button class="pill" data-tab="names" aria-current="page">Namen</button>
-    <button class="pill" data-tab="types">Types</button>
-    <button class="pill" data-tab="locations">Locaties</button>
-    <button class="pill" data-tab="themes">Thema’s</button>
-    <button class="pill" data-tab="trainers">Trainers</button>
-    <button class="pill" data-tab="beheer">Beheer</button>
-    <span style="margin-left:auto"></span>
-    <a class="btn" href="/">→ Dashboard</a>
-  </nav>
+    <section class="card">
+      <div class="row" style="display:flex;gap:.5rem;align-items:center">
+        <input id="search" class="input" placeholder="Zoek op naam/type/locatie…" />
+        <button id="refresh" class="btn">Ververs</button>
+        <a href="../dashboard/" class="btn btn-secondary">← Terug</a>
+      </div>
 
-  <!-- content host -->
-  <section id="view" class="card"><p class="muted">Laden…</p></section>
-</main>
+      <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
 
-<footer id="footer" class="footer"></footer>
-<script>
-  window.addEventListener('DOMContentLoaded',()=>{
-    SuperhondUI.mount({ title:'Superhond — Lessenmodule', icon:'📅', back:'/' });
-  });
-</script>
+      <div class="table-wrap" style="margin-top:.5rem">
+        <table class="table" id="tbl">
+          <thead>
+            <tr><th>Naam</th><th>Datum</th><th>Locatie</th><th>Trainer</th><th>Cap.</th><th style="width:1%"></th></tr>
+          </thead>
+          <tbody><!-- rows --></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:1rem">
+      <h2>Nieuwe les toevoegen</h2>
+      <form id="form-add" class="form-grid">
+        <input name="type" class="input" placeholder="Type / Naam" required />
+        <input name="trainer" class="input" placeholder="Trainer" />
+        <input name="location" class="input" placeholder="Locatie" />
+        <input name="capacity" class="input" type="number" min="0" step="1" placeholder="Capaciteit" />
+        <div class="row" style="display:flex;gap:.5rem">
+          <input name="date" class="input" type="date" required />
+          <input name="time" class="input" type="time" required />
+        </div>
+        <input name="notes" class="input" placeholder="Notities" />
+        <button class="btn" type="submit">Opslaan</button>
+      </form>
+      <div id="form-msg" class="muted" style="margin-top:.5rem"></div>
+    </section>
+  </main>
+
+  <footer id="footer" class="footer"></footer>
+
+  <script src="../js/layout.js?v=0.20.0" defer></script>
+  <script type="module" src="../js/lessen.js?v=0.20.0"></script>
 </body>
 </html>
