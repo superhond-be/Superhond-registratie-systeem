@@ -1,1 +1,179 @@
 
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Superhond – Admin API Test</title>
+  <style>
+    :root { --ink:#111; --muted:#6b7280; --err:#b91c1c; --ok:#15803d; }
+    body { font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:#fafafa; color:var(--ink); padding:2rem; }
+    h1 { margin:0 0 .75rem; }
+    .card { background:#fff; border:1px solid #e5e7eb; border-radius:10px; box-shadow:0 1px 2px rgba(0,0,0,.06); padding:1rem 1.25rem; margin:0 0 1rem; }
+    .row { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+    label { font-size:.9rem; color:var(--muted); }
+    input,button { font:inherit; }
+    input { min-width:280px; padding:.55rem .65rem; border:1px solid #d1d5db; border-radius:8px; background:#fff; }
+    button { padding:.55rem .75rem; border:1px solid #d1d5db; border-radius:8px; background:#fff; cursor:pointer; }
+    button:hover { background:#f3f4f6; }
+    pre { background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:.75rem; overflow:auto; font-size:.9rem; }
+    .ok{ color:var(--ok); } .fail{ color:var(--err); } .muted{ color:var(--muted); }
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+    @media (max-width:900px){ .grid2{ grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <h1>🛡️ Superhond – Admin API Test</h1>
+  <p class="muted">Test hier <strong>cfg.get/set</strong> en <strong>schema</strong>-acties via je Node proxy → Google Apps Script.</p>
+
+  <!-- Config -->
+  <section class="card">
+    <h2 style="margin:.25rem 0 .5rem">Centrale Config</h2>
+    <div class="row" style="margin:.25rem 0 .5rem">
+      <button id="btnCfgGet">cfg.get</button>
+      <span id="cfgState" class="muted">—</span>
+    </div>
+    <div class="row">
+      <label>apiBase</label>
+      <input id="apiBase" placeholder="https://script.google.com/macros/s/…/exec" />
+      <label>CFG_TOKEN</label>
+      <input id="cfgToken" placeholder="token" />
+      <button id="btnCfgSet">cfg.set (opslaan)</button>
+    </div>
+  </section>
+
+  <!-- Schema -->
+  <section class="card">
+    <h2 style="margin:.25rem 0 .5rem">Schema</h2>
+    <div class="row" style="margin:.25rem 0 .5rem">
+      <button id="btnSchemaGet">schema.get</button>
+      <button id="btnEnsureAll">ensureSchema (alle tabs)</button>
+      <span class="muted">Token wordt vereist voor mutaties</span>
+    </div>
+
+    <div class="grid2">
+      <div class="card" style="margin:0">
+        <h3 style="margin-top:0">Kolommen toevoegen (ensure)</h3>
+        <div class="row"><input id="ensTab" placeholder="Tab (bv. Klanten)" /></div>
+        <div class="row"><input id="ensCols" placeholder="Kolommen, komma-gescheiden (bv. iban,geboortedatum)" /></div>
+        <div class="row">
+          <input id="ensToken" placeholder="CFG_TOKEN" />
+          <button id="btnEnsure">Uitvoeren</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin:0">
+        <h3 style="margin-top:0">Kolom hernoemen (rename)</h3>
+        <div class="row"><input id="renTab" placeholder="Tab (bv. Klanten)" /></div>
+        <div class="row">
+          <input id="renFrom" placeholder="Van (oude headernaam)" />
+          <input id="renTo" placeholder="Naar (nieuwe headernaam)" />
+        </div>
+        <div class="row">
+          <input id="renToken" placeholder="CFG_TOKEN" />
+          <button id="btnRename">Uitvoeren</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Output -->
+  <section class="card">
+    <h2 style="margin:.25rem 0 .5rem">Output</h2>
+    <div id="status" class="muted">Klaar voor test…</div>
+    <pre id="out">—</pre>
+  </section>
+
+  <script type="module">
+    const $ = s => document.querySelector(s);
+    const out = $('#out'), status = $('#status'), cfgState = $('#cfgState');
+
+    function show(data, ok=true, title='Resultaat'){
+      status.textContent = (ok ? '✔️ ' : '❌ ') + title;
+      status.className = ok ? 'ok' : 'fail';
+      out.textContent = JSON.stringify(data, null, 2);
+    }
+    async function getJSON(url, init){
+      const r = await fetch(url, init);
+      const txt = await r.text();
+      let j; try{ j = JSON.parse(txt); }catch{ j = { raw: txt }; }
+      if (!r.ok || j?.ok === false) throw new Error(j?.error || `HTTP ${r.status}`);
+      return j.data;
+    }
+
+    // cfg.get
+    $('#btnCfgGet').addEventListener('click', async ()=>{
+      try{
+        cfgState.textContent='⏳';
+        const data = await getJSON('../api/sheets?action=cfg.get',{ cache:'no-store' });
+        cfgState.textContent='OK'; cfgState.className='ok';
+        $('#apiBase').value = data?.apiBase || '';
+        show(data, true, 'cfg.get');
+      }catch(e){ cfgState.textContent='FOUT'; cfgState.className='fail'; show({error:e.message}, false, 'cfg.get'); }
+    });
+
+    // cfg.set
+    $('#btnCfgSet').addEventListener('click', async ()=>{
+      const apiBase = $('#apiBase').value.trim();
+      const token   = $('#cfgToken').value.trim();
+      try{
+        show({apiBase}, true, 'cfg.set ⏳');
+        const body = { entity:'Config', action:'set', payload:{ apiBase, token } };
+        const data = await getJSON('../api/sheets', {
+          method:'POST', headers:{ 'Content-Type':'text/plain' }, body: JSON.stringify(body)
+        });
+        show(data, true, 'cfg.set');
+      }catch(e){ show({error:e.message}, false, 'cfg.set'); }
+    });
+
+    // schema.get
+    $('#btnSchemaGet').addEventListener('click', async ()=>{
+      try{
+        const data = await getJSON('../api/sheets?action=schema.get', { cache:'no-store' });
+        show(data, true, 'schema.get');
+      }catch(e){ show({error:e.message}, false, 'schema.get'); }
+    });
+
+    // ensureSchema (alle tabs)
+    $('#btnEnsureAll').addEventListener('click', async ()=>{
+      const token = prompt('CFG_TOKEN voor ensureAll:')?.trim() || '';
+      try{
+        const body = { entity:'Schema', action:'ensureAll', payload:{ token } };
+        const data = await getJSON('../api/sheets', {
+          method:'POST', headers:{ 'Content-Type':'text/plain' }, body: JSON.stringify(body)
+        });
+        show(data, true, 'schema.ensureAll');
+      }catch(e){ show({error:e.message}, false, 'schema.ensureAll'); }
+    });
+
+    // ensure specifieke tab
+    $('#btnEnsure').addEventListener('click', async ()=>{
+      const tab = $('#ensTab').value.trim();
+      const cols = $('#ensCols').value.split(',').map(s=>s.trim()).filter(Boolean);
+      const token = $('#ensToken').value.trim();
+      try{
+        const body = { entity:'Schema', action:'ensure', payload:{ tab, columns: cols, token } };
+        const data = await getJSON('../api/sheets', {
+          method:'POST', headers:{ 'Content-Type':'text/plain' }, body: JSON.stringify(body)
+        });
+        show(data, true, 'schema.ensure');
+      }catch(e){ show({error:e.message}, false, 'schema.ensure'); }
+    });
+
+    // rename kolom
+    $('#btnRename').addEventListener('click', async ()=>{
+      const tab  = $('#renTab').value.trim();
+      const from = $('#renFrom').value.trim();
+      const to   = $('#renTo').value.trim();
+      const token= $('#renToken').value.trim();
+      try{
+        const body = { entity:'Schema', action:'rename', payload:{ tab, from, to, token } };
+        const data = await getJSON('../api/sheets', {
+          method:'POST', headers:{ 'Content-Type':'text/plain' }, body: JSON.stringify(body)
+        });
+        show(data, true, 'schema.rename');
+      }catch(e){ show({error:e.message}, false, 'schema.rename'); }
+    });
+  </script>
+</body>
+</html>
