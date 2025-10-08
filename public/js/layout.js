@@ -53,7 +53,6 @@
       console[(type === 'warn' ? 'warn' : 'log')](msg);
     }
   }
-  // Wacht tot DOM klaar is (voorkomt te vroege mount-calls)
   function onReady(cb){
     if (document.readyState !== 'loading') cb();
     else document.addEventListener('DOMContentLoaded', cb, { once:true });
@@ -128,9 +127,9 @@
 
   /* ───────── Renderers ───────── */
 
-  function statusClass(ok) { return ok ? 'is-online' : 'is-offline'; }
+  const statusClass = (ok) => (ok ? 'is-online' : 'is-offline');
 
-  // Uniforme Topbar (dashboard = geel, subpages = blauw via body-classes)
+  // Uniforme Topbar (dashboard = geel, subpages = blauw via body-classes/force)
   function renderTopbar(container, opts, cfg, online) {
     if (!container) return;
     container.innerHTML = '';
@@ -175,21 +174,26 @@
       cfg?.env ? el('span', { class: 'muted' }, `(${cfg.env})`) : null
     );
 
-    // Eenmalige CSS voor topbar (rest staat in je hoofd-CSS)
+    // Eenmalige CSS voor topbar (geen witte achtergrond meer)
     onceStyle('sh-topbar-style', `
       /* sticky over de volle breedte */
       #topbar{position:sticky;top:0;z-index:50;background:var(--topbar-bg);color:var(--topbar-ink)}
-      .topbar-inner{display:flex;align-items:center;gap:.75rem;min-height:56px;border-bottom:1px solid #e5e7eb}
+      #topbar .topbar-inner{display:flex;align-items:center;gap:.75rem;min-height:56px;border-bottom:1px solid #e5e7eb;background:inherit}
       .tb-left{display:flex;align-items:center;gap:.5rem}
       .tb-right{margin-left:auto;display:flex;align-items:center;gap:.5rem;font-size:.9rem}
       .brand{font-weight:800;font-size:20px;text-decoration:none;color:inherit}
-      .btn-back{appearance:none;border:1px solid rgba(0,0,0,.15);background:#fff;color:#111827;
-        border-radius:8px;padding:6px 10px;cursor:pointer}
+      .btn-back{appearance:none;border:1px solid rgba(0,0,0,.15);background:#fff;color:#111827;border-radius:8px;padding:6px 10px;cursor:pointer}
       body.subpage .btn-back{border-color:#cbd5e1;background:#f8fafc;color:#0f172a} /* beter contrast op blauw */
       .status-dot{width:.6rem;height:.6rem;border-radius:999px;display:inline-block;vertical-align:middle;background:#9ca3af}
       .status-dot.is-online{background:#16a34a}
       .status-dot.is-offline{background:#ef4444}
-      @media (prefers-color-scheme: dark){ .topbar-inner{border-bottom-color:#374151} }
+      @media (prefers-color-scheme: dark){ #topbar .topbar-inner{border-bottom-color:#374151} }
+
+      /* Hard-forcers: dashboard altijd geel, subpages blauw */
+      body.dashboard-page #topbar,
+      body.dashboard-page #topbar .topbar-inner { background: var(--accent) !important; color:#000 !important; }
+      body.subpage #topbar,
+      body.subpage #topbar .topbar-inner { background: #2563eb !important; color:#fff !important; }
     `);
 
     inner.append(left, right);
@@ -227,8 +231,7 @@
 
   /* ───────── Mount ───────── */
   async function mount(opts = {}) {
-    // Wacht altijd tot DOM klaar is (en #topbar bestaat) → voorkomt race conditions
-    await new Promise(resolve => onReady(resolve));
+    await new Promise(resolve => onReady(resolve)); // wacht tot DOM klaar
 
     // Dichtheid toepassen vóór render
     applyDensityFromStorage();
@@ -240,7 +243,6 @@
     const isSub = document.body.classList.contains('subpage');
     const finalOpts = Object.assign({ back: isSub ? true : null }, opts);
 
-    // Render alleen als de ankers bestaan
     const topbarEl = document.getElementById('topbar');
     const footerEl = document.getElementById('footer');
     if (!topbarEl && !footerEl) {
@@ -252,7 +254,6 @@
     if (topbarEl) renderTopbar(topbarEl, finalOpts, cfg, online);
     if (footerEl) renderFooter(footerEl, cfg);
 
-    // Admin badge tonen indien nodig (na topbar render)
     ensureAdminBadge();
   }
 
