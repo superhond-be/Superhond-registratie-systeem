@@ -1,15 +1,17 @@
 /**
- * public/js/sheets.js — Centrale API-laag voor Superhond (v0.21.0)
+ * public/js/sheets.js — Centrale API-laag voor Superhond (v0.21.1)
  * - Proxy-first naar /api/sheets (CORS-vrij) met veilige base-override
  * - Fallback naar directe GAS /exec (optioneel)
  * - Timeouts, retries, nette fouten + localStorage cache voor apiBase
+ * - NEW: optionele { timeout } bij fetchSheet/fetchAction/postAction
+ * - NEW: cache-buster 't=' op alle verzoeken (ook direct naar GAS)
  */
 
-const DEFAULT_TIMEOUT = 10_000;   // 10s
+const DEFAULT_TIMEOUT = 15_000;   // eerder 10s → 15s geeft iets meer speling
 const DEFAULT_RETRIES = 2;        // totaal 3 pogingen
 const LS_KEY_BASE     = 'superhond:apiBase';
 
-let   GAS_BASE_URL    = '';       // directe /exec (optioneel; wordt ook via /api/config gezet)
+let GAS_BASE_URL = '';            // directe /exec (optioneel; kan via /api/config/LS/window gezet worden)
 
 /* ─────────────────── Base helpers ─────────────────── */
 function sanitizeExecUrl(url = '') {
@@ -97,13 +99,19 @@ async function withRetry(doRequest, { retries = DEFAULT_RETRIES, baseDelay = 300
 }
 
 /* ─────────────────── URL builders ─────────────────── */
-function proxyUrl(paramsObj) {
-  const url = new URL('/api/sheets', location.origin);
+function appendParams(url, paramsObj) {
   if (paramsObj) {
     Object.entries(paramsObj).forEach(([k, v]) => {
       if (v != null && v !== '') url.searchParams.set(k, String(v));
     });
   }
+  // kleine bust tegen caches
+  url.searchParams.set('t', Date.now().toString());
+}
+
+function proxyUrl(paramsObj) {
+  const url = new URL('/api/sheets', location.origin);
+  appendParams(url, paramsObj);
   // ⬇️ Stuur veilige base override mee, jouw server/api/sheets.js valideert dit
   if (GAS_BASE_URL) url.searchParams.set('base', GAS_BASE_URL);
   return url.toString();
@@ -112,11 +120,7 @@ function proxyUrl(paramsObj) {
 function directUrl(paramsObj) {
   if (!GAS_BASE_URL) return '';
   const url = new URL(GAS_BASE_URL);
-  if (paramsObj) {
-    Object.entries(paramsObj).forEach(([k, v]) => {
-      if (v != null && v !== '') url.searchParams.set(k, String(v));
-    });
-  }
+  appendParams(url, paramsObj);
   return url.toString();
 }
 
@@ -176,36 +180,51 @@ export function normStatus(s) {
   return String(s == null ? '' : s).trim().toLowerCase();
 }
 
-/** Lees een sheet-tab via legacy `mode=`: klanten|honden|klassen|lessen|reeksen|all|diag */
-export async function fetchSheet(tabName) {
+/**
+ * Lees een sheet-tab via legacy `mode=`: klanten|honden|klassen|lessen|reeksen|all|diag
+ * @param {string} tabName
+ * @param {{timeout?:number}} opts
+ */
+export async function fetchSheet(tabName, opts = {}) {
   const mode = String(tabName || '').toLowerCase();
   if (!mode) throw new Error('tabName vereist');
-  const json = await getJSON({ mode });
+  const json = await getJSON({ mode }, opts);
   return json?.data || [];
 }
 
-/** Moderne GET actions uit GAS (indien aanwezig): bv. action=getLeden */
-export async function fetchAction(action, params = {}) {
+/**
+ * Moderne GET actions uit GAS (indien aanwezig): bv. action=getLeden
+ * @param {string} action
+ * @param {object} params
+ * @param {{timeout?:number}} opts
+ */
+export async function fetchAction(action, params = {}, opts = {}) {
   const a = String(action || '').trim();
   if (!a) throw new Error('action vereist');
-  const json = await getJSON({ action: a, ...params });
+  const json = await getJSON({ action: a, ...params }, opts);
   return json?.data || [];
 }
 
-/** Moderne POST actions (algemene router): { entity, action, payload } */
-export async function postAction(entity, action, payload = {}) {
+/**
+ * Moderne POST actions (algemene router): { entity, action, payload }
+ * @param {string} entity
+ * @param {string} action
+ * @param {object} payload
+ * @param {{timeout?:number}} opts
+ */
+export async function postAction(entity, action, payload = {}, opts = {}) {
   const e = String(entity || '').trim().toLowerCase();
   const a = String(action || '').trim().toLowerCase();
   if (!e || !a) throw new Error('entity en action vereist');
-  const json = await postJSON({ entity: e, action: a, payload });
+  const json = await postJSON({ entity: e, action: a, payload }, undefined, opts);
   return json?.data || {};
 }
 
 /* Convenience: directe save-calls die mappen op doPost(mode=...) in main.gs */
-export const saveKlant = (data) => postJSON(data, { mode: 'saveKlant' }).then(j => j.data || {});
-export const saveHond  = (data) => postJSON(data, { mode: 'saveHond'  }).then(j => j.data || {});
-export const saveKlas  = (data) => postJSON(data, { mode: 'saveKlas'  }).then(j => j.data || {});
-export const saveLes   = (data) => postJSON(data, { mode: 'saveLes'   }).then(j => j.data || {});
+export const saveKlant = (data, opts) => postJSON(data, { mode: 'saveKlant' }, opts || {}).then(j => j.data || {});
+export const saveHond  = (data, opts) => postJSON(data, { mode: 'saveHond'  }, opts || {}).then(j => j.data || {});
+export const saveKlas  = (data, opts) => postJSON(data, { mode: 'saveKlas'  }, opts || {}).then(j => j.data || {});
+export const saveLes   = (data, opts) => postJSON(data, { mode: 'saveLes'   }, opts || {}).then(j => j.data || {});
 
 /* ─────────────────── Bootstrapping ─────────────────── */
 /** Best-effort init (kun je ook handmatig aanroepen vóór fetchSheet/save...) */
