@@ -1,316 +1,411 @@
 /**
- * public/js/klassen.js — Lijst + zoeken + inline bewerken + toevoegen (v0.21.1)
- * Werkt met public/js/sheets.js (proxy-first, timeouts, retries)
+ * public/js/klassen.js — Lijst + zoeken + toevoegen + actiekolom (v0.26.0)
+ * - Superhond actiekolom (👁️ ✏️ 🗑️) via actions.js
+ * - View/Edit/Delete modals
+ * - Abortable refresh, NL-sortering
+ * - Status-select voorgedrukt (actief/inactief)
  */
 
 import {
-  fetchAction, fetchSheet, postAction, initFromConfig
-} from '../js/sheets.js';
+  initFromConfig,
+  fetchSheet,
+  saveKlas,
+  postAction
+} from './sheets.js';
 
-const $  = (s, r = document) => r.querySelector(s);
-const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+import {
+  actionBtns,
+  wireActionHandlers
+} from './actions.js';
 
-const els = {
-  state:   $('#state'),
-  tbody:   $('#tbl tbody'),
-  search:  $('#search'),
-  refresh: $('#refresh'),
-  form:    $('#form-add'),
-  formMsg: $('#form-msg')
-};
+// ───────────────────────── Utils ─────────────────────────
+const $  = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-let CACHE = [];
-let editingId = null;
-let undoTimer = null;
-let lastArchived = null; // { entity:'Klas', id, snapshot }
-
-/* ────────────── Helpers ────────────── */
-function setState(txt, kind = 'muted') {
-  if (!els.state) return;
-  els.state.className = kind; // 'muted' | 'error'
-  els.state.textContent = txt;
+function debounce(fn, ms = 250) {
+  let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
-function escapeHtml(s='') {
-  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function toast(msg, type='info'){
+  if (typeof window.SuperhondToast === 'function') window.SuperhondToast(msg, type);
+  else console[(type === 'error' ? 'error' : 'log')](msg);
 }
-function required(v) { return String(v ?? '').trim().length > 0; }
-function norm(s) { return String(s ?? '').trim().toLowerCase(); }
-
-function filterRows(list, q) {
-  const ql = norm(q);
-  if (!ql) return list;
-  return list.filter(k =>
-    norm(k.naam).includes(ql) ||
-    norm(k.niveau).includes(ql) ||
-    norm(k.trainer).includes(ql) ||
-    norm(k.status).includes(ql)
+function setState(text, kind='muted'){
+  const el = $('#state');
+  if (!el) return;
+  el.className = kind;
+  el.textContent = text;
+  el.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+}
+function escapeHtml(s=''){
+  return String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
   );
 }
 
-function debounce(fn, ms = 200) {
-  let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+// ───────────────────────── Helpers ─────────────────────────
+const TIMEOUT_MS = 20000;
+const collator = new Intl.Collator('nl', { sensitivity: 'base', numeric: true });
+
+let allRows = [];
+let viewRows = [];
+let lastAbort = null;
+
+/** Zorgt dat respons altijd een array wordt. */
+function toArrayRows(x){
+  if (Array.isArray(x)) return x;
+  if (x && Array.isArray(x.data)) return x.data;
+  if (x && Array.isArray(x.rows)) return x.rows;
+  if (x && Array.isArray(x.result)) return x.result;
+  if (x && x.ok === true && Array.isArray(x.data)) return x.data;
+  throw new Error('Server gaf onverwachte respons (geen lijst).');
 }
 
-/* Inline form errors (CSS-classes uit style.css) */
-function clearErrors(root = document) {
-  $$('.input-error', root).forEach(el => el.classList.remove('input-error'));
-  $$('.field-error', root).forEach(el => el.remove());
-}
-function setFieldError(input, message = '') {
-  if (!input) return;
-  input.classList.toggle('input-error', !!message);
-  let hint = input.nextElementSibling;
-  if (!hint || !hint.classList.contains('field-error')) {
-    hint = document.createElement('div');
-    hint.className = 'field-error';
-    input.insertAdjacentElement('afterend', hint);
+function normalizeRow(row){
+  const o = Object.create(null);
+  for (const [k,v] of Object.entries(row || {})) {
+    o[String(k||'').toLowerCase()] = v;
   }
-  hint.textContent = message || '';
-  hint.style.display = message ? '' : 'none';
+  // Aliassen volgens saveKlas_
+  return {
+    id:       (o.id ?? o['id.'] ?? o.col1 ?? '').toString(),
+    naam:     (o.naam ?? '').toString(),
+    niveau:   (o.niveau ?? '').toString(),
+    trainer:  (o.trainer ?? '').toString(),
+    status:   (o.status ?? '').toString(),
+    weeks:    (o.geldigheid_weken ?? o.weken ?? '').toString(),
+    max:      (o.max_deelnemers ?? o.capaciteit ?? '').toString()
+  };
 }
 
-/* Toast (compatible met jouw CSS/toast.js) */
-function showToast(msg, type = 'info', undoCallback = null, duration = 10_000) {
-  if (typeof window.SuperhondToast === 'function') {
-    window.SuperhondToast(msg, type, { undo: undoCallback, duration });
-    return { close: () => {} };
+function rowMatchesQuery(row, q){
+  if (!q) return true;
+  const hay = [
+    row.naam, row.niveau, row.trainer, row.status
+  ].map(x => String(x||'').toLowerCase()).join(' ');
+  return hay.includes(q);
+}
+
+function applyActiveFilter(){
+  const q = String($('#search')?.value || '').trim().toLowerCase();
+  viewRows = allRows.filter(r => rowMatchesQuery(r, q));
+  return viewRows;
+}
+
+// ───────────────────────── Tabel ─────────────────────────
+function renderTable(rows){
+  const tb = $('#tbl tbody');
+  if (!tb) return;
+  tb.innerHTML = '';
+
+  if (!rows.length) {
+    tb.innerHTML = `<tr><td colspan="6" class="muted">Geen resultaten.</td></tr>`;
+    return;
   }
-  // simpele fallback
-  let cont = document.querySelector('.toast-container');
-  if (!cont) {
-    cont = document.createElement('div');
-    cont.className = 'toast-container';
-    document.body.appendChild(cont);
-  }
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.innerHTML = `<span>${escapeHtml(msg)}</span>`;
-  if (undoCallback) {
-    const b = document.createElement('button');
-    b.textContent = 'Ongedaan';
-    b.onclick = () => { undoCallback(); el.remove(); };
-    el.appendChild(b);
-  }
-  const x = document.createElement('button');
-  x.setAttribute('aria-label', 'Sluiten');
-  x.textContent = '×';
-  x.onclick = () => el.remove();
-  el.appendChild(x);
-  cont.appendChild(el);
-  const timer = setTimeout(() => el.remove(), duration);
-  return { close: () => { clearTimeout(timer); el.remove(); } };
-}
 
-/* ────────────── Row renders ────────────── */
-function displayRow(k) {
-  const tr = document.createElement('tr');
-  tr.dataset.id = k.id || '';
-  tr.innerHTML = `
-    <td>${escapeHtml(k.naam || '—')}</td>
-    <td>${escapeHtml(k.niveau || '—')}</td>
-    <td>${escapeHtml(k.trainer || '—')}</td>
-    <td>${escapeHtml(k.status || '—')}</td>
-    <td class="nowrap">
-      <button class="btn btn-xs act-edit">Bewerk</button>
-      <button class="btn btn-xs act-archive">Archiveer</button>
-    </td>
-  `;
-  return tr;
-}
-
-function mkInput(name, value='', placeholder='', isRequired=false, type='text'){
-  const wrap = document.createElement('div');
-  const el = document.createElement('input');
-  el.name = name; el.value = value ?? ''; el.placeholder = placeholder;
-  el.className = 'input'; el.type = type; el.autocomplete = 'off';
-  if (isRequired) el.required = true;
-  wrap.appendChild(el);
-  return wrap;
-}
-function mkBtn(label, cls){ const b=document.createElement('button'); b.type='button'; b.className=cls; b.textContent=label; return b; }
-
-function editRow(k) {
-  const tr = document.createElement('tr');
-  tr.dataset.id = k.id || '';
-
-  const tdNaam   = document.createElement('td');
-  const inNaam   = mkInput('naam', k.naam || '', 'Naam', true);
-  tdNaam.append(inNaam);
-
-  const tdNiv    = document.createElement('td');
-  const inNiveau = mkInput('niveau', k.niveau || '', 'Niveau');
-  tdNiv.append(inNiveau);
-
-  const tdTr     = document.createElement('td');
-  const inTrainer= mkInput('trainer', k.trainer || '', 'Trainer');
-  tdTr.append(inTrainer);
-
-  const tdSt     = document.createElement('td');
-  const inStatus = mkInput('status', k.status || 'actief', 'Status (actief/inactief)');
-  tdSt.append(inStatus);
-
-  const tdAct = document.createElement('td'); tdAct.className='nowrap';
-  const bSave   = mkBtn('Opslaan','btn btn-xs act-save');
-  const bCancel = mkBtn('Annuleer','btn btn-xs act-cancel');
-  tdAct.append(bSave, bCancel);
-
-  // Enter in een van de velden → opslaan
-  $$('input', tr).forEach(inp => {
-    inp.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        bSave.click();
-      }
-    });
-  });
-
-  tr.append(tdNaam, tdNiv, tdTr, tdSt, tdAct);
-  return tr;
-}
-
-/* ────────────── Data load/render ────────────── */
-async function load() {
-  try {
-    setState('⏳ Laden…', 'muted');
-    await initFromConfig();
-
-    let data = [];
-    try {
-      // Moderne action indien beschikbaar
-      data = await fetchAction('getKlassen');
-    } catch {
-      // Fallback op legacy tab
-      data = await fetchSheet('Klassen');
-    }
-
-    CACHE = (data || []).filter(k => norm(k.archived) !== 'true');
-    render();
-    setState(`✅ ${CACHE.length} klas${CACHE.length===1?'':'sen'} geladen`, 'muted');
-  } catch (err) {
-    console.error(err);
-    setState('❌ Fout bij laden van klassen: ' + (err?.message || String(err)), 'error');
-  }
-}
-
-function render() {
-  if (!els.tbody) return;
-  els.tbody.innerHTML = '';
-  const list = filterRows(CACHE, els.search?.value || '');
-  if (!list.length) {
+  const frag = document.createDocumentFragment();
+  for (const r of rows) {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td colspan="5" class="muted">Geen resultaten.</td>`;
-    els.tbody.appendChild(tr);
-    return;
+    tr.innerHTML = `
+      <td>${escapeHtml(r.naam || '')}</td>
+      <td>${escapeHtml(r.niveau || '')}</td>
+      <td>${escapeHtml(r.trainer || '')}</td>
+      <td>${escapeHtml(r.status || '')}</td>
+      <td class="nowrap">${escapeHtml(r.max || '')}</td>
+      <td class="nowrap">${actionBtns({ id: r.id, entity: 'klas' })}</td>
+    `;
+    frag.appendChild(tr);
   }
-  for (const k of list) {
-    const tr = (editingId && editingId === k.id) ? editRow(k) : displayRow(k);
-    els.tbody.appendChild(tr);
+  tb.appendChild(frag);
+}
+
+const doFilter = debounce(() => {
+  renderTable(applyActiveFilter());
+}, 150);
+
+// ───────────────────────── Modals ─────────────────────────
+function ensureModalRoot(){
+  let root = document.getElementById('modal-root');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'modal-root';
+    document.body.appendChild(root);
+  }
+  return root;
+}
+function closeModal(){
+  const root = document.getElementById('modal-root');
+  if (root) root.innerHTML = '';
+}
+function modal(contentHTML, {title='Details'} = {}){
+  ensureModalRoot();
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `
+    <style>
+      #modal-root .sh-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:1000}
+      #modal-root .sh-modal{background:#fff;border-radius:12px;min-width:300px;max-width:720px;width:clamp(300px,92vw,720px);box-shadow:0 10px 30px rgba(0,0,0,.2)}
+      #modal-root .sh-head{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1rem;border-bottom:1px solid #e5e7eb;font-weight:700}
+      #modal-root .sh-body{padding:1rem}
+      #modal-root .sh-foot{display:flex;gap:.5rem;justify-content:flex-end;padding:0 1rem 1rem}
+      #modal-root .sh-close{appearance:none;border:1px solid #d1d5db;border-radius:8px;background:#fff;padding:.3rem .6rem;cursor:pointer}
+      #modal-root .row{display:grid;grid-template-columns:180px 1fr;gap:.35rem .75rem;margin:.15rem 0}
+      #modal-root .key{color:#6b7280}
+      #modal-root .input, #modal-root select, #modal-root textarea { width:100%; padding:.45rem .55rem; border:1px solid #cbd5e1; border-radius:8px }
+      #modal-root .btn{border:1px solid #cbd5e1;border-radius:8px;padding:.4rem .7rem;cursor:pointer}
+      #modal-root .btn.primary{background:#2563eb;color:#fff;border-color:#2563eb}
+      #modal-root .btn.danger{background:#ef4444;color:#fff;border-color:#ef4444}
+      @media (max-width:560px){ #modal-root .row{grid-template-columns:1fr} }
+    </style>
+    <div class="sh-overlay" data-close="1" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
+      <div class="sh-modal" role="document">
+        <div class="sh-head">
+          <span>${escapeHtml(title)}</span>
+          <button class="sh-close" type="button" data-close="1" aria-label="Sluiten">✕</button>
+        </div>
+        <div class="sh-body">${contentHTML}</div>
+      </div>
+    </div>`;
+  const onClose = (e)=>{ if (e.target?.dataset?.close === '1') closeModal(); };
+  root.querySelector('.sh-overlay').addEventListener('click', onClose);
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); }, { once:true });
+}
+
+// — View
+function openKlasView(id){
+  const r = allRows.find(x => String(x.id) === String(id));
+  if (!r) { toast('Klas niet gevonden', 'error'); return; }
+  const html = `
+    <div class="row"><div class="key">Naam</div><div>${escapeHtml(r.naam||'—')}</div></div>
+    <div class="row"><div class="key">Niveau</div><div>${escapeHtml(r.niveau||'—')}</div></div>
+    <div class="row"><div class="key">Trainer</div><div>${escapeHtml(r.trainer||'—')}</div></div>
+    <div class="row"><div class="key">Status</div><div>${escapeHtml(r.status||'—')}</div></div>
+    <div class="row"><div class="key">Max. deelnemers</div><div>${escapeHtml(r.max||'—')}</div></div>
+    <div class="row"><div class="key">Weken</div><div>${escapeHtml(r.weeks||'—')}</div></div>
+    <div class="row"><div class="key">ID</div><div><code>${escapeHtml(r.id||'')}</code></div></div>
+  `;
+  modal(html, { title: 'Klas bekijken' });
+}
+
+// — Edit
+function openKlasEdit(id){
+  const r = allRows.find(x => String(x.id) === String(id));
+  if (!r) { toast('Klas niet gevonden', 'error'); return; }
+
+  const html = `
+    <form id="edit-form">
+      <div class="row"><div class="key">Naam</div><div><input class="input" name="naam" value="${escapeHtml(r.naam||'')}" required></div></div>
+      <div class="row"><div class="key">Niveau</div><div><input class="input" name="niveau" value="${escapeHtml(r.niveau||'')}"></div></div>
+      <div class="row"><div class="key">Trainer</div><div><input class="input" name="trainer" value="${escapeHtml(r.trainer||'')}"></div></div>
+      <div class="row"><div class="key">Max. deelnemers</div><div><input class="input" type="number" min="0" step="1" name="max_deelnemers" value="${escapeHtml(r.max||'')}"></div></div>
+      <div class="row"><div class="key">Weken</div><div><input class="input" type="number" min="0" step="1" name="geldigheid_weken" value="${escapeHtml(r.weeks||'')}"></div></div>
+      <div class="row"><div class="key">Status</div><div>
+        <select class="input" name="status">
+          <option value="actief" ${r.status==='actief'?'selected':''}>actief</option>
+          <option value="inactief" ${r.status==='inactief'?'selected':''}>inactief</option>
+        </select>
+      </div></div>
+
+      <div class="sh-foot">
+        <button type="button" class="btn" data-close="1">Annuleren</button>
+        <button type="submit" class="btn primary">Opslaan</button>
+      </div>
+    </form>`;
+  modal(html, { title: 'Klas wijzigen' });
+
+  $('#edit-form')?.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const payload = {
+      id: r.id,
+      naam:     String(fd.get('naam')||'').trim(),
+      niveau:   String(fd.get('niveau')||'').trim(),
+      trainer:  String(fd.get('trainer')||'').trim(),
+      status:   String(fd.get('status')||'').trim() || 'actief',
+      // align met saveKlas_ kolommen:
+      max_deelnemers: String(fd.get('max_deelnemers')||'').trim(),
+      geldigheid_weken: String(fd.get('geldigheid_weken')||'').trim()
+    };
+
+    // validatie
+    if (!payload.naam) { toast('Naam is verplicht', 'error'); return; }
+    if (payload.max_deelnemers && !/^\d+$/.test(payload.max_deelnemers)) { toast('Max. deelnemers moet een geheel getal zijn', 'error'); return; }
+    if (payload.geldigheid_weken && !/^\d+$/.test(payload.geldigheid_weken)) { toast('Weken moet een geheel getal zijn', 'error'); return; }
+
+    try{
+      await postAction('klas','update', payload);
+      Object.assign(r, normalizeRow(payload));
+      renderTable(applyActiveFilter());
+      closeModal();
+      toast('Wijzigingen opgeslagen','ok');
+    }catch(err){
+      console.error(err);
+      toast('Opslaan mislukt: '+(err?.message||err), 'error');
+    }
+  });
+}
+
+// — Delete (archive/soft delete indien kolom aanwezig)
+async function deleteKlas(id){
+  const r = allRows.find(x => String(x.id) === String(id));
+  if (!r) { toast('Klas niet gevonden', 'error'); return; }
+  if (!confirm(`Weet je zeker dat je "${r.naam || 'deze klas'}" wil verwijderen/archiveren?`)) return;
+  try{
+    await postAction('klas','delete', { id });
+    allRows = allRows.filter(x => String(x.id)!==String(id));
+    renderTable(applyActiveFilter());
+    toast('Klas verwijderd', 'ok');
+  }catch(err){
+    console.error(err);
+    toast('Verwijderen mislukt: '+(err?.message||err), 'error');
   }
 }
 
-/* ────────────── Events ────────────── */
-// Zoeken met debounce
-const doFilter = debounce(render, 150);
-els.search?.addEventListener('input', doFilter);
-els.refresh?.addEventListener('click', load);
+// ───────────────────────── Data laden ─────────────────────────
+async function refresh(){
+  if (lastAbort) lastAbort.abort();
+  const ac = new AbortController();
+  lastAbort = ac;
 
-// Toevoegen
-els.form?.addEventListener('submit', async (e) => {
+  try{
+    setState('⏳ Laden…','muted');
+
+    const raw = await fetchSheet('Klassen', { timeout: TIMEOUT_MS, signal: ac.signal });
+    const rows = toArrayRows(raw);
+    allRows = rows.map(normalizeRow);
+
+    // sorteer op naam, dan niveau
+    allRows.sort((a,b)=>{
+      const c = collator.compare(a.naam||'', b.naam||'');
+      return c || collator.compare(a.niveau||'', b.niveau||'');
+    });
+
+    renderTable(applyActiveFilter());
+    setState(`✅ ${viewRows.length} klas${viewRows.length===1?'':'sen'} geladen`, 'muted');
+    window.SuperhondUI?.setOnline?.(true);
+  }catch(err){
+    if (err?.name === 'AbortError') return;
+    console.error(err);
+    setState(`❌ Fout bij laden: ${err?.message || err}`,'error');
+    toast('Laden van klassen mislukt','error');
+    window.SuperhondUI?.setOnline?.(false);
+  }
+}
+
+// ───────────────────────── Form: Nieuwe klas ─────────────────────────
+function ensureStatusSelectDefault(){
+  const sel = document.querySelector('#form-add [name="status"]');
+  if (!sel || sel.tagName !== 'SELECT') return;
+  if (!sel.options || sel.options.length === 0) {
+    for (const {v,t} of [{v:'actief',t:'actief'},{v:'inactief',t:'inactief'}]) {
+      const o = document.createElement('option'); o.value=v; o.textContent=t; sel.appendChild(o);
+    }
+  }
+  if (!sel.value) sel.value = 'actief';
+}
+
+function wireAddFormValidation(){
+  const form = $('#form-add'); if (!form) return;
+  const btn  = form.querySelector('[type="submit"]') || form.querySelector('button') || null;
+  if (btn) btn.type = 'submit';
+  const naam   = form.querySelector('[name="naam"]');
+  const max    = form.querySelector('[name="max_deelnemers"]');
+  const weken  = form.querySelector('[name="geldigheid_weken"]');
+
+  function validate(){
+    const hasNaam = !!String(naam?.value||'').trim();
+    const okMax   = !max?.value || /^\d+$/.test(max.value);
+    const okWeken = !weken?.value || /^\d+$/.test(weken.value);
+    const ok = hasNaam && okMax && okWeken;
+    if (btn) btn.disabled = !ok;
+    return ok;
+  }
+  ['input','change','blur'].forEach(ev=>{
+    naam?.addEventListener(ev, validate);
+    max?.addEventListener(ev, validate);
+    weken?.addEventListener(ev, validate);
+  });
+  validate();
+}
+
+async function onSubmitAdd(e){
   e.preventDefault();
-  clearErrors(els.form);
+  const form = e.currentTarget;
 
-  const fd = new FormData(els.form);
-  const payload = Object.fromEntries(fd.entries());
+  const fd = new FormData(form);
+  const naam   = String(fd.get('naam')||'').trim();
+  const niveau = String(fd.get('niveau')||'').trim();
+  const trainer= String(fd.get('trainer')||'').trim();
+  const status = String(fd.get('status')||'').trim() || 'actief';
+  const max_deelnemers   = String(fd.get('max_deelnemers')||'').trim();
+  const geldigheid_weken = String(fd.get('geldigheid_weken')||'').trim();
 
-  const fNaam   = els.form.querySelector('input[name="naam"]');
-  const fStatus = els.form.querySelector('input[name="status"]');
+  let hasErr = false;
+  if (!naam){ hasErr = true; }
+  if (max_deelnemers && !/^\d+$/.test(max_deelnemers)) { hasErr = true; }
+  if (geldigheid_weken && !/^\d+$/.test(geldigheid_weken)) { hasErr = true; }
+  if (hasErr){ toast('Controleer de velden (naam verplicht, getallen zijn geheel)','error'); return; }
 
-  let ok = true;
-  if (!required(payload.naam)) { setFieldError(fNaam,'Naam is verplicht'); ok=false; }
-  if (!payload.status) payload.status = 'actief';
-  if (!ok) {
-    els.formMsg.textContent = '❌ Corrigeer de gemarkeerde velden';
-    els.formMsg.className = 'error';
-    return;
+  const msg = $('#form-msg');
+  if (msg) { msg.className='muted'; msg.textContent='⏳ Opslaan…'; }
+
+  try{
+    const res = await saveKlas({ naam, niveau, trainer, status, max_deelnemers, geldigheid_weken }); // verwacht {id}
+    const id  = res?.id || '';
+    toast('✅ Klas opgeslagen','ok');
+
+    const nieuw = normalizeRow({ id, naam, niveau, trainer, status, max_deelnemers, geldigheid_weken });
+    allRows.push(nieuw);
+    allRows.sort((a,b)=>{
+      const c = collator.compare(a.naam||'', b.naam||'');
+      return c || collator.compare(a.niveau||'', b.niveau||'');
+    });
+    renderTable(applyActiveFilter());
+
+    if (msg) msg.textContent = `✅ Bewaard (id: ${id})`;
+    form.reset();
+    ensureStatusSelectDefault(); // zet status terug naar 'actief' indien nodig
+    const first = form.querySelector('input,select,textarea'); first && first.focus();
+  }catch(err){
+    console.error(err);
+    if (msg){ msg.className='error'; msg.textContent = `❌ Opslaan mislukt: ${err?.message || err}`; }
+    toast('Opslaan mislukt','error');
   }
+}
 
-  try {
-    els.formMsg.textContent = '⏳ Opslaan…';
-    els.formMsg.className = 'muted';
-
-    await postAction('Klas', 'add', payload);
-    els.form.reset();
-    els.formMsg.textContent = '✅ Toegevoegd';
-    await load();
-    showToast('Klas toegevoegd', 'ok');
-  } catch (err) {
-    els.formMsg.textContent = '❌ ' + (err?.message || String(err));
-    els.formMsg.className = 'error';
-  }
-});
-
-// Tabelacties (edit/save/cancel/archive + undo)
-els.tbody?.addEventListener('click', async (e) => {
-  const btn = e.target.closest('button'); if (!btn) return;
-  const tr = btn.closest('tr'); const id = tr?.dataset.id; if (!id) return;
-  const item = CACHE.find(k => k.id === id);
-
-  if (btn.classList.contains('act-edit')) {
-    if (editingId && editingId !== id) return;
-    editingId = id; render();
-  }
-  else if (btn.classList.contains('act-cancel')) {
-    editingId = null; render();
-  }
-  else if (btn.classList.contains('act-save')) {
-    const naam    = $('input[name="naam"]', tr)?.value || '';
-    const niveau  = $('input[name="niveau"]', tr)?.value || '';
-    const trainer = $('input[name="trainer"]', tr)?.value || '';
-    const status  = $('input[name="status"]', tr)?.value || '';
-
-    clearErrors(tr);
-    let ok = true;
-    if (!required(naam))  { setFieldError($('input[name="naam"]', tr),'Verplicht'); ok=false; }
-    if (!ok) { setState('❌ Corrigeer de gemarkeerde velden', 'error'); return; }
-
-    btn.disabled = true; const oldLabel = btn.textContent; btn.textContent = 'Opslaan…';
-    try {
-      await postAction('Klas', 'update', { id, naam, niveau, trainer, status });
-      editingId = null;
-      await load();
-      showToast('Wijzigingen opgeslagen', 'ok');
-    } catch (err) {
-      setState('❌ Opslaan mislukt: ' + (err?.message || String(err)), 'error');
-      btn.disabled = false; btn.textContent = oldLabel;
-    }
-  }
-  else if (btn.classList.contains('act-archive')) {
-    if (!confirm('Archiveer deze klas?')) return;
-    try {
-      lastArchived = { entity:'Klas', id, snapshot: { ...item, archived:false } };
-      await postAction('Klas', 'delete', { id });
-      await load();
-
-      if (undoTimer) clearTimeout(undoTimer);
-      const t = showToast('Klas gearchiveerd', 'info', async () => {
-        if (!lastArchived) return;
-        try { await postAction('Klas','update', lastArchived.snapshot); await load(); showToast('Hersteld', 'ok'); }
-        catch (e) { setState('❌ Ongedaan maken faalde: ' + (e?.message || e), 'error'); }
-        finally { lastArchived = null; }
-      }, 10_000);
-      undoTimer = setTimeout(() => { lastArchived = null; t?.close?.(); }, 10_000);
-    } catch (err) {
-      setState('❌ Archiveren mislukt: ' + (err?.message || String(err)), 'error');
-    }
-  }
-});
-
-/* ────────────── Boot ────────────── */
-document.addEventListener('DOMContentLoaded', async () => {
-  // Uniforme topbar (subpage = blauw) + terugknop naar dashboard
+// ───────────────────────── Mount ─────────────────────────
+async function main(){
+  // Topbar
   if (window.SuperhondUI?.mount) {
     document.body.classList.add('subpage');
-    SuperhondUI.mount({ title: 'Klassen', icon: '📚', back: '../dashboard/' });
+    window.SuperhondUI.mount({ title:'Klassen', icon:'📚', back:'../dashboard/' });
   }
-  await load();
-});
+
+  await initFromConfig();
+
+  // status-select + form-validatie
+  ensureStatusSelectDefault();
+  wireAddFormValidation();
+
+  // events
+  $('#refresh')?.addEventListener('click', refresh);
+  $('#search')?.addEventListener('input', doFilter);
+  $('#form-add')?.addEventListener('submit', onSubmitAdd);
+
+  // Actieknoppen (👁️ ✏️ 🗑️)
+  wireActionHandlers('#tbl', {
+    view:   (id)=> openKlasView(id),
+    edit:   (id)=> openKlasEdit(id),
+    delete: (id)=> deleteKlas(id),
+  });
+
+  // eerste load
+  await refresh();
+
+  // Enter → submit in add-form
+  $$('#form-add input').forEach(inp => {
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); $('#form-add')?.requestSubmit(); }
+    });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', main, { once:true });
