@@ -6,8 +6,30 @@
   <title>Superhond — Instellingen</title>
 
   <!-- Centrale UI styles -->
-  <link rel="stylesheet" href="../css/style.css?v=0.20.4" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.4" />
+  <link rel="stylesheet" href="../css/style.css?v=0.24.2" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.24.2" />
+
+  <style>
+    main.container{max-width:960px}
+    .card{border:1px solid #e5e7eb;border-radius:12px;padding:1rem 1.25rem;background:#fff}
+    .section-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:.5rem}
+    .section-sub{font-size:.9rem;opacity:.75}
+    .form-grid{display:grid;grid-template-columns:1fr auto;gap:.5rem}
+    .form-grid input.input{min-width:260px}
+    .dash-grid{display:grid;gap:.75rem}
+    .tabs{display:flex;gap:.5rem;margin:.25rem 0 .5rem}
+    .tab{padding:.4rem .7rem;border:1px solid #cbd5e1;border-radius:8px;background:#fff;cursor:pointer}
+    .tab.active{background:#2563eb;color:#fff;border-color:#2563eb}
+    .muted{opacity:.8}
+    .ok{color:#15803d}
+    .error{color:#b91c1c}
+    .btn{padding:.55rem .9rem;border:1px solid #cbd5e1;border-radius:8px;background:#fff;cursor:pointer}
+    .btn.primary{background:#2563eb;color:#fff;border-color:#2563eb}
+    .input{padding:.55rem .7rem;border:1px solid #d1d5db;border-radius:8px}
+    .select{padding:.55rem .7rem;border:1px solid #d1d5db;border-radius:8px;background:#fff}
+    .row{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+    code.inline{background:#f3f4f6;padding:.1rem .35rem;border-radius:.25rem}
+  </style>
 </head>
 
 <body class="subpage">
@@ -40,14 +62,14 @@
           </select>
         </div>
 
-        <div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap">
+        <div class="row" style="margin-top:.75rem">
           <button id="btnSave" class="btn">Bewaren</button>
           <button id="btnReset" class="btn">Herstellen naar standaard</button>
           <span id="saveState" class="muted" role="status" aria-live="polite"></span>
         </div>
 
         <p class="muted" style="margin-top:.25rem">
-          Je voorkeuren worden lokaal bewaard in <code>localStorage</code> en automatisch toegepast op deze site.
+          Je voorkeuren worden lokaal bewaard in <code class="inline">localStorage</code> en automatisch toegepast.
         </p>
       </div>
     </section>
@@ -56,59 +78,35 @@
     <section class="card section--admin" id="admin-section" style="display:none; margin-top:1rem" aria-labelledby="sec-admin">
       <div class="section-header">
         <h2 id="sec-admin">🛡️ Admin</h2>
-        <span class="section-sub">Centrale Config & Sheet-schema</span>
+        <span class="section-sub">Centrale Config</span>
       </div>
 
-      <!-- Config -->
+      <!-- Centrale config -->
       <div class="card" style="margin:0 0 1rem">
         <h3 style="margin-top:0">Centrale Config</h3>
-        <div id="cfg-state" class="muted">⏳ Laden…</div>
+        <div id="cfg-state" class="muted" role="status" aria-live="polite">⏳ Laden…</div>
         <form id="cfg-form" class="form-grid" style="margin-top:.5rem">
-          <input name="apiBase" class="input" placeholder="https://script.google.com/macros/s/.../exec" required />
-          <input name="token"   class="input" placeholder="CFG_TOKEN (admin)" required />
-          <button class="btn" type="submit">Opslaan</button>
+          <input name="apiBase" class="input" type="url"
+                 placeholder="https://script.google.com/macros/s/…/exec" required />
+          <button class="btn" id="btnSaveLocal" type="button" title="Opslaan in deze browser">Opslaan (lokaal)</button>
+          <input name="token" class="input" type="text" placeholder="Admin token (cfg)" required />
+          <button class="btn primary" id="btnSaveCentral" type="submit">Opslaan (centraal)</button>
         </form>
+
+        <div class="row" style="margin-top:.5rem">
+          <button class="btn" id="btnTest">Verbinding testen</button>
+          <span id="testState" class="muted">–</span>
+        </div>
+
+        <p class="muted" style="margin-top:.5rem">
+          Tip: stel de Web App in GAS in op <em>“Anyone with the link”</em> en gebruik altijd de <code class="inline">/exec</code>-URL.
+        </p>
       </div>
 
-      <!-- Schema -->
+      <!-- (Optioneel) Schema-tools kunnen later geactiveerd worden -->
       <div class="card" style="margin:0">
-        <h3 style="margin-top:0">Sheet Schema</h3>
-
-        <div class="tabs" id="tabs">
-          <button class="tab active" data-tab="headers">Headers</button>
-          <button class="tab" data-tab="ensure">Kolommen toevoegen</button>
-          <button class="tab" data-tab="rename">Hernoemen</button>
-        </div>
-
-        <!-- HEADERS -->
-        <div id="tab-headers">
-          <div style="display:flex;gap:.5rem;align-items:center;margin:.5rem 0">
-            <button id="btn-load-headers" class="btn">Ververs headers</button>
-            <button id="btn-ensure-all" class="btn">Ensure alle tabs</button>
-          </div>
-          <pre id="headers-out" class="muted" style="white-space:pre-wrap">Nog niets geladen.</pre>
-        </div>
-
-        <!-- ENSURE -->
-        <div id="tab-ensure" style="display:none">
-          <form id="ensure-form" class="form-grid" style="margin-top:.5rem">
-            <input name="tab"     class="input" placeholder="Tabnaam (bv. Klanten)" required />
-            <input name="columns" class="input" placeholder="Nieuwe kolommen, komma-gescheiden" />
-            <button class="btn" type="submit">Toevoegen</button>
-          </form>
-          <div id="ensure-state" class="muted" style="margin-top:.5rem"></div>
-        </div>
-
-        <!-- RENAME -->
-        <div id="tab-rename" style="display:none">
-          <form id="rename-form" class="form-grid" style="margin-top:.5rem">
-            <input name="tab"  class="input" placeholder="Tabnaam (bv. Klanten)" required />
-            <input name="from" class="input" placeholder="Van (oude header)" required />
-            <input name="to"   class="input" placeholder="Naar (nieuwe header)" required />
-            <button class="btn" type="submit">Hernoemen</button>
-          </form>
-          <div id="rename-state" class="muted" style="margin-top:.5rem"></div>
-        </div>
+        <h3 style="margin-top:0">Sheet Schema <span class="muted">(optioneel, later)</span></h3>
+        <p class="muted">Deze sectie is voorbereid maar vereist extra endpoints in GAS. Voor nu zonder functionaliteit.</p>
       </div>
     </section>
   </main>
@@ -116,15 +114,175 @@
   <footer id="footer" class="footer"></footer>
 
   <!-- Scripts -->
-  <script src="../js/layout.js?v=0.20.4" defer></script>
-  <script src="../js/toast.js?v=0.20.4" defer></script>
-  <script type="module" src="./instellingen.js?v=0.20.4"></script>
+  <script src="../js/layout.js?v=0.24.2" defer></script>
+  <script src="../js/toast.js?v=0.24.2" defer></script>
 
-  <!-- Mount met terugknop -->
-  <script>
+  <!-- Inline module: instellingen-logic (vervangt losse instellingen.js) -->
+  <script type="module">
+    const $ = s => document.querySelector(s);
+    const LS_DENSITY = 'superhond:density';
+    const LS_THEME   = 'superhond:theme';
+    const LS_API     = 'apiBase'; // lokaal fallback
+
+    // UI mount
     document.addEventListener('DOMContentLoaded', () => {
-      if (window.SuperhondUI?.mount) {
-        SuperhondUI.mount({ title:'Instellingen', icon:'⚙️', back:'../dashboard/' });
+      window.SuperhondUI?.mount?.({ title:'Instellingen', icon:'⚙️', back:'../dashboard/', home:false });
+    });
+
+    // ---- App-voorkeuren
+    const saveState = $('#saveState');
+    $('#btnSave')?.addEventListener('click', () => {
+      localStorage.setItem(LS_DENSITY, $('#density').value);
+      localStorage.setItem(LS_THEME, $('#theme').value);
+      window.SuperhondUI?.applyDensity?.($('#density').value);
+      saveState.textContent = 'Opgeslagen ✔️';
+      saveState.className = 'ok';
+    });
+    $('#btnReset')?.addEventListener('click', () => {
+      localStorage.removeItem(LS_DENSITY);
+      localStorage.removeItem(LS_THEME);
+      $('#density').value = 'normal';
+      $('#theme').value = 'light';
+      window.SuperhondUI?.applyDensity?.('normal');
+      saveState.textContent = 'Standaardwaarden hersteld';
+      saveState.className = 'muted';
+    });
+    // Prefill
+    (function(){
+      const d = localStorage.getItem(LS_DENSITY) || 'normal';
+      const t = localStorage.getItem(LS_THEME) || 'light';
+      $('#density').value = d;
+      $('#theme').value = t;
+    })();
+
+    // ---- Admin-sectie tonen als admin
+    function isAdmin() { return localStorage.getItem('superhond:admin:enabled') === '1' || document.body.classList.contains('admin-page'); }
+    function showAdmin(on){ $('#admin-section').style.display = on ? '' : 'none'; }
+    showAdmin(isAdmin());
+
+    // ---- Centrale config inladen
+    async function tryJson(url){
+      const r = await fetch(url, { cache:'no-store' });
+      if (!r.ok) throw new Error('HTTP '+r.status);
+      return r.json();
+    }
+
+    async function loadCentralConfig(){
+      const state = $('#cfg-state');
+      try {
+        // 1) Probeer config via GAS (config.get) indien apiBase bekend is
+        const ls = localStorage.getItem(LS_API) || '';
+        if (ls) {
+          try {
+            const j = await tryJson(ls + '?action=config.get');
+            if (j?.data?.apiBase) {
+              state.textContent = 'Centrale config geladen ✔️';
+              state.className = 'ok';
+              $('[name="apiBase"]').value = j.data.apiBase;
+              return;
+            }
+          } catch {}
+        }
+        // 2) Fallback: /api/config bestand
+        const cfg = await tryJson('/api/config').catch(()=> ({}));
+        if (cfg?.apiBase) {
+          $('[name="apiBase"]').value = cfg.apiBase;
+          state.textContent = 'Config uit /api/config geladen ✔️';
+          state.className = 'ok';
+        } else {
+          // 3) Laatste fallback: localStorage
+          const ls2 = localStorage.getItem(LS_API);
+          if (ls2) {
+            $('[name="apiBase"]').value = ls2;
+            state.textContent = 'Geen centrale config; lokale waarde gebruikt.';
+            state.className = 'muted';
+          } else {
+            state.textContent = 'Voer je /exec-URL in en sla op.';
+            state.className = 'muted';
+          }
+        }
+      } catch (e) {
+        state.textContent = 'Fout bij laden config: ' + e.message;
+        state.className = 'error';
+      }
+    }
+    loadCentralConfig();
+
+    // ---- Opslaan (lokaal)
+    $('#btnSaveLocal')?.addEventListener('click', () => {
+      const url = $('[name="apiBase"]').value.trim();
+      if (!/^https?:\/\/.+\/exec(\?.*)?$/.test(url)) {
+        $('#cfg-state').textContent = 'Ongeldige /exec-URL';
+        $('#cfg-state').className = 'error';
+        return;
+      }
+      localStorage.setItem(LS_API, url);
+      $('#cfg-state').textContent = 'Lokaal opgeslagen ✔️';
+      $('#cfg-state').className = 'ok';
+    });
+
+    // ---- Opslaan (centraal) via GAS config.set
+    $('#cfg-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url   = $('[name="apiBase"]').value.trim();
+      const token = $('[name="token"]').value.trim();
+      const state = $('#cfg-state');
+
+      if (!/^https?:\/\/.+\/exec(\?.*)?$/.test(url)) {
+        state.textContent = 'Ongeldige /exec-URL';
+        state.className = 'error';
+        return;
+      }
+      if (!token) {
+        state.textContent = 'Admin token vereist';
+        state.className = 'error';
+        return;
+      }
+
+      state.textContent = 'Opslaan…';
+      state.className = 'muted';
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            entity: 'config',
+            action: 'set',
+            token,
+            payload: { apiBase: url }
+          })
+        });
+        const j = await res.json();
+        if (!j?.ok) throw new Error(j?.error || 'Onbekende fout');
+
+        // Quality-of-life: ook lokaal wegschrijven
+        localStorage.setItem(LS_API, url);
+
+        state.textContent = 'Centraal + lokaal opgeslagen ✔️';
+        state.className = 'ok';
+      } catch (err) {
+        state.textContent = 'Opslaan mislukt: ' + err.message;
+        state.className = 'error';
+      }
+    });
+
+    // ---- Verbinding testen
+    $('#btnTest')?.addEventListener('click', async () => {
+      const base = $('[name="apiBase"]').value.trim();
+      const el = $('#testState');
+      el.textContent = 'Testen…';
+      el.className = 'muted';
+      try {
+        const r = await fetch(base + '?mode=ping', { cache:'no-store' });
+        const ok = r.ok;
+        const j = await r.json().catch(()=> ({}));
+        el.textContent = ok ? 'Online ✔️' : ('Offline: ' + (j?.error || r.status));
+        el.className = ok ? 'ok' : 'error';
+        window.SuperhondUI?.setOnline?.(ok);
+      } catch(e) {
+        el.textContent = 'Offline: ' + e.message;
+        el.className = 'error';
+        window.SuperhondUI?.setOnline?.(false);
       }
     });
   </script>
