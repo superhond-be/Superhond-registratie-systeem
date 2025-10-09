@@ -185,3 +185,21 @@
   .brand { font-size:18px; }
 }
 
+/* ─────────── Veiligheidsfix voor topbar kleur ─────────── */
+/* Zorg dat de inner bar de kleur van de container erft — voorkomt witte balken */
+#topbar .topbar-inner {
+  background: inherit !important;
+  color: inherit !important;
+}
+
+/* Extra zekerheid: dashboard altijd geel, subpagina’s blauw */
+body.dashboard-page #topbar,
+body.dashboard-page #topbar .topbar-inner {
+  background: var(--accent, #f4c400) !important;
+  color: #000 !important;
+}
+body.subpage #topbar,
+body.subpage #topbar .topbar-inner {
+  background: #2563eb !important;
+  color: #fff !important;
+}
