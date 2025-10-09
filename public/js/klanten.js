@@ -1,5 +1,5 @@
 /**
- * public/js/klanten.js — Lijst + zoeken + toevoegen + acties (v0.26.5)
+ * public/js/klanten.js — Lijst + zoeken + toevoegen + acties (v0.26.6)
  * - Voorgedrukte status-select (actief/inactief)
  * - Actiekolom (👁️ ✏️ 🗑️) via actions.js (met veilige fallback)
  * - Klik op naam opent details (met gekoppelde honden)
@@ -10,8 +10,7 @@ import {
   initFromConfig,
   fetchSheet,
   saveKlant,
-  postAction,
-  currentApiBase
+  postAction
 } from './sheets.js';
 
 import * as Actions from './actions.js';
@@ -326,8 +325,7 @@ async function refresh(){
   }catch(err){
     if (err?.name === 'AbortError') return;
     console.error(err);
-    const hint = currentApiBase() ? '' : ' (instellingen: ontbrekende Web-app URL?)';
-    setState(`❌ Fout bij laden: ${err?.message || err}${hint}`,'error');
+    setState(`❌ Fout bij laden: ${err?.message || err}`,'error');
     toast('Laden van klanten mislukt','error');
     window.SuperhondUI?.setOnline?.(false);
   }
