@@ -11,6 +11,68 @@
  * - Exporteert: SuperhondUI.{ mount, setOnline, noteSuccess, noteFailure, setAdmin, applyDensity }
  */
 
+// ───────────────────────── Centrale online/offline manager ─────────────────────────
+(function () {
+  const LS_KEY = 'superhond:lastOnlineTs';
+  const PING_URL = '/api/ping';
+  const PING_EVERY_MS = 20000;
+  const PING_TIMEOUT_MS = 5000;
+
+  let online = null;            // null = onbekend, true/false = status
+  const listeners = new Set();  // voor callbacks bij wijziging
+
+  function notify() {
+    // Update UI (topbar) als beschikbaar
+    try { window.SuperhondUI?.setOnline?.(online === true); } catch {}
+    listeners.forEach(fn => { try { fn(online === true); } catch {} });
+  }
+
+  function setOnline(next) {
+    const val = !!next;
+    if (online === val) return;
+    online = val;
+    if (val) localStorage.setItem(LS_KEY, String(Date.now()));
+    notify();
+  }
+
+  async function pingOnce() {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), PING_TIMEOUT_MS);
+    try {
+      const r = await fetch(PING_URL, { cache: 'no-store', signal: ctl.signal });
+      setOnline(r.ok);
+    } catch {
+      setOnline(false);
+    } finally {
+      clearTimeout(t);
+    }
+  }
+
+  function start() {
+    // Browser events
+    window.addEventListener('online',  () => setOnline(true));
+    window.addEventListener('offline', () => setOnline(false));
+
+    // Eerste status (val terug op navigator.onLine)
+    if (navigator.onLine !== undefined) setOnline(navigator.onLine);
+
+    // Start ping-loop (lichtgewicht)
+    pingOnce();
+    setInterval(pingOnce, PING_EVERY_MS);
+  }
+
+  // Public API
+  window.SuperhondNet = {
+    get online() { return online === true; },
+    setOnline,                // mag door andere modules worden aangeroepen
+    onChange(fn){ listeners.add(fn); return () => listeners.delete(fn); },
+    lastOnlineTs(){ return Number(localStorage.getItem(LS_KEY) || 0); }
+  };
+
+  // Autostart zodra script geladen is
+  try { start(); } catch {}
+})();
+
 (function () {
   // ───────── Config
   const APP_VERSION = '0.25.0';
