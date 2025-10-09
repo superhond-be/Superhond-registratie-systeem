@@ -177,3 +177,195 @@
 @media (max-width:720px){
   .brand { font-size:18px; }
 }
+
+/* =====================================================================
+   Superhond UI — Instellingenpagina Styles
+   Versie: 0.22.0
+   Beschrijving: Visuele afwerking van instellingenpagina + admin-tabs
+   ===================================================================== */
+
+/* ───────────── Algemene layout ───────────── */
+main.container {
+  max-width: 800px;
+  margin: 2rem auto;
+}
+
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 1.25rem;
+}
+
+/* ───────────── Cards ───────────── */
+.card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  margin-bottom: 1.25rem;
+  transition: box-shadow .2s ease;
+}
+.card:hover {
+  box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+}
+
+/* ───────────── Sectie headers ───────────── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: .75rem;
+}
+.section-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: #111;
+}
+.section-sub {
+  font-size: .9rem;
+  color: #6b7280;
+}
+
+/* ───────────── Tabs ───────────── */
+.tabs {
+  display: flex;
+  border-bottom: 2px solid #e5e7eb;
+  gap: .25rem;
+  margin-bottom: .75rem;
+}
+.tab {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-bottom: none;
+  padding: .5rem .9rem;
+  border-radius: 8px 8px 0 0;
+  font-weight: 600;
+  cursor: pointer;
+  color: #2563eb;
+  transition: background .15s ease, color .15s ease;
+}
+.tab:hover {
+  background: #e0e7ff;
+}
+.tab.active {
+  background: #f4c400;
+  border-color: #f4c400;
+  color: #000;
+}
+
+/* ───────────── Formulieren ───────────── */
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: .6rem;
+  align-items: center;
+}
+.form-grid input {
+  width: 100%;
+  padding: .45rem .65rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: .95rem;
+  transition: border-color .15s;
+}
+.form-grid input:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+.form-grid button.btn {
+  white-space: nowrap;
+}
+
+/* ───────────── Knoppen ───────────── */
+.btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: .45rem .9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s ease;
+}
+.btn:hover {
+  background: #1d4ed8;
+}
+.btn:active {
+  background: #1e40af;
+}
+.btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.btn-secondary {
+  background: #f4c400;
+  color: #111;
+}
+.btn-secondary:hover {
+  background: #eab308;
+}
+
+/* ───────────── Statusmeldingen ───────────── */
+.muted {
+  color: #6b7280;
+  font-size: .9rem;
+}
+.error {
+  color: #dc2626;
+  font-weight: 600;
+}
+.success {
+  color: #16a34a;
+}
+
+/* ───────────── Code- en tekstblokken ───────────── */
+pre {
+  background: #f9fafb;
+  padding: .75rem;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  font-size: .85rem;
+  overflow-x: auto;
+  max-height: 320px;
+  line-height: 1.4;
+}
+
+/* ───────────── Specifieke blokken ───────────── */
+#cfg-form input {
+  min-width: 280px;
+}
+#cfg-form button {
+  background: #f4c400;
+  color: #000;
+}
+#cfg-form button:hover {
+  background: #eab308;
+}
+
+/* ───────────── Responsiviteit ───────────── */
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .tabs {
+    flex-wrap: wrap;
+  }
+  .tab {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+}
+
+/* ───────────── Thema-aanpassingen ───────────── */
+[data-density="compact"] .form-grid input {
+  padding: .3rem .5rem;
+  font-size: .9rem;
+}
+[data-density="compact"] .btn {
+  padding: .35rem .75rem;
+  font-size: .9rem;
+}
