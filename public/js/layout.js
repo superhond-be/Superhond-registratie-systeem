@@ -270,6 +270,80 @@
     __renderDot(online); // initiale status
   }
 
+  // ───────── Centrale netwerkstatus ─────────
+const NetState = {
+  online: null,
+  lastChange: 0,
+  timer: null
+};
+
+async function pingOnce() {
+  try {
+    const ok = await ping();            // gebruikt de bestaande ping() bovenaan
+    setOnline(ok, { source: 'ping' });
+    return ok;
+  } catch {
+    setOnline(false, { source: 'ping' });
+    return false;
+  }
+}
+
+function startHeartbeat(ms = 30000) {
+  if (NetState.timer) clearInterval(NetState.timer);
+  NetState.timer = setInterval(pingOnce, ms);
+}
+
+// Overschrijf setOnline zodat layout + status-dot altijd in sync zijn
+function setOnline(ok, { source } = {}) {
+  ok = !!ok;
+  if (NetState.online === ok) return;
+
+  NetState.online = ok;
+  NetState.lastChange = Date.now();
+
+  const dot = document.querySelector('#topbar .status-dot');
+  const txt = document.querySelector('#topbar .status-text');
+  if (dot) {
+    dot.classList.toggle('is-online', ok);
+    dot.classList.toggle('is-offline', !ok);
+  }
+  if (txt) txt.textContent = ok ? 'Online' : 'Offline';
+
+  // Optioneel: log 1x
+  // console.debug('[Net]', ok ? 'online' : 'offline', source || '');
+}
+
+// Browser-events (gaat uit bij echte offline, en terug bij reconnect)
+window.addEventListener('online',  () => setOnline(true,  { source: 'navigator' }));
+window.addEventListener('offline', () => setOnline(false, { source: 'navigator' }));
+
+// Tijdens mount: eerste ping + heartbeat starten
+const _origMount = (window.SuperhondUI && window.SuperhondUI.mount) || null;
+async function mountWithNet(opts = {}) {
+  // call originele mount (bouwt topbar op)
+  if (_origMount) await _origMount(opts);
+  // init status (ping result overschrijft dit zo meteen)
+  setOnline(navigator.onLine, { source: 'boot' });
+  await pingOnce();           // directe check
+  startHeartbeat(30000);      // elke 30s verifiëren
+}
+
+// ───────── Public API (vervang je bestaande expose-blok) ─────────
+window.SuperhondUI = Object.assign(window.SuperhondUI || {}, {
+  mount: mountWithNet,
+  setOnline,      // blijft publiek, maar gaat via centrale state
+  setAdmin,
+  applyDensity,
+  APP_VERSION
+});
+
+// Centrale “netwerkmanager” voor andere modules (sheets.js, pagina’s)
+window.SuperhondNet = Object.assign(window.SuperhondNet || {}, {
+  setOnline,          // SuperhondNet.setOnline(true/false, {source})
+  ping: pingOnce,
+  startHeartbeat
+});
+  
   // Expose
   window.SuperhondUI = Object.assign(window.SuperhondUI || {}, {
     mount,
