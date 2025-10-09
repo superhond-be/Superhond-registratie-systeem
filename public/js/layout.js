@@ -1,81 +1,16 @@
 /**
- * public/js/layout.js — Topbar & Footer mount (v0.25.0)
+ * public/js/layout.js — Topbar & Footer + centrale netstatus (v0.26.0)
  * - Dashboard = GEEL (#f4c400), Subpages = BLAUW (#2563eb)
- * - Versienummer: cfg.version -> APP_VERSION fallback
- * - Kleur geforceerd met !important (style.setProperty)
- * - Consistente .topbar-inner.container
- * - CENTRALE online/offline status:
- *     SuperhondUI.noteSuccess()  -> zet dot groen
- *     SuperhondUI.noteFailure()  -> ping; alleen bij echte offline -> rood
- *     SuperhondUI.setOnline()    -> compat alias (roept bovenstaande aan)
- * - Exporteert: SuperhondUI.{ mount, setOnline, noteSuccess, noteFailure, setAdmin, applyDensity }
+ * - Eén bron van waarheid voor online/offline (SuperhondNet)
+ * - SuperhondUI.setOnline() blijft werken (compat), maar gebruikt centrale status
+ * - Exporteert:
+ *   - SuperhondUI.{ mount, setOnline, setAdmin, applyDensity, APP_VERSION }
+ *   - SuperhondNet.{ setOnline, onChange, ping, startHeartbeat, online }
  */
-
-// ───────────────────────── Centrale online/offline manager ─────────────────────────
-(function () {
-  const LS_KEY = 'superhond:lastOnlineTs';
-  const PING_URL = '/api/ping';
-  const PING_EVERY_MS = 20000;
-  const PING_TIMEOUT_MS = 5000;
-
-  let online = null;            // null = onbekend, true/false = status
-  const listeners = new Set();  // voor callbacks bij wijziging
-
-  function notify() {
-    // Update UI (topbar) als beschikbaar
-    try { window.SuperhondUI?.setOnline?.(online === true); } catch {}
-    listeners.forEach(fn => { try { fn(online === true); } catch {} });
-  }
-
-  function setOnline(next) {
-    const val = !!next;
-    if (online === val) return;
-    online = val;
-    if (val) localStorage.setItem(LS_KEY, String(Date.now()));
-    notify();
-  }
-
-  async function pingOnce() {
-    const ctl = new AbortController();
-    const t = setTimeout(() => ctl.abort(), PING_TIMEOUT_MS);
-    try {
-      const r = await fetch(PING_URL, { cache: 'no-store', signal: ctl.signal });
-      setOnline(r.ok);
-    } catch {
-      setOnline(false);
-    } finally {
-      clearTimeout(t);
-    }
-  }
-
-  function start() {
-    // Browser events
-    window.addEventListener('online',  () => setOnline(true));
-    window.addEventListener('offline', () => setOnline(false));
-
-    // Eerste status (val terug op navigator.onLine)
-    if (navigator.onLine !== undefined) setOnline(navigator.onLine);
-
-    // Start ping-loop (lichtgewicht)
-    pingOnce();
-    setInterval(pingOnce, PING_EVERY_MS);
-  }
-
-  // Public API
-  window.SuperhondNet = {
-    get online() { return online === true; },
-    setOnline,                // mag door andere modules worden aangeroepen
-    onChange(fn){ listeners.add(fn); return () => listeners.delete(fn); },
-    lastOnlineTs(){ return Number(localStorage.getItem(LS_KEY) || 0); }
-  };
-
-  // Autostart zodra script geladen is
-  try { start(); } catch {}
-})();
 
 (function () {
   // ───────── Config
-  const APP_VERSION = '0.25.0';
+  const APP_VERSION = '0.26.0';
   const LS_ADMIN    = 'superhond:admin:enabled';
   const LS_DENSITY  = 'superhond:density';
   const API_CONFIG  = '/api/config';
@@ -119,13 +54,9 @@
     return r.json();
   };
 
-  const ping = async () => {
-    try {
-      const r = await fetch(API_PING, { cache: 'no-store' });
-      return r.ok;
-    } catch {
-      return false;
-    }
+  const pingHTTP = async () => {
+    try { const r = await fetch(API_PING, { cache: 'no-store' }); return r.ok; }
+    catch { return false; }
   };
 
   // ───────── Prefs
@@ -140,11 +71,56 @@
     document.documentElement.setAttribute('data-density', m);
   };
 
-  // ───────── Topbar/Footer intern
+  // ───────── Centrale Netstatus
+  const Net = {
+    online: null,          // null onbekend, true/false bekend
+    listeners: new Set(),
+    timer: null
+  };
+
+  function renderDot(ok) {
+    const dot = document.querySelector('#topbar .status-dot');
+    const txt = document.querySelector('#topbar .status-text');
+    if (dot) {
+      dot.classList.toggle('is-online', !!ok);
+      dot.classList.toggle('is-offline', !ok);
+    }
+    if (txt) txt.textContent = ok ? 'Online' : 'Offline';
+  }
+
+  function setOnline(ok, { source } = {}) {
+    ok = !!ok;
+    if (Net.online === ok) return;
+    Net.online = ok;
+    renderDot(ok);
+    Net.listeners.forEach(fn => { try { fn(ok); } catch {} });
+    // console.debug('[Net]', ok ? 'online' : 'offline', source || '');
+  }
+
+  async function pingOnce() {
+    const ok = await pingHTTP();
+    setOnline(ok, { source: 'ping' });
+    return ok;
+  }
+
+  function startHeartbeat(ms = 30000) {
+    if (Net.timer) clearInterval(Net.timer);
+    Net.timer = setInterval(pingOnce, ms);
+  }
+
+  // Maak het globaal beschikbaar
+  window.SuperhondNet = Object.assign(window.SuperhondNet || {}, {
+    get online() { return Net.online === true; },
+    setOnline,                    // door andere modules te gebruiken
+    onChange(fn){ Net.listeners.add(fn); return () => Net.listeners.delete(fn); },
+    ping: pingOnce,
+    startHeartbeat
+  });
+
+  // ───────── Topbar/Footer
   const statusClass = (ok) => (ok ? 'is-online' : 'is-offline');
 
   function forceTopbarColors(container, { home }) {
-    // home === true => dashboard geel, anders blauw
     const isDashboard =
       home === true
         ? true
@@ -165,46 +141,34 @@
     const {
       title = 'Superhond',
       icon = '🐾',
-      home = null,      // null -> autodetect via body.dashboard-page
+      home = null,
       back = null,
       version = null
     } = opts || {};
 
     let backEl = null;
     if (back) {
-      if (typeof back === 'string') {
-        backEl = el('a', { class: 'btn-back', href: back }, '← Terug');
-      } else {
-        backEl = el('button', { class: 'btn-back', type: 'button' }, '← Terug');
-        backEl.addEventListener('click', () => history.back());
-      }
+      if (typeof back === 'string') backEl = el('a', { class: 'btn-back', href: back }, '← Terug');
+      else { backEl = el('button', { class: 'btn-back', type: 'button' }, '← Terug'); backEl.addEventListener('click', () => history.back()); }
     }
 
     const inner = el('div', { class: 'topbar-inner container' });
 
-    const left = el(
-      'div',
-      { class: 'tb-left' },
+    const left = el('div', { class: 'tb-left' },
       backEl,
-      // Als home expliciet true is => link naar dashboard, anders statische span
       (home === true || (home === null && document.body.classList.contains('dashboard-page')))
         ? el('a', { class: 'brand', href: '../dashboard/' }, `${icon} ${title}`)
         : el('span', { class: 'brand' }, `${icon} ${title}`)
     );
 
-    const right = el(
-      'div',
-      { class: 'tb-right' },
+    const right = el('div', { class: 'tb-right' },
       el('span', { class: `status-dot ${statusClass(online)}`, title: online ? 'Online' : 'Offline' }),
       el('span', { class: 'status-text' }, online ? 'Online' : 'Offline'),
       el('span', { class: 'muted' }, `v${version || cfg?.version || APP_VERSION}`),
       cfg?.env ? el('span', { class: 'muted' }, `(${cfg.env})`) : null
     );
 
-    // Basis styles (eenmalig)
-    onceStyle(
-      'sh-topbar-style',
-      `
+    onceStyle('sh-topbar-style', `
       #topbar{position:sticky;top:0;z-index:50}
       #topbar .topbar-inner{display:flex;align-items:center;gap:.75rem;min-height:56px;border-bottom:1px solid #e5e7eb;background:inherit;color:inherit}
       .tb-left{display:flex;align-items:center;gap:.5rem}
@@ -217,11 +181,9 @@
       .status-text{font-weight:600;color:inherit}
       .muted{opacity:.85}
       @media (prefers-color-scheme: dark){ #topbar .topbar-inner{border-bottom-color:#374151} }
-    `
-    );
+    `);
 
     forceTopbarColors(container, { home });
-
     inner.append(left, right);
     container.appendChild(inner);
   }
@@ -229,189 +191,63 @@
   function renderFooter(container, cfg) {
     if (!container) return;
     container.innerHTML = '';
-    onceStyle(
-      'sh-footer-style',
-      `
+    onceStyle('sh-footer-style', `
       .footer{margin-top:2rem;padding:1rem;border-top:1px solid #e5e7eb;color:#6b7280;font-size:.9rem}
       .footer .row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:space-between}
       .footer code{background:rgba(0,0,0,.05);padding:.1rem .35rem;border-radius:.25rem}
-    `
-    );
-    const row = el(
-      'div',
-      { class: 'row' },
+    `);
+    const row = el('div', { class: 'row' },
       el('div', {}, `© ${new Date().getFullYear()} Superhond`),
-      el(
-        'div',
-        {},
-        cfg?.apiBase
-          ? el('code', {}, 'api: ' + String(cfg.apiBase).replace(/^https?:\/\/(www\.)?/, ''))
-          : el('span', { class: 'muted' }, 'api: n.v.t.')
-      ),
+      el('div', {}, cfg?.apiBase ? el('code', {}, 'api: ' + String(cfg.apiBase).replace(/^https?:\/\/(www\.)?/, '')) : el('span', { class: 'muted' }, 'api: n.v.t.')),
       el('div', {}, `versie ${cfg?.version || APP_VERSION}`)
     );
     container.classList.add('footer');
     container.append(row);
   }
 
-  // ───────── Centrale Online/Offline besturing
-  let __netState = null; // laatste bekende status (true/false)
-
-  function __renderDot(ok) {
-    __netState = !!ok;
-    const dot = document.querySelector('#topbar .status-dot');
-    const txt = document.querySelector('#topbar .status-text');
-    if (dot) {
-      dot.classList.toggle('is-online', !!ok);
-      dot.classList.toggle('is-offline', !ok);
-    }
-    if (txt) txt.textContent = ok ? 'Online' : 'Offline';
-  }
-
-  async function recheckOnline() {
-    try { __renderDot(await ping()); } catch { __renderDot(false); }
-  }
-
-  /** Publiek: noem dit na een geslaagde API-call → dot groen */
-  function noteSuccess() { __renderDot(true); }
-
-  /**
-   * Publiek: noem dit bij een mislukte data-call.
-   * We doen eerst een ping:
-   *  - ping OK  -> dot blijft groen (server bereikbaar, fout was iets anders)
-   *  - ping NOK -> dot wordt rood (echt offline)
-   */
-  async function noteFailure() { await recheckOnline(); }
-
-  /** (Compat) Oude API: setOnline(true/false) */
-  function setOnlineCompat(ok) {
-    if (ok) noteSuccess();
-    else noteFailure(); // verifieert eerst met ping
-  }
-
-  // ───────── Public API
+  // ───────── Public UI API
   async function mount(opts = {}) {
-    // Wacht tot DOM gereed
     await new Promise((res) => onReady(res));
     applyDensity();
 
-    // Autodetect dashboard → body class
+    // Detecteer dashboard/subpage → class voor kleur
     try {
       const p = location.pathname.replace(/\/+$/, '');
-      const isDash =
-        /\/dashboard$/.test(p) ||
-        /\/dashboard\/index\.html$/.test(p) ||
-        opts.home === true;
-      if (isDash) {
-        document.body.classList.add('dashboard-page');
-        document.body.classList.remove('subpage');
-      } else if (opts.home === false) {
-        document.body.classList.remove('dashboard-page');
-        document.body.classList.add('subpage');
-      }
-    } catch { /* ignore */ }
+      const isDash = /\/dashboard$/.test(p) || /\/dashboard\/index\.html$/.test(p) || opts.home === true;
+      if (isDash) { document.body.classList.add('dashboard-page'); document.body.classList.remove('subpage'); }
+      else if (opts.home === false) { document.body.classList.remove('dashboard-page'); document.body.classList.add('subpage'); }
+    } catch {}
 
     // Admin badge
     document.body.classList.toggle('admin-page', isAdmin());
 
-    // Subpagina’s krijgen standaard back=true (dashboard niet)
-    const isSub =
-      document.body.classList.contains('subpage') &&
-      !document.body.classList.contains('dashboard-page');
+    // Subpagina’s standaard back=true (dashboard niet)
+    const isSub = document.body.classList.contains('subpage') && !document.body.classList.contains('dashboard-page');
     const finalOpts = Object.assign({ back: isSub ? true : null }, opts);
 
-    const [cfg, online] = await Promise.all([
+    const [cfg, ok] = await Promise.all([
       fetchJSON(API_CONFIG).catch(() => ({})),
-      ping()
+      pingHTTP()
     ]);
 
     const topbarEl = document.getElementById('topbar');
     const footerEl = document.getElementById('footer');
-    if (topbarEl) renderTopbar(topbarEl, finalOpts, cfg, online);
+    if (topbarEl) renderTopbar(topbarEl, finalOpts, cfg, ok);
     if (footerEl) renderFooter(footerEl, cfg);
-    __renderDot(online); // initiale status
+
+    // Init + heartbeat
+    setOnline(ok, { source: 'mount' });
+    window.addEventListener('online',  () => setOnline(true,  { source: 'navigator' }));
+    window.addEventListener('offline', () => setOnline(false, { source: 'navigator' }));
+    startHeartbeat(30000);
   }
 
-  // ───────── Centrale netwerkstatus ─────────
-const NetState = {
-  online: null,
-  lastChange: 0,
-  timer: null
-};
+  // Compat: oude setOnline blijft werken en routeert naar centrale status
+  function setOnlineCompat(ok){ setOnline(!!ok, { source:'compat' }); }
 
-async function pingOnce() {
-  try {
-    const ok = await ping();            // gebruikt de bestaande ping() bovenaan
-    setOnline(ok, { source: 'ping' });
-    return ok;
-  } catch {
-    setOnline(false, { source: 'ping' });
-    return false;
-  }
-}
-
-function startHeartbeat(ms = 30000) {
-  if (NetState.timer) clearInterval(NetState.timer);
-  NetState.timer = setInterval(pingOnce, ms);
-}
-
-// Overschrijf setOnline zodat layout + status-dot altijd in sync zijn
-function setOnline(ok, { source } = {}) {
-  ok = !!ok;
-  if (NetState.online === ok) return;
-
-  NetState.online = ok;
-  NetState.lastChange = Date.now();
-
-  const dot = document.querySelector('#topbar .status-dot');
-  const txt = document.querySelector('#topbar .status-text');
-  if (dot) {
-    dot.classList.toggle('is-online', ok);
-    dot.classList.toggle('is-offline', !ok);
-  }
-  if (txt) txt.textContent = ok ? 'Online' : 'Offline';
-
-  // Optioneel: log 1x
-  // console.debug('[Net]', ok ? 'online' : 'offline', source || '');
-}
-
-// Browser-events (gaat uit bij echte offline, en terug bij reconnect)
-window.addEventListener('online',  () => setOnline(true,  { source: 'navigator' }));
-window.addEventListener('offline', () => setOnline(false, { source: 'navigator' }));
-
-// Tijdens mount: eerste ping + heartbeat starten
-const _origMount = (window.SuperhondUI && window.SuperhondUI.mount) || null;
-async function mountWithNet(opts = {}) {
-  // call originele mount (bouwt topbar op)
-  if (_origMount) await _origMount(opts);
-  // init status (ping result overschrijft dit zo meteen)
-  setOnline(navigator.onLine, { source: 'boot' });
-  await pingOnce();           // directe check
-  startHeartbeat(30000);      // elke 30s verifiëren
-}
-
-// ───────── Public API (vervang je bestaande expose-blok) ─────────
-window.SuperhondUI = Object.assign(window.SuperhondUI || {}, {
-  mount: mountWithNet,
-  setOnline,      // blijft publiek, maar gaat via centrale state
-  setAdmin,
-  applyDensity,
-  APP_VERSION
-});
-
-// Centrale “netwerkmanager” voor andere modules (sheets.js, pagina’s)
-window.SuperhondNet = Object.assign(window.SuperhondNet || {}, {
-  setOnline,          // SuperhondNet.setOnline(true/false, {source})
-  ping: pingOnce,
-  startHeartbeat
-});
-  
-  // Expose
   window.SuperhondUI = Object.assign(window.SuperhondUI || {}, {
     mount,
-    setOnline: setOnlineCompat, // compat
-    noteSuccess,                // nieuw
-    noteFailure,                // nieuw
+    setOnline: setOnlineCompat,
     setAdmin,
     applyDensity,
     APP_VERSION
