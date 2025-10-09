@@ -1,5 +1,5 @@
 /**
- * public/js/sheets.js — Proxy-first Sheets API met harde fallback (v0.26.0)
+ * public/js/sheets.js — Proxy-first Sheets API met harde fallback (v0.26.1)
  * - Probeert eerst /api/sheets (optionele proxy), valt bij 404/timeout/netwerk terug op GAS /exec
  * - Centrale netstatus: succesvolle call => online; netwerk/timeout => offline; HTTP 4xx/5xx => online
  * - initFromConfig(): leest /api/config en localStorage('apiBase')
@@ -60,15 +60,16 @@ async function getJSON(url, { timeout = DEFAULT_TIMEOUT, signal } = {}) {
     err.status = res.status;
     throw err;
   }
-  // Content-type kan ontbreken
+
   const ct = res.headers.get('content-type') || '';
   let data;
-  if (!ct.includes('application/json')) {
+  if (ct.includes('application/json')) {
+    data = await res.json();
+  } else {
     try { data = await res.json(); }
     catch { throw new Error(`Geen geldige JSON (status ${res.status})`); }
-  } else {
-    data = await res.json();
   }
+
   noteOnline();
   return data;
 }
@@ -111,6 +112,12 @@ export async function initFromConfig() {
   return API_BASE;
 }
 
+/**
+ * Geeft de huidige actieve API-base terug:
+ *  - Eerst de variabele die tijdens initFromConfig() is ingesteld
+ *  - Anders de waarde uit localStorage (apiBase)
+ *  - Anders lege string
+ */
 export function currentApiBase() {
   return API_BASE || localStorage.getItem('apiBase') || '';
 }
@@ -129,7 +136,6 @@ async function proxyThenGas(urlProxy, urlGas, { timeout, signal } = {}) {
   }
 
   if (!urlGas || !urlGas.startsWith('http')) {
-    // Beide paden faalden of er is geen apiBase
     noteOffline();
     throw new Error('Proxy faalde (404/timeout) en geen geldige apiBase ingesteld.');
   }
@@ -158,10 +164,9 @@ export async function fetchSheet(tab, { timeout, params = {}, signal } = {}) {
       return data;
     } catch (e) {
       lastErr = e;
-      // Als laatste poging straks ook faalt, bepalen we hier de status
       if (i === RETRIES) {
         if (isNetworkyError(e)) noteOffline();
-        else noteOnline(); // functionele fout: server bereikbaar
+        else noteOnline();
         break;
       }
     }
@@ -205,7 +210,6 @@ export async function postAction({ entity, action, payload }, { timeout, signal 
     noteOnline();
     return data;
   } catch (e) {
-    // functionele fout ≠ offline
     if (e && e.status && e.status !== 404) { noteOnline(); throw e; }
     if (!e.status && !isNetworkyError(e)) { noteOnline(); throw e; }
   }
@@ -238,21 +242,8 @@ export function normStatus(s) {
   if (!v) return '';
   if (['actief', 'active', 'activeer', 'activer', '1', 'yes', 'ja', 'true'].includes(v)) return 'actief';
   if (['inactief', 'inactive', '0', 'nee', 'no', 'false', 'archief', 'archiveren', 'archived'].includes(v)) return 'inactief';
-  return s; // onbekend: laat origineel staan
+  return s;
 }
 
-/* ───────────────────────── Debug export (optioneel) ───────────────────────── */
+/* ───────────────────────── Debug export ───────────────────────── */
 export function _getConfig() { return { API_BASE, CFG }; }
-
-
-/* ───────────────────────── Huidige API-base (helper voor klanten.js) ───────────────────────── */
-/**
- * Geeft de huidige actieve API-base terug:
- *  - Eerst de variabele die tijdens initFromConfig() is ingesteld
- *  - Anders de waarde uit localStorage (apiBase)
- *  - Anders lege string
- */
-export function currentApiBase() {
-  return API_BASE || localStorage.getItem('apiBase') || '';
-}
-
