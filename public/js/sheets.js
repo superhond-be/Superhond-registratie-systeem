@@ -202,4 +202,17 @@ export const saveHond  = (h, opt) => postAction('hond','add',h,opt);
 export const saveKlas  = (k, opt) => postAction('klas','add',k,opt);
 export const saveLes   = (l, opt) => postAction('les','add',l,opt);
 // onderaan sheets.js
-export function currentApiBase(){ return apiBase; }
+
+
+
+// Bestaande variabelen bovenin:
+// let apiBase = ''; 
+// const LS_KEY = 'superhond:apiBase';
+
+export function currentApiBase() {
+  try {
+    return apiBase || localStorage.getItem('superhond:apiBase') || '';
+  } catch {
+    return apiBase || '';
+  }
+}
