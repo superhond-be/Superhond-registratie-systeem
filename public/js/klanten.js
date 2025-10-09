@@ -1,22 +1,14 @@
 /**
- * public/js/klanten.js — Lijst + zoeken + toevoegen (v0.24.1)
+ * public/js/klanten.js — Lijst + zoeken + toevoegen (v0.24.3)
  * Werkt met public/js/sheets.js (proxy-first, timeouts, retries)
- * Verbeteringen:
- *  - Correct import pad
- *  - TIMEOUT 20s voor 'Klanten'
- *  - Abortable refresh (race-safe)
- *  - Intl.Collator ('nl') sortering
- *  - Online-indicator bij fout/succes
  */
 
 import {
   initFromConfig,
   fetchSheet,
-  saveKlant,
-  // normStatus  // ← niet gebruikt; mocht je willen, kun je 'status' hiermee normaliseren
-} from './sheets.js'; // FIX: stond op '../js/sheets.js' (verkeerd vanuit /public/js/)
+  saveKlant
+} from './sheets.js';
 
-//
 // ───────────────────────── Utils ─────────────────────────
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -46,7 +38,9 @@ function linkEmail(s){
 function linkTel(s){
   const v = String(s||'').trim();
   if (!v) return '';
-  const href = v.replace(/\s+/g,'').replace(/^0/,'+32'); // eenvoudige BE-normalisatie (optioneel)
+  // eenvoudige normalisatie: “0470 12 34 56” -> “+32470123456”
+  const digits = v.replace(/[^\d+]/g,'');
+  const href = /^\+/.test(digits) ? digits : digits.replace(/^0/, '+32');
   return `<a href="tel:${escapeHtml(href)}">${escapeHtml(v)}</a>`;
 }
 function escapeHtml(s){
@@ -68,17 +62,43 @@ function setFieldError(input, msg){
   input.insertAdjacentElement('afterend', hint);
 }
 
-//
-// ───────────────────────── Data & render ─────────────────────────
-const TIMEOUT_MS = 20000; // belangrijk: zwaardere tab
+// ───────────────────────── Data & helpers ─────────────────────────
+const TIMEOUT_MS = 20000; // zwaardere tab
 const collator = new Intl.Collator('nl', { sensitivity: 'base', numeric: true });
 
 let allRows = [];    // volledige dataset
 let viewRows = [];   // gefilterd
 let lastAbort = null;
 
+/** Vangt verschillende responsevormen op en geeft altijd een array terug. */
+function toArrayRows(x) {
+  if (Array.isArray(x)) return x;
+  if (x && Array.isArray(x.data)) return x.data;
+  if (x && Array.isArray(x.rows)) return x.rows;
+  if (x && Array.isArray(x.result)) return x.result;
+  // Als GAS legacy { ok, data } formaat wordt doorgegeven via proxy zonder uitpakken:
+  if (x && x.ok === true && Array.isArray(x.data)) return x.data;
+  throw new Error('Server gaf onverwachte respons (geen lijst).');
+}
+
+/** Probeer eerst tab 'Klanten', val anders terug op 'Leden'. */
+async function fetchKlantenArray(opts) {
+  try {
+    const raw = await fetchSheet('Klanten', opts);
+    return toArrayRows(raw);
+  } catch (e1) {
+    // Fallback wanneer tab anders heet in de sheet
+    try {
+      const raw2 = await fetchSheet('Leden', opts);
+      return toArrayRows(raw2);
+    } catch (e2) {
+      // Laat originele fout zien (meestal duidelijker)
+      throw e1;
+    }
+  }
+}
+
 function normalizeRow(row){
-  // Headers komen flexibel uit GAS. Normaliseer belangrijkste velden.
   const o = Object.create(null);
   for (const [k,v] of Object.entries(row || {})) {
     o[String(k||'').toLowerCase()] = v;
@@ -135,6 +155,7 @@ const doFilter = debounce(() => {
   renderTable(viewRows);
 }, 150);
 
+// ───────────────────────── Data laden ─────────────────────────
 async function refresh(){
   // Maak lopende fetch abortable om race conditions te voorkomen
   if (lastAbort) lastAbort.abort();
@@ -144,19 +165,16 @@ async function refresh(){
   try {
     setState('⏳ Laden…', 'muted');
 
-    // fetchSheet accepteert extra init; voegen we signal toe voor abort
-    // (Als jouw fetchSheet dit niet support, wordt signal genegeerd door native fetch binnenin.)
-    const rows = await fetchSheet('Klanten', { timeout: TIMEOUT_MS, signal: ac.signal });
-
-    allRows = (rows || []).map(normalizeRow);
+    const rows = await fetchKlantenArray({ timeout: TIMEOUT_MS, signal: ac.signal });
+    allRows = rows.map(normalizeRow);
 
     // Sorteer stabiel op naam (nl)
     allRows.sort((a,b) => collator.compare(a.naam||'', b.naam||''));
 
-    // Unieke ID’s (veiligheid: soms dubbele rijen in sheet)
+    // Unieke ID’s (veiligheid)
     const seen = new Set();
     allRows = allRows.filter(r => {
-      if (!r.id) return true; // laat zonder id door, beter tonen dan droppen
+      if (!r.id) return true; // toon liever dan droppen
       if (seen.has(r.id)) return false;
       seen.add(r.id); return true;
     });
@@ -169,12 +187,11 @@ async function refresh(){
     if (err?.name === 'AbortError') return; // nieuwe refresh startte, negeren
     console.error(err);
     setState(`❌ Fout bij laden: ${err?.message || err}`, 'error');
-    toast('Laden van klanten mislukt', 'error');
+    toast(`Laden van klanten mislukt: ${err?.message || err}`, 'error');
     window.SuperhondUI?.setOnline?.(false);
   }
 }
 
-//
 // ───────────────────────── Form submit ─────────────────────────
 async function onSubmitAdd(e){
   e.preventDefault();
@@ -223,7 +240,6 @@ async function onSubmitAdd(e){
 
     if (msg) { msg.textContent = `✅ Bewaard (id: ${id})`; }
     form.reset();
-    // eerste input terug focus voor snelle datainvoer
     const first = form.querySelector('input,select,textarea');
     first && first.focus();
   } catch (err) {
@@ -233,12 +249,11 @@ async function onSubmitAdd(e){
   }
 }
 
-//
 // ───────────────────────── Mount ─────────────────────────
 async function main(){
   // Topbar mount (uniform; subpage = blauwe balk + back-knop)
   if (window.SuperhondUI?.mount) {
-    document.body.classList.add('subpage'); // hint voor styling; kleur wordt sowieso geforceerd
+    document.body.classList.add('subpage'); // hint voor styling
     window.SuperhondUI.mount({ title:'Klanten', icon:'👤', back:'../dashboard/', home:false });
   }
 
