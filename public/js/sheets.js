@@ -1,233 +1,187 @@
 /**
- * public/js/sheets.js — Centrale API-laag voor Superhond (v0.21.1)
- * - Proxy-first naar /api/sheets (CORS-vrij) met veilige base-override
- * - Fallback naar directe GAS /exec (optioneel)
- * - Timeouts, retries, nette fouten + localStorage cache voor apiBase
- * - NEW: optionele { timeout } bij fetchSheet/fetchAction/postAction
- * - NEW: cache-buster 't=' op alle verzoeken (ook direct naar GAS)
+ * public/js/sheets.js — Proxy-first Sheets API met harde fallback (v0.24.2)
+ * - Probeert eerst /api/sheets (optionele proxy)
+ * - Bij 404/Netwerk/timeout valt hij DIRECT terug op GAS /exec (apiBase)
+ * - initFromConfig(): leest /api/config en localStorage('apiBase')
+ * - fetchSheet(tab, { timeout, params, signal })
+ * - fetchAction(action, { timeout, params, signal })
+ * - postAction({ entity, action, payload })
+ * - Helpers: saveKlant/Hond/Klas/Les, normStatus
  */
 
-const DEFAULT_TIMEOUT = 15_000;   // eerder 10s → 15s geeft iets meer speling
-const DEFAULT_RETRIES = 2;        // totaal 3 pogingen
-const LS_KEY_BASE     = 'superhond:apiBase';
+const DEFAULT_TIMEOUT = 12000;
+const HEAVY_TIMEOUT   = 20000;  // bv. 'Klanten'
+const RETRIES         = 1;
 
-let GAS_BASE_URL = '';            // directe /exec (optioneel; kan via /api/config/LS/window gezet worden)
+let API_BASE = ''; // bv. https://script.google.com/macros/s/XXX/exec
+let CFG      = {}; // { apiBase, version, env }
 
-/* ─────────────────── Base helpers ─────────────────── */
-function sanitizeExecUrl(url = '') {
-  try {
-    const u = new URL(String(url).trim());
-    if (
-      u.hostname === 'script.google.com' &&
-      u.pathname.startsWith('/macros/s/') &&
-      u.pathname.endsWith('/exec')
-    ) {
-      return `${u.origin}${u.pathname}`;
-    }
-  } catch {}
-  return '';
+/* ───────────────────────── Utils ───────────────────────── */
+function withTimeout(ms, p) {
+  return Promise.race([
+    p,
+    new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))
+  ]);
 }
 
-/** Optioneel: zet directe GAS /exec URL + persist (fallback als proxy niet werkt) */
-export function setBaseUrl(url) {
-  const safe = sanitizeExecUrl(url);
-  GAS_BASE_URL = safe;
-  try {
-    if (safe) localStorage.setItem(LS_KEY_BASE, safe);
-    else localStorage.removeItem(LS_KEY_BASE);
-  } catch {}
+function qs(obj = {}) {
+  const s = new URLSearchParams();
+  Object.entries(obj).forEach(([k, v]) => {
+    if (v === undefined || v === null) return;
+    s.set(k, String(v));
+  });
+  return s.toString();
 }
 
-export function getBaseUrl() { return GAS_BASE_URL; }
+async function getJSON(url, { timeout = DEFAULT_TIMEOUT, signal } = {}) {
+  const res = await withTimeout(timeout, fetch(url, { cache: 'no-store', signal }));
+  if (!res.ok) {
+    const err = new Error(`HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  // Kan 204 zijn?
+  const ct = res.headers.get('content-type') || '';
+  if (!ct.includes('application/json')) {
+    // probeer alsnog JSON te parsen; anders nette melding
+    try { return await res.json(); }
+    catch { throw new Error(`Geen geldige JSON (status ${res.status})`); }
+  }
+  return res.json();
+}
 
-/** Init: haal base uit /api/config → localStorage → window */
+async function postJSON(url, body, { timeout = DEFAULT_TIMEOUT, signal } = {}) {
+  const res = await withTimeout(timeout, fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify(body),
+    signal
+  }));
+  if (!res.ok) {
+    const err = new Error(`HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+function isNetworkyError(e) {
+  const m = String(e && e.message || '').toLowerCase();
+  return m.includes('timeout') || m.includes('network') || m.includes('failed to fetch');
+}
+
+/* ───────────────────────── Config ───────────────────────── */
 export async function initFromConfig() {
-  if (!GAS_BASE_URL) {
-    try {
-      const r = await fetch('/api/config', { cache: 'no-store' });
-      if (r.ok) {
-        const cfg = await r.json();
-        if (cfg?.apiBase) setBaseUrl(cfg.apiBase);
-      }
-    } catch {}
-  }
-  if (!GAS_BASE_URL) {
-    try {
-      const ls = localStorage.getItem(LS_KEY_BASE);
-      if (ls) setBaseUrl(ls);
-    } catch {}
-  }
-  if (!GAS_BASE_URL && window.SUPERHOND_SHEETS_URL) {
-    setBaseUrl(window.SUPERHOND_SHEETS_URL);
-  }
-}
-
-/* ─────────────────── Fetch utils ─────────────────── */
-function peekBody(s, n = 180) {
-  return String(s || '').trim().replace(/\s+/g, ' ').slice(0, n);
-}
-
-async function fetchWithTimeout(url, init = {}, timeoutMs = DEFAULT_TIMEOUT) {
-  const ac = new AbortController();
-  const to = setTimeout(() => ac.abort(new Error('timeout')), timeoutMs);
+  if (API_BASE) return API_BASE;
+  // 1) /api/config (optioneel)
   try {
-    return await fetch(url, { ...init, signal: ac.signal, cache: 'no-store' });
-  } finally {
-    clearTimeout(to);
-  }
+    const r = await getJSON('/api/config', { timeout: 4000 });
+    CFG = r || {};
+    if (r?.apiBase) API_BASE = r.apiBase;
+  } catch { /* geen config file: ok */ }
+
+  // 2) localStorage override
+  const ls = localStorage.getItem('apiBase');
+  if (ls) API_BASE = ls;
+
+  return API_BASE;
 }
 
-async function withRetry(doRequest, { retries = DEFAULT_RETRIES, baseDelay = 300 } = {}) {
+/* ───────────────────────── Kern: proxy-first + harde fallback ───────────────────────── */
+async function proxyThenGas(urlProxy, urlGas, { timeout, signal } = {}) {
+  // 1) Proxy proberen
+  try {
+    const data = await getJSON(urlProxy, { timeout, signal });
+    return data;
+  } catch (e) {
+    // Als status NIET 404 is en geen netwerk/timeout, geef direct door
+    if (e && e.status && e.status !== 404) throw e;
+    if (!e.status && !isNetworkyError(e)) throw e;
+    // Anders: door naar GAS
+  }
+
+  if (!urlGas || !urlGas.startsWith('http')) {
+    throw new Error('Proxy faalde (404/timeout) en geen geldige apiBase ingesteld.');
+  }
+
+  // 2) GAS direct
+  const data2 = await getJSON(urlGas, { timeout, signal });
+  return data2;
+}
+
+/* ───────────────────────── API: GET ───────────────────────── */
+export async function fetchSheet(tab, { timeout, params = {}, signal } = {}) {
+  await initFromConfig();
+  const t = (tab === 'Klanten') ? (timeout || HEAVY_TIMEOUT) : (timeout || DEFAULT_TIMEOUT);
+
+  const baseParams = { action: 'getSheet', tab, ...params, _: Date.now() };
+  const q = qs(baseParams);
+
+  const urlProxy = `/api/sheets?${q}`;
+  const urlGas   = API_BASE ? `${API_BASE}?${q}` : (localStorage.getItem('apiBase') ? `${localStorage.getItem('apiBase')}?${q}` : '');
+
   let lastErr;
-  for (let attempt = 0; attempt <= retries; attempt++) {
+  for (let i = 0; i <= RETRIES; i++) {
     try {
-      return await doRequest(attempt);
-    } catch (err) {
-      lastErr = err;
-      const isTimeout = err?.name === 'AbortError' || err?.message === 'timeout';
-      const transient = isTimeout ||
-        /Failed to fetch|NetworkError|ECONNRESET|ENOTFOUND/i.test(String(err));
-      if (attempt < retries && transient) {
-        const wait = baseDelay * Math.pow(2, attempt); // 300ms, 600ms, 1200ms
-        await new Promise(r => setTimeout(r, wait));
-        continue;
-      }
-      break;
+      return await proxyThenGas(urlProxy, urlGas, { timeout: t, signal });
+    } catch (e) {
+      lastErr = e;
+      if (i === RETRIES) break;
     }
   }
   throw lastErr;
 }
 
-/* ─────────────────── URL builders ─────────────────── */
-function appendParams(url, paramsObj) {
-  if (paramsObj) {
-    Object.entries(paramsObj).forEach(([k, v]) => {
-      if (v != null && v !== '') url.searchParams.set(k, String(v));
-    });
+export async function fetchAction(action, { timeout, params = {}, signal } = {}) {
+  await initFromConfig();
+  const t = timeout || DEFAULT_TIMEOUT;
+
+  const baseParams = { action, ...params, _: Date.now() };
+  const q = qs(baseParams);
+
+  const urlProxy = `/api/sheets?${q}`;
+  const urlGas   = API_BASE ? `${API_BASE}?${q}` : (localStorage.getItem('apiBase') ? `${localStorage.getItem('apiBase')}?${q}` : '');
+
+  return proxyThenGas(urlProxy, urlGas, { timeout: t, signal });
+}
+
+/* ───────────────────────── API: POST ───────────────────────── */
+export async function postAction({ entity, action, payload }, { timeout, signal } = {}) {
+  await initFromConfig();
+  const t = timeout || DEFAULT_TIMEOUT;
+
+  const body = { entity, action, payload };
+  const urlProxy = `/api/sheets`;
+  const urlGas   = API_BASE || localStorage.getItem('apiBase') || '';
+
+  // 1) Proxy
+  try {
+    return await postJSON(urlProxy, body, { timeout: t, signal });
+  } catch (e) {
+    if (e && e.status && e.status !== 404) throw e;
+    if (!e.status && !isNetworkyError(e)) throw e;
   }
-  // kleine bust tegen caches
-  url.searchParams.set('t', Date.now().toString());
+
+  // 2) GAS
+  if (!urlGas) throw new Error('Proxy faalde en apiBase is niet ingesteld.');
+  return postJSON(urlGas, body, { timeout: t, signal });
 }
 
-function proxyUrl(paramsObj) {
-  const url = new URL('/api/sheets', location.origin);
-  appendParams(url, paramsObj);
-  // ⬇️ Stuur veilige base override mee, jouw server/api/sheets.js valideert dit
-  if (GAS_BASE_URL) url.searchParams.set('base', GAS_BASE_URL);
-  return url.toString();
-}
+/* ───────────────────────── Helpers voor entiteiten ───────────────────────── */
+export const saveKlant = (payload, opts) => postAction({ entity: 'klant', action: payload?.id ? 'update' : 'add', payload }, opts);
+export const saveHond  = (payload, opts) => postAction({ entity: 'hond',  action: payload?.id ? 'update' : 'add', payload }, opts);
+export const saveKlas  = (payload, opts) => postAction({ entity: 'klas',  action: payload?.id ? 'update' : 'add', payload }, opts);
+export const saveLes   = (payload, opts) => postAction({ entity: 'les',   action: payload?.id ? 'update' : 'add', payload }, opts);
 
-function directUrl(paramsObj) {
-  if (!GAS_BASE_URL) return '';
-  const url = new URL(GAS_BASE_URL);
-  appendParams(url, paramsObj);
-  return url.toString();
-}
-
-/* ─────────────────── Kern GET/POST ─────────────────── */
-async function getJSON(paramsObj, { timeout = DEFAULT_TIMEOUT } = {}) {
-  return withRetry(async (attempt) => {
-    // 1e poging via proxy; bij mislukken met directe fallback (als base bekend is)
-    const viaProxy = attempt === 0 || !GAS_BASE_URL;
-    const url = viaProxy ? proxyUrl(paramsObj) : directUrl(paramsObj);
-    if (!url) throw new Error('Geen geldige base URL');
-
-    const res  = await fetchWithTimeout(url, { method: 'GET' }, timeout);
-    const text = await res.text();
-
-    // Probeer JSON te parsen
-    let json;
-    try { json = JSON.parse(text); }
-    catch { throw new Error(`Geen geldige JSON (status ${res.status}): ${peekBody(text)}`); }
-
-    if (!res.ok || json?.ok === false) {
-      const err = json?.error || `Upstream ${res.status}`;
-      throw new Error(`${err}: ${peekBody(text)}`);
-    }
-    return json;
-  });
-}
-
-async function postJSON(body, paramsObj, { timeout = DEFAULT_TIMEOUT } = {}) {
-  // Altijd als string doorsturen met text/plain (GAS leest e.postData.contents; geen preflight)
-  const bodyText = typeof body === 'string' ? body : JSON.stringify(body || {});
-  return withRetry(async (attempt) => {
-    const viaProxy = attempt === 0 || !GAS_BASE_URL;
-    const url = viaProxy ? proxyUrl(paramsObj) : directUrl(paramsObj);
-    if (!url) throw new Error('Geen geldige base URL');
-
-    const res  = await fetchWithTimeout(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-      body: bodyText
-    }, timeout);
-    const text = await res.text();
-
-    let json;
-    try { json = JSON.parse(text); }
-    catch { throw new Error(`Geen geldige JSON (status ${res.status}): ${peekBody(text)}`); }
-
-    if (!res.ok || json?.ok === false) {
-      const err = json?.error || `Upstream ${res.status}`;
-      throw new Error(`${err}: ${peekBody(text)}`);
-    }
-    return json;
-  });
-}
-
-/* ─────────────────── Publieke helpers ─────────────────── */
+/* ───────────────────────── Kleine normalisaties ───────────────────────── */
 export function normStatus(s) {
-  return String(s == null ? '' : s).trim().toLowerCase();
+  const v = String(s || '').trim().toLowerCase();
+  if (!v) return '';
+  if (['actief', 'active', 'activeer', 'activer', '1', 'yes', 'ja', 'true'].includes(v)) return 'actief';
+  if (['inactief', 'inactive', '0', 'nee', 'no', 'false', 'archief', 'archiveren', 'archived'].includes(v)) return 'inactief';
+  return s; // onbekend: laat origineel staan
 }
 
-/**
- * Lees een sheet-tab via legacy `mode=`: klanten|honden|klassen|lessen|reeksen|all|diag
- * @param {string} tabName
- * @param {{timeout?:number}} opts
- */
-export async function fetchSheet(tabName, opts = {}) {
-  const mode = String(tabName || '').toLowerCase();
-  if (!mode) throw new Error('tabName vereist');
-  const json = await getJSON({ mode }, opts);
-  return json?.data || [];
-}
-
-/**
- * Moderne GET actions uit GAS (indien aanwezig): bv. action=getLeden
- * @param {string} action
- * @param {object} params
- * @param {{timeout?:number}} opts
- */
-export async function fetchAction(action, params = {}, opts = {}) {
-  const a = String(action || '').trim();
-  if (!a) throw new Error('action vereist');
-  const json = await getJSON({ action: a, ...params }, opts);
-  return json?.data || [];
-}
-
-/**
- * Moderne POST actions (algemene router): { entity, action, payload }
- * @param {string} entity
- * @param {string} action
- * @param {object} payload
- * @param {{timeout?:number}} opts
- */
-export async function postAction(entity, action, payload = {}, opts = {}) {
-  const e = String(entity || '').trim().toLowerCase();
-  const a = String(action || '').trim().toLowerCase();
-  if (!e || !a) throw new Error('entity en action vereist');
-  const json = await postJSON({ entity: e, action: a, payload }, undefined, opts);
-  return json?.data || {};
-}
-
-/* Convenience: directe save-calls die mappen op doPost(mode=...) in main.gs */
-export const saveKlant = (data, opts) => postJSON(data, { mode: 'saveKlant' }, opts || {}).then(j => j.data || {});
-export const saveHond  = (data, opts) => postJSON(data, { mode: 'saveHond'  }, opts || {}).then(j => j.data || {});
-export const saveKlas  = (data, opts) => postJSON(data, { mode: 'saveKlas'  }, opts || {}).then(j => j.data || {});
-export const saveLes   = (data, opts) => postJSON(data, { mode: 'saveLes'   }, opts || {}).then(j => j.data || {});
-
-/* ─────────────────── Bootstrapping ─────────────────── */
-/** Best-effort init (kun je ook handmatig aanroepen vóór fetchSheet/save...) */
-(async function autoInit(){
-  try { await initFromConfig(); } catch {}
-})();
+/* ───────────────────────── Debug export (optioneel) ───────────────────────── */
+export function _getConfig() { return { API_BASE, CFG }; }
