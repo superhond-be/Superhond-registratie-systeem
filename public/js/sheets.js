@@ -243,3 +243,16 @@ export function normStatus(s) {
 
 /* ───────────────────────── Debug export (optioneel) ───────────────────────── */
 export function _getConfig() { return { API_BASE, CFG }; }
+
+
+/* ───────────────────────── Huidige API-base (helper voor klanten.js) ───────────────────────── */
+/**
+ * Geeft de huidige actieve API-base terug:
+ *  - Eerst de variabele die tijdens initFromConfig() is ingesteld
+ *  - Anders de waarde uit localStorage (apiBase)
+ *  - Anders lege string
+ */
+export function currentApiBase() {
+  return API_BASE || localStorage.getItem('apiBase') || '';
+}
+
