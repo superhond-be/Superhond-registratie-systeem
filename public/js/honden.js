@@ -1,9 +1,10 @@
 /**
- * public/js/honden.js — Lijst + zoeken + toevoegen (v0.26.0)
+ * public/js/honden.js — Lijst + zoeken + toevoegen (v0.26.1-net)
  * - Actiekolom (👁️ ✏️ 🗑️) via actions.js
  * - Owner-koppeling verplicht (ownerId moet bestaan)
  * - Typeahead op bestaande klanten (voor ownerId) bij toevoegen & wijzigen
  * - Update/Delete via postAction('hond', ...)
+ * - Centrale online/offline: noteSuccess()/noteFailure()
  */
 
 import {
@@ -83,7 +84,8 @@ function toArrayRows(x) {
   if (x && Array.isArray(x.data)) return x.data;
   if (x && Array.isArray(x.rows)) return x.rows;
   if (x && Array.isArray(x.result)) return x.result;
-  if (x && x.ok === true && Array.isArray(x.data)) return x.data; // legacy
+  if (x && x.ok === true && Array.isArray(x.data)) return x.data;     // legacy ok+data
+  if (x && x.data && Array.isArray(x.data.rows)) return x.data.rows;  // nested data.rows
   throw new Error('Server gaf onverwachte respons (geen lijst).');
 }
 
@@ -353,12 +355,14 @@ function openHondEdit(id){
 
     try{
       await postAction('hond','update', payload);
+      window.SuperhondUI?.noteSuccess?.();     // ✅ centrale online
       Object.assign(r, normalizeRow(payload));
       renderTable(applyActiveFilter());
       closeModal();
       toast('Wijzigingen opgeslagen','ok');
     }catch(err){
       console.error(err);
+      window.SuperhondUI?.noteFailure?.();     // ❌ centrale online
       toast('Opslaan mislukt: '+(err?.message||err), 'error');
     }
   });
@@ -371,11 +375,13 @@ async function deleteHond(id){
   if (!confirm(`Weet je zeker dat je "${r.name || 'deze hond'}" wil verwijderen?`)) return;
   try{
     await postAction('hond','delete', { id });
+    window.SuperhondUI?.noteSuccess?.();       // ✅
     allRows = allRows.filter(x => String(x.id)!==String(id));
     renderTable(applyActiveFilter());
     toast('Hond verwijderd', 'ok');
   }catch(err){
     console.error(err);
+    window.SuperhondUI?.noteFailure?.();       // ❌
     toast('Verwijderen mislukt: '+(err?.message||err), 'error');
   }
 }
@@ -397,24 +403,26 @@ async function refresh(){
 
     // eigenaars eerst (nodig voor labeling/validatie)
     const ownersRaw = await fetchOwnersArray({ timeout: TIMEOUT_MS, signal: ac.signal });
+    // als we hier komen, was er netwerk → success
+    window.SuperhondUI?.noteSuccess?.();
     owners = ownersRaw.map(normOwnerRow).filter(o => o.id);
     buildOwnersIndex(owners);
 
     // honden
     const raw = await fetchSheet('Honden', { timeout: TIMEOUT_MS, signal: ac.signal });
+    window.SuperhondUI?.noteSuccess?.(); // tweede succes
     const rows = toArrayRows(raw);
     allRows = rows.map(normalizeRow);
     allRows.sort((a,b) => collator.compare(a.name||'', b.name||''));
 
     renderTable(applyActiveFilter());
     setState(`✅ ${viewRows.length} hond${viewRows.length===1?'':'en'} geladen`, 'muted');
-    window.SuperhondUI?.setOnline?.(true);
   } catch (err) {
     if (err?.name === 'AbortError') return;
     console.error(err);
     setState(`❌ Fout bij laden: ${err?.message || err}`, 'error');
     toast('Laden van honden mislukt', 'error');
-    window.SuperhondUI?.setOnline?.(false);
+    window.SuperhondUI?.noteFailure?.(); // check ping en zet dot alleen rood bij échte offline
   }
 }
 
@@ -479,6 +487,7 @@ async function onSubmitAdd(e){
 
   try {
     const res = await saveHond(payload);  // verwacht { id }
+    window.SuperhondUI?.noteSuccess?.();  // ✅
     const id  = res?.id || '';
     toast('✅ Hond opgeslagen', 'ok');
 
@@ -494,6 +503,7 @@ async function onSubmitAdd(e){
     first && first.focus();
   } catch (err) {
     console.error(err);
+    window.SuperhondUI?.noteFailure?.(); // ❌
     if (msg) { msg.className = 'error'; msg.textContent = `❌ Opslaan mislukt: ${err?.message || err}`; }
     toast('Opslaan mislukt', 'error');
   }
