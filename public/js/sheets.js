@@ -1,7 +1,8 @@
-// /public/js/sheets.js  v0.26.2 — proxy-first + fallback GAS + nette statusdoorprik
+// /public/js/sheets.js  v0.26.3 — proxy-first + fallback GAS + striktere JSON + betere fallbacks
 // Exports: initFromConfig, currentApiBase, setApiBase, fetchSheet, postAction, saveHond, diag
 
 const UI = globalThis.SuperhondUI || { noteSuccess(){}, noteFailure(){} };
+export const VERSION = '0.26.3';
 
 let _apiBase = '';     // bv. https://script.google.com/macros/s/XXX/exec
 let _config   = null;  // { apiBase, version, env }
@@ -14,12 +15,12 @@ export function setApiBase(url){
 
 // ───────────────────────── Helpers ─────────────────────────
 function withTimeout(ms, signal){
-  const ctrl = new AbortController();
-  const t = setTimeout(()=> ctrl.abort(new Error('timeout')), ms);
+  const timeoutCtrl = new AbortController();
+  const t = setTimeout(()=> timeoutCtrl.abort(new Error('timeout')), ms);
   const combo = new AbortController();
   function abortFrom(src){ try { combo.abort(src?.reason || src); } catch {} }
   signal?.addEventListener('abort', ()=> abortFrom(signal), { once:true });
-  ctrl.signal.addEventListener('abort', ()=> abortFrom(ctrl.signal), { once:true });
+  timeoutCtrl.signal.addEventListener('abort', ()=> abortFrom(timeoutCtrl.signal), { once:true });
   return { signal: combo.signal, cancel(){ clearTimeout(t); } };
 }
 
@@ -50,28 +51,36 @@ export async function initFromConfig(){
   // volgorde: /api/config → localStorage('apiBase') → noop
   try {
     const { res, text } = await fetchText('/api/config', { cache:'no-store' });
-    let cfg = safeParseJSON(text);
+    const cfg = safeParseJSON(text);
     if (res.ok && cfg && typeof cfg === 'object') {
       _config = cfg;
       if (cfg.apiBase) setApiBase(cfg.apiBase);
       markOk();
       return _config;
     }
-    // /api/config bestaat niet of geen JSON → probeer localStorage
+    // /api/config bestaat niet of is geen JSON → val door naar localStorage
   } catch (e) {
-    // netwerkprobleem naar server → noteFailure, maar we kunnen nog steeds localStorage lezen
     markStatusFromError(e);
   }
-  // fallback: localStorage
   try {
     const ls = localStorage.getItem('apiBase');
     if (ls) { setApiBase(ls); markOk(); return { apiBase: _apiBase, source:'localStorage' }; }
   } catch {}
-  // geen geldige apiBase
   throw new Error('Geen geldige apiBase gevonden. Zet /api/config of localStorage("apiBase").');
 }
 
 // ───────────────────────── Kern calls ─────────────────────────
+// NB: voor sheet/diag paden verwachten we **JSON**. Anders fallback.
+function ensureJsonOrThrow(text, res, label){
+  const j = safeParseJSON(text);
+  if (j === null) {
+    const err = new Error(`${label || 'invalid_json'}`);
+    err.status = res?.status;
+    throw err;
+  }
+  return j;
+}
+
 // Probeer eerst de server-proxy: /api/sheets?action=…  (mag 404’en)
 // Als 404/Not Found → val terug op GAS (apiBase).
 async function proxyGet(params, { timeout=20000, signal } = {}){
@@ -79,21 +88,26 @@ async function proxyGet(params, { timeout=20000, signal } = {}){
   Object.entries(params).forEach(([k,v]) => v!=null && u.searchParams.set(k, v));
   const { signal: sig, cancel } = withTimeout(timeout, signal);
   try {
-    const { res, text } = await fetchText(u.toString(), { signal: sig });
+    const { res, text } = await fetchText(u.toString(), { signal: sig, credentials: 'same-origin' });
     cancel();
     if (res.status === 404) throw new Error('proxy_not_found'); // dwing fallback
-    const ct = res.headers.get('content-type') || '';
-    const data = ct.includes('application/json') ? safeParseJSON(text) : safeParseJSON(text) || text;
     if (!res.ok) {
       // server bereikbaar → online
       markOk();
+      // Probeer error body te lezen als JSON
+      const data = safeParseJSON(text);
       const msg = (data && (data.error || data.message)) || `Proxy fout ${res.status}`;
       const err = new Error(msg); err.status = res.status; throw err;
     }
+    // OK → verwacht JSON
+    const data = ensureJsonOrThrow(text, res, 'proxy_bad_payload'); // forceer fallback pad hogerop
     markOk();
     return data;
   } catch (e) {
-    if (e.message === 'proxy_not_found') throw e; // signaleer expliciet
+    if (e.message === 'proxy_not_found' || e.message === 'proxy_bad_payload' || e.message === 'invalid_json') {
+      // signaleer expliciete fallback
+      throw e;
+    }
     markStatusFromError(e);
     throw e;
   }
@@ -107,13 +121,14 @@ async function gasGet(params, { timeout=20000, signal } = {}){
   try {
     const { res, text } = await fetchText(u.toString(), { signal: sig, mode:'cors' });
     cancel();
-    const ct = res.headers.get('content-type') || '';
-    const data = ct.includes('application/json') ? safeParseJSON(text) : safeParseJSON(text) || text;
     if (!res.ok) {
       markOk(); // HTTP → online
+      const data = safeParseJSON(text);
       const msg = (data && (data.error || data.message)) || `GAS fout ${res.status}`;
       const err = new Error(msg); err.status = res.status; throw err;
     }
+    // OK → verwacht JSON
+    const data = ensureJsonOrThrow(text, res, 'gas_bad_payload');
     markOk();
     return data;
   } catch (e) {
@@ -135,12 +150,13 @@ async function gasPost(body, { timeout=20000, signal } = {}){
     });
     const text = await res.text();
     cancel();
-    const data = safeParseJSON(text) ?? text;
     if (!res.ok) {
       markOk();
+      const data = safeParseJSON(text);
       const msg = (data && (data.error || data.message)) || `GAS fout ${res.status}`;
       const err = new Error(msg); err.status = res.status; throw err;
     }
+    const data = ensureJsonOrThrow(text, res, 'gas_bad_payload');
     markOk();
     return data;
   } catch (e) {
@@ -158,12 +174,15 @@ async function gasPost(body, { timeout=20000, signal } = {}){
  */
 export async function fetchSheet(sheetName, opts = {}){
   if (!sheetName) throw new Error('sheetName ontbreekt');
-  // 1) Proxy (mag 404 → fallback)
+  // 1) Proxy (mag 404 of bad payload → fallback)
   try {
     const data = await proxyGet({ action:'sheet', sheet: sheetName, range: opts.range }, opts);
     return data;
   } catch (e) {
-    if (e.message !== 'proxy_not_found') throw e;
+    if (!['proxy_not_found','proxy_bad_payload','invalid_json'].includes(e.message)) {
+      // andere proxy-fout (HTTP 5xx/4xx behalve 404): laat bubbelen (functionele fout)
+      throw e;
+    }
     // 2) Fallback GAS (GET action=sheet)
     const data = await gasGet({ action:'sheet', sheet: sheetName, range: opts.range }, opts);
     return data;
@@ -179,20 +198,23 @@ export async function postAction(entity, action, payload={}, opts={}){
       method: 'POST',
       headers: { 'Content-Type':'application/json' },
       body: JSON.stringify({ entity, action, payload }),
-      signal: opts.signal
+      signal: opts.signal,
+      credentials: 'same-origin'
     });
     const text = await res.text();
-    const data = safeParseJSON(text) ?? text;
+    if (res.status === 404) throw new Error('proxy_not_found');
     if (!res.ok) {
       markOk();
+      const data = safeParseJSON(text);
       const msg = (data && (data.error || data.message)) || `Proxy fout ${res.status}`;
       const err = new Error(msg); err.status = res.status; throw err;
     }
+    const data = ensureJsonOrThrow(text, res, 'proxy_bad_payload');
     markOk();
     return data;
   } catch (e) {
-    if (e?.status === 404) {
-      // 2) Fallback naar GAS POST
+    // Fallback voorwaarden: proxy niet aanwezig, slechte payload, of netwerk/CORS/timeout
+    if (e.message === 'proxy_not_found' || e.message === 'proxy_bad_payload' || isNetError(e)) {
       const data = await gasPost({ entity, action, payload }, opts);
       return data;
     }
