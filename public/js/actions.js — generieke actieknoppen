@@ -1,0 +1,49 @@
+/**
+ * public/js/actions.js — Superhond actieknoppen (v1.0)
+ * Standaard knoppen: Bekijken(👁️) | Wijzigen(✏️) | Verwijderen(🗑️)
+ * Gebruik:
+ *   import { actionBtns, wireActionHandlers } from './actions.js';
+ *   cell.innerHTML = actionBtns({ id: r.id, entity: 'klant' });
+ *   wireActionHandlers('#tbl', {
+ *     view:   (id, entity, btn)=> { ... },
+ *     edit:   (id, entity, btn)=> { ... },
+ *     delete: (id, entity, btn)=> { ... }
+ *   });
+ */
+
+export function actionBtns({ id, entity, compact = true, titles = {} } = {}) {
+  const safeId = escapeHtml(String(id ?? ''));
+  const e = escapeHtml(String(entity ?? ''));
+  const t = {
+    view: titles.view ?? 'Bekijken',
+    edit: titles.edit ?? 'Wijzigen',
+    delete: titles.delete ?? 'Verwijderen'
+  };
+  return `
+    <div class="btn-group">
+      <button class="btn btn-xs btn-icon" data-action="view" data-entity="${e}" data-id="${safeId}" title="${escapeHtml(t.view)}" aria-label="${escapeHtml(t.view)}">👁️</button>
+      <button class="btn btn-xs btn-icon" data-action="edit" data-entity="${e}" data-id="${safeId}" title="${escapeHtml(t.edit)}" aria-label="${escapeHtml(t.edit)}">✏️</button>
+      <button class="btn btn-xs btn-icon danger" data-action="delete" data-entity="${e}" data-id="${safeId}" title="${escapeHtml(t.delete)}" aria-label="${escapeHtml(t.delete)}">🗑️</button>
+    </div>
+  `;
+}
+
+export function wireActionHandlers(tableSelector, handlers = {}) {
+  const root = typeof tableSelector === 'string' ? document.querySelector(tableSelector) : tableSelector;
+  if (!root) return;
+  root.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn || !root.contains(btn)) return;
+    const action = btn.dataset.action;
+    const id     = btn.dataset.id;
+    const entity = btn.dataset.entity || '';
+    const fn = handlers[action];
+    if (typeof fn === 'function') fn(id, entity, btn);
+  });
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
+  );
+}
