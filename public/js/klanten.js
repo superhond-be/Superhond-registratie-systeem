@@ -1,5 +1,5 @@
 /**
- * public/js/klanten.js — Lijst + zoeken + toevoegen (v0.24.3)
+ * public/js/klanten.js — Lijst + zoeken + toevoegen (v0.24.4)
  * Werkt met public/js/sheets.js (proxy-first, timeouts, retries)
  */
 
@@ -76,8 +76,7 @@ function toArrayRows(x) {
   if (x && Array.isArray(x.data)) return x.data;
   if (x && Array.isArray(x.rows)) return x.rows;
   if (x && Array.isArray(x.result)) return x.result;
-  // Als GAS legacy { ok, data } formaat wordt doorgegeven via proxy zonder uitpakken:
-  if (x && x.ok === true && Array.isArray(x.data)) return x.data;
+  if (x && x.ok === true && Array.isArray(x.data)) return x.data; // legacy GAS proxy
   throw new Error('Server gaf onverwachte respons (geen lijst).');
 }
 
@@ -87,12 +86,10 @@ async function fetchKlantenArray(opts) {
     const raw = await fetchSheet('Klanten', opts);
     return toArrayRows(raw);
   } catch (e1) {
-    // Fallback wanneer tab anders heet in de sheet
     try {
       const raw2 = await fetchSheet('Leden', opts);
       return toArrayRows(raw2);
     } catch (e2) {
-      // Laat originele fout zien (meestal duidelijker)
       throw e1;
     }
   }
@@ -103,7 +100,6 @@ function normalizeRow(row){
   for (const [k,v] of Object.entries(row || {})) {
     o[String(k||'').toLowerCase()] = v;
   }
-  // aliasen
   o.id        = (o.id ?? o.klantid ?? o['klant id'] ?? o['id.'] ?? o['klant_id'] ?? o.col1 ?? '').toString();
   const vn    = (o.voornaam || '').toString().trim();
   const an    = (o.achternaam || '').toString().trim();
@@ -122,6 +118,7 @@ function rowMatchesQuery(row, q){
   return hay.includes(q);
 }
 
+// ───────────────────────── Tabel ─────────────────────────
 function renderTable(rows){
   const tb = $('#tbl tbody');
   if (!tb) return;
@@ -154,6 +151,62 @@ const doFilter = debounce(() => {
   viewRows = allRows.filter(r => rowMatchesQuery(r, q));
   renderTable(viewRows);
 }, 150);
+
+// ───────────────────────── Detail modal ─────────────────────────
+function ensureModalRoot(){
+  let root = document.getElementById('modal-root');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'modal-root';
+    document.body.appendChild(root);
+  }
+  return root;
+}
+function closeModal(){
+  const root = document.getElementById('modal-root');
+  if (root) root.innerHTML = '';
+}
+function modal(contentHTML, {title='Details'} = {}){
+  ensureModalRoot();
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `
+    <style>
+      #modal-root .sh-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:1000}
+      #modal-root .sh-modal{background:#fff;border-radius:12px;min-width:300px;max-width:640px;width:clamp(300px,90vw,640px);box-shadow:0 10px 30px rgba(0,0,0,.2)}
+      #modal-root .sh-head{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1rem;border-bottom:1px solid #e5e7eb;font-weight:700}
+      #modal-root .sh-body{padding:1rem}
+      #modal-root .sh-close{appearance:none;border:1px solid #d1d5db;border-radius:8px;background:#fff;padding:.3rem .6rem;cursor:pointer}
+      #modal-root .row{display:grid;grid-template-columns:160px 1fr;gap:.35rem .75rem;margin:.15rem 0}
+      #modal-root .key{color:#6b7280}
+      @media (max-width:560px){ #modal-root .row{grid-template-columns:1fr} }
+    </style>
+    <div class="sh-overlay" data-close="1" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
+      <div class="sh-modal" role="document">
+        <div class="sh-head">
+          <span>${escapeHtml(title)}</span>
+          <button class="sh-close" type="button" data-close="1" aria-label="Sluiten">✕</button>
+        </div>
+        <div class="sh-body">${contentHTML}</div>
+      </div>
+    </div>`;
+  const onClose = (e)=>{ if (e.target?.dataset?.close === '1') closeModal(); };
+  root.querySelector('.sh-overlay').addEventListener('click', onClose);
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); }, { once:true });
+}
+
+function openKlant(id){
+  const r = allRows.find(x => String(x.id) === String(id));
+  if (!r) { toast('Klant niet gevonden', 'error'); return; }
+
+  const html = `
+    <div class="row"><div class="key">Naam</div><div>${escapeHtml(r.naam||'')}</div></div>
+    <div class="row"><div class="key">E-mail</div><div>${r.email ? `<a href="mailto:${escapeHtml(r.email)}">${escapeHtml(r.email)}</a>` : '—'}</div></div>
+    <div class="row"><div class="key">Telefoon</div><div>${escapeHtml(r.telefoon||'—')}</div></div>
+    <div class="row"><div class="key">Status</div><div>${escapeHtml(r.status||'—')}</div></div>
+    <div class="row"><div class="key">ID</div><div><code>${escapeHtml(r.id||'')}</code></div></div>
+  `;
+  modal(html, { title: `Klant bekijken` });
+}
 
 // ───────────────────────── Data laden ─────────────────────────
 async function refresh(){
@@ -203,7 +256,10 @@ async function onSubmitAdd(e){
   const achternaam = String(fd.get('achternaam')||'').trim();
   const email      = String(fd.get('email')||'').trim();
   const telefoon   = String(fd.get('telefoon')||'').trim();
-  const status     = (String(fd.get('status')||'').trim() || 'actief');
+
+  // status-waarde uit select (altijd 'actief' of 'inactief')
+  const selStatus  = form.querySelector('[name="status"]');
+  const status     = selStatus && selStatus.value ? selStatus.value : 'actief';
 
   let hasErr = false;
   if (!voornaam)   { setFieldError(form.querySelector('[name="voornaam"]'),   'Voornaam is verplicht'); hasErr = true; }
@@ -240,6 +296,8 @@ async function onSubmitAdd(e){
 
     if (msg) { msg.textContent = `✅ Bewaard (id: ${id})`; }
     form.reset();
+    // default status terugzetten naar 'actief'
+    if (selStatus) selStatus.value = 'actief';
     const first = form.querySelector('input,select,textarea');
     first && first.focus();
   } catch (err) {
@@ -250,6 +308,28 @@ async function onSubmitAdd(e){
 }
 
 // ───────────────────────── Mount ─────────────────────────
+function ensureStatusSelectDefault(){
+  // Zorg dat status altijd een voorgedrukte keuze is: actief/inactief (default = actief)
+  const sel = document.querySelector('#form-add [name="status"]');
+  if (!sel) return;
+  // Maak van een eventuele text input een select? (we verwachten al een <select>)
+  if (sel.tagName !== 'SELECT') return;
+
+  // Alleen populeren als er nog geen opties zijn
+  if (!sel.options || sel.options.length === 0) {
+    const opts = [
+      { v:'actief',   t:'actief' },
+      { v:'inactief', t:'inactief' }
+    ];
+    for (const {v,t} of opts) {
+      const o = document.createElement('option');
+      o.value = v; o.textContent = t;
+      sel.appendChild(o);
+    }
+  }
+  sel.value = sel.value || 'actief';
+}
+
 async function main(){
   // Topbar mount (uniform; subpage = blauwe balk + back-knop)
   if (window.SuperhondUI?.mount) {
@@ -260,10 +340,20 @@ async function main(){
   // init config (zet evt. GAS base) en init UI
   await initFromConfig();
 
+  // status-select zeker klaarzetten
+  ensureStatusSelectDefault();
+
   // events
   $('#refresh')?.addEventListener('click', refresh);
   $('#search')?.addEventListener('input', doFilter);
   $('#form-add')?.addEventListener('submit', onSubmitAdd);
+
+  // “Bekijken”-knop activeren via event delegation
+  $('#tbl')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-action="view"]');
+    if (!btn) return;
+    openKlant(btn.dataset.id);
+  });
 
   // Enter-to-submit
   $$('#form-add input').forEach(inp => {
