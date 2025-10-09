@@ -6,29 +6,24 @@
   <title>Superhond — Dashboard</title>
 
   <!-- Centrale UI -->
-  <link rel="stylesheet" href="../css/style.css?v=0.20.3" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.3" />
+  <link rel="stylesheet" href="../css/style.css?v=0.26.0" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.26.0" />
 
-  <!-- Sheets-config: backward compatible fallback -->
+  <!-- (optioneel) legacy fallback voor oudere builds -->
   <script>
-    // Voorbeeld: 'https://script.google.com/macros/s/AKfycb.../exec'
     window.SUPERHOND_SHEETS_URL = window.SUPERHOND_SHEETS_URL || 'https://script.google.com/macros/s/JOUW_EXEC_URL/exec';
   </script>
 
   <!-- Dashboard-specifiek: GELE topbar hard-forceren -->
   <style>
-    /* Altijd geel op dashboard, zowel header als inner bar */
+    :root { --accent: #f4c400; } /* fallback, mocht superhond.css dit niet zetten */
     body.dashboard-page #topbar,
     body.dashboard-page #topbar .topbar-inner {
       background: var(--accent) !important;
       color: #000 !important;
     }
-    /* (optioneel) back-knop stijl op geel */
-    body.dashboard-page .btn-back {
-      border-color:#e5e7eb; background:#fff; color:#111827;
-    }
+    body.dashboard-page .btn-back { border-color:#e5e7eb; background:#fff; color:#111827; }
 
-    /* Kleine lokale tweaks voor dit scherm */
     .tabs{display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
     .tab{position:relative;padding:.4rem .8rem;border:1px solid #e5e7eb;border-radius:.5rem;background:#fff;cursor:pointer}
     .tab.active{background:var(--accent,#f4c400);font-weight:600}
@@ -66,7 +61,6 @@
         <span class="badge-dot" id="lessen-week-badge" aria-label="Aantal lessen">0</span>
       </a>
 
-      <!-- 📚 Klassen -->
       <a class="tile badged" href="../klassen/">
         <span class="tile-icon">📚</span>
         <div class="tile-body">
@@ -76,7 +70,6 @@
         <span class="badge-dot" id="klassen-badge" aria-label="Aantal actieve klassen">0</span>
       </a>
 
-      <!-- 📦 Lessenreeksen -->
       <a class="tile badged" href="../lessenreeks/">
         <span class="tile-icon">📦</span>
         <div class="tile-body">
@@ -130,28 +123,38 @@
   <footer id="footer" class="footer"></footer>
 
   <!-- Basis scripts -->
-  <script src="../js/layout.js?v=0.20.3" defer></script>
-  <script src="../js/agenda.js?v=0.20.3" defer></script>
-  <script src="../js/admin-gate.js?v=0.20.3" defer></script>
+  <script src="../js/layout.js?v=0.26.0" defer></script>
+  <script src="../js/agenda.js?v=0.26.0" defer></script>
+  <script src="../js/admin-gate.js?v=0.26.0" defer></script>
+
+  <!-- Fallback & badges -->
+  <script>
+    // Fallback: zorg dat de topbar altijd gemount wordt op het dashboard
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.SuperhondUI && typeof SuperhondUI.mount === 'function') {
+        SuperhondUI.mount({ title: 'Superhond', icon: '🐾', home: true });
+      }
+    });
+  </script>
 
   <!-- Tellers: Sheets-first (met baseUrl), fallback op store.js -->
   <script type="module">
     const safeImport = async (path) => {
       try { return await import(path); }
-      catch (e) { console.error(`Import mislukt: ${path}`, e); return {}; }
+      catch (e) { console.warn(`Import mislukt: ${path}`, e); return {}; }
     };
 
-    const sheets = await safeImport('../js/sheets.js?v=0.20.3');
-    const store  = await safeImport('../js/store.js?v=0.20.3');
+    const sheets = await safeImport('../js/sheets.js?v=0.26.0');
+    const store  = await safeImport('../js/store.js?v=0.26.0');
 
     const fetchSheet     = sheets.fetchSheet     || (async () => { throw new Error('sheets.fetchSheet ontbreekt'); });
-    const normStatus     = sheets.normStatus     || ((s) => String(s||'').toLowerCase());
-    const setBaseUrl     = sheets.setBaseUrl     || (() => {});
+    const normStatus     = (sheets.normStatus && typeof sheets.normStatus==='function') ? sheets.normStatus : (s => String(s||'').toLowerCase());
+    const setBaseUrl     = typeof sheets.setBaseUrl==='function' ? sheets.setBaseUrl : (() => {});
     const initFromConfig = sheets.initFromConfig || (async () => {});
     const ensureMigrated = store.ensureMigrated  || (() => {});
     const getKlassen     = store.getKlassen      || (() => []);
     const getReeksen     = store.getReeksen      || (() => []);
-    const isActiefStatus = store.isActiefStatus  || ((s) => String(s||'').toLowerCase()==='actief');
+    const isActiefStatus = store.isActiefStatus  || (s => String(s||'').toLowerCase()==='actief');
 
     if (window.SUPERHOND_SHEETS_URL) setBaseUrl(window.SUPERHOND_SHEETS_URL);
     await initFromConfig(); // haalt centrale apiBase op
@@ -180,12 +183,24 @@
       }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      if (window.SuperhondUI?.mount) {
-        SuperhondUI.mount({ title: 'Superhond', icon: '🐾', home: true });
-      }
-      updateBadges();
-    });
+    function setBadges(actKl, actRs) {
+      const klSub = document.getElementById('klassen-sub');
+      const klBad = document.getElementById('klassen-badge');
+      const rkSub = document.getElementById('reeksen-sub');
+      const rkBad = document.getElementById('reeksen-badge');
+      if (klSub) klSub.textContent = `${actKl} actief`;
+      if (klBad) klBad.textContent = actKl;
+      if (rkSub) rkSub.textContent = `${actRs} actief`;
+      if (rkBad) rkBad.textContent = actRs;
+
+      // Tabs (optioneel, als je week/alles/mededelingen telt)
+      document.getElementById('tab-week-dot')?.textContent = '0';
+      document.getElementById('tab-all-dot')?.textContent  = String(actKl + actRs);
+      document.getElementById('tab-notes-dot')?.textContent= '0';
+    }
+
+    // Start badges
+    updateBadges();
   </script>
 
   <noscript>
