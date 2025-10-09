@@ -1,6 +1,6 @@
 /**
  * public/js/layout.js — Topbar & Footer mount (v0.24.1)
- * - Dashboard = GEEL (#f4c400), Subpages = BLAUW (#2563eb)
+ * - Dashboard = GEEL (#f4c400), Subpages = BLAUW (#2563eb). 
  * - Versienummer: cfg.version -> APP_VERSION fallback
  * - Kleur geforceerd met !important (style.setProperty)
  * - Consistente .topbar-inner.container
