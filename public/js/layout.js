@@ -1,15 +1,19 @@
 /**
- * public/js/layout.js — Topbar & Footer mount (v0.24.1)
- * - Dashboard = GEEL (#f4c400), Subpages = BLAUW (#2563eb). 
+ * public/js/layout.js — Topbar & Footer mount (v0.25.0)
+ * - Dashboard = GEEL (#f4c400), Subpages = BLAUW (#2563eb)
  * - Versienummer: cfg.version -> APP_VERSION fallback
  * - Kleur geforceerd met !important (style.setProperty)
  * - Consistente .topbar-inner.container
- * - Exporteert: SuperhondUI.{ mount, setOnline, setAdmin, applyDensity }
+ * - CENTRALE online/offline status:
+ *     SuperhondUI.noteSuccess()  -> zet dot groen
+ *     SuperhondUI.noteFailure()  -> ping; alleen bij echte offline -> rood
+ *     SuperhondUI.setOnline()    -> compat alias (roept bovenstaande aan)
+ * - Exporteert: SuperhondUI.{ mount, setOnline, noteSuccess, noteFailure, setAdmin, applyDensity }
  */
 
 (function () {
   // ───────── Config
-  const APP_VERSION = '0.24.1';
+  const APP_VERSION = '0.25.0';
   const LS_ADMIN    = 'superhond:admin:enabled';
   const LS_DENSITY  = 'superhond:density';
   const API_CONFIG  = '/api/config';
@@ -188,6 +192,41 @@
     container.append(row);
   }
 
+  // ───────── Centrale Online/Offline besturing
+  let __netState = null; // laatste bekende status (true/false)
+
+  function __renderDot(ok) {
+    __netState = !!ok;
+    const dot = document.querySelector('#topbar .status-dot');
+    const txt = document.querySelector('#topbar .status-text');
+    if (dot) {
+      dot.classList.toggle('is-online', !!ok);
+      dot.classList.toggle('is-offline', !ok);
+    }
+    if (txt) txt.textContent = ok ? 'Online' : 'Offline';
+  }
+
+  async function recheckOnline() {
+    try { __renderDot(await ping()); } catch { __renderDot(false); }
+  }
+
+  /** Publiek: noem dit na een geslaagde API-call → dot groen */
+  function noteSuccess() { __renderDot(true); }
+
+  /**
+   * Publiek: noem dit bij een mislukte data-call.
+   * We doen eerst een ping:
+   *  - ping OK  -> dot blijft groen (server bereikbaar, fout was iets anders)
+   *  - ping NOK -> dot wordt rood (echt offline)
+   */
+  async function noteFailure() { await recheckOnline(); }
+
+  /** (Compat) Oude API: setOnline(true/false) */
+  function setOnlineCompat(ok) {
+    if (ok) noteSuccess();
+    else noteFailure(); // verifieert eerst met ping
+  }
+
   // ───────── Public API
   async function mount(opts = {}) {
     // Wacht tot DOM gereed
@@ -228,27 +267,15 @@
     const footerEl = document.getElementById('footer');
     if (topbarEl) renderTopbar(topbarEl, finalOpts, cfg, online);
     if (footerEl) renderFooter(footerEl, cfg);
-  }
-
-  function setOnline(ok) {
-    const dot = document.querySelector('#topbar .status-dot');
-    const txt = document.querySelector('#topbar .status-text');
-    const bar = document.getElementById('topbar');
-    if (dot) {
-      dot.classList.toggle('is-online', !!ok);
-      dot.classList.toggle('is-offline', !ok);
-    }
-    if (txt) txt.textContent = ok ? 'Online' : 'Offline';
-    // kleur blijft zoals pagina-type (niet afhankelijk van online)
-    if (bar) {
-      // niets: kleur wordt door forceTopbarColors bepaald
-    }
+    __renderDot(online); // initiale status
   }
 
   // Expose
   window.SuperhondUI = Object.assign(window.SuperhondUI || {}, {
     mount,
-    setOnline,
+    setOnline: setOnlineCompat, // compat
+    noteSuccess,                // nieuw
+    noteFailure,                // nieuw
     setAdmin,
     applyDensity,
     APP_VERSION
