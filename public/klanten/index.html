@@ -63,7 +63,21 @@
 
   <!-- Scripts -->
   <script src="../js/layout.js?v=0.26.0" defer></script>
-  <!-- klanten.js doet zelf de mount; geen extra inline mount nodig -->
+
+  <!-- Fallback-mount: zorg dat de topbar altijd verschijnt, ook als klanten.js faalt -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.SuperhondUI && typeof SuperhondUI.mount === 'function') {
+        SuperhondUI.mount({ title:'Klanten', icon:'👤', back:'../dashboard/', home:false });
+      }
+    });
+  </script>
+
+  <!-- Functionele pagina-logica -->
   <script type="module" src="../js/klanten.js?v=0.26.0"></script>
+
+  <noscript>
+    <p style="padding:1rem;color:#b91c1c">JavaScript is vereist om deze pagina te gebruiken.</p>
+  </noscript>
 </body>
 </html>
