@@ -201,3 +201,5 @@ export const saveKlant = (k, opt) => postAction('klant','add',k,opt);
 export const saveHond  = (h, opt) => postAction('hond','add',h,opt);
 export const saveKlas  = (k, opt) => postAction('klas','add',k,opt);
 export const saveLes   = (l, opt) => postAction('les','add',l,opt);
+// onderaan sheets.js
+export function currentApiBase(){ return apiBase; }
