@@ -6,8 +6,8 @@
   <title>Klanten – Superhond</title>
 
   <!-- Centrale stijlen -->
-  <link rel="stylesheet" href="../css/style.css?v=0.20.2" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.2" />
+  <link rel="stylesheet" href="../css/style.css?v=0.26.0" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.26.0" />
 </head>
 
 <body class="subpage page-klanten">
@@ -19,8 +19,8 @@
     <!-- Overzicht -->
     <section class="card">
       <div class="row" style="display:flex;gap:.5rem;align-items:center">
-        <input id="search" class="input" placeholder="Zoek op naam of e-mail…" />
-        <button id="refresh" class="btn">🔄 Ververs</button>
+        <input id="search" class="input" placeholder="Zoek op naam of e-mail…" aria-label="Zoeken" />
+        <button id="refresh" class="btn" type="button">🔄 Ververs</button>
       </div>
 
       <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
@@ -33,7 +33,7 @@
               <th>E-mail</th>
               <th>Telefoon</th>
               <th>Status</th>
-              <th style="width:1%"></th>
+              <th style="width:1%;">Acties</th>
             </tr>
           </thead>
           <tbody><!-- dynamische rijen --></tbody>
@@ -43,33 +43,27 @@
 
     <!-- Toevoegen -->
     <section class="card" style="margin-top:1rem">
-      <h2>Nieuw lid toevoegen</h2>
+      <h2>Nieuwe klant toevoegen</h2>
       <form id="form-add" class="form-grid" autocomplete="off">
-        <input name="voornaam" class="input" placeholder="Voornaam" required />
+        <input name="voornaam"   class="input" placeholder="Voornaam"   required />
         <input name="achternaam" class="input" placeholder="Achternaam" required />
-        <input name="email" class="input" type="email" placeholder="E-mail" />
-        <input name="telefoon" class="input" placeholder="Telefoon" />
-        <input name="status" class="input" placeholder="Status (actief)" value="actief" />
+        <input name="email"      class="input" type="email" placeholder="E-mail" />
+        <input name="telefoon"   class="input" placeholder="Telefoon" />
+        <select name="status" class="input" aria-label="Status">
+          <option value="actief" selected>actief</option>
+          <option value="inactief">inactief</option>
+        </select>
         <button class="btn" type="submit">💾 Opslaan</button>
       </form>
-      <div id="form-msg" class="field-error" style="display:none;"></div>
+      <div id="form-msg" class="muted" role="status" aria-live="polite"></div>
     </section>
   </main>
 
   <footer id="footer"></footer>
 
   <!-- Scripts -->
-  <script src="../js/layout.js?v=0.20.2" defer></script>
-  <script type="module" src="../js/klanten.js?v=0.20.2"></script>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      SuperhondUI.mount({
-        title: 'Klanten',
-        icon: '👤',
-        back: '../dashboard/'
-      });
-    });
-  </script>
+  <script src="../js/layout.js?v=0.26.0" defer></script>
+  <!-- klanten.js doet zelf de mount; geen extra inline mount nodig -->
+  <script type="module" src="../js/klanten.js?v=0.26.0"></script>
 </body>
 </html>
