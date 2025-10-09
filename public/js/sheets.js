@@ -1,11 +1,12 @@
 /**
- * public/js/sheets.js — robust proxy + GAS fallback (v0.26.4)
+ * public/js/sheets.js — robust proxy + GAS fallback (v0.26.3)
  * Exports:
  *   initFromConfig, fetchSheet, fetchAction, postAction,
- *   saveKlant, saveHond, saveKlas, saveLes, currentApiBase
+ *   saveKlant, saveHond, saveKlas, saveLes,
+ *   currentApiBase   ← nieuw
  */
 
-const PROXY  = '/api/sheets';
+const PROXY = '/api/sheets';
 const CFG_EP = '/api/config';
 const LS_KEY = 'superhond:apiBase';
 
@@ -13,8 +14,6 @@ let apiBase = '';   // e.g. https://script.google.com/macros/s/.../exec
 let lastOnline = null;
 
 const sleep = (ms)=> new Promise(r=>setTimeout(r,ms));
-
-export const currentApiBase = () => apiBase;
 
 function setOnline(on){
   if (lastOnline === on) return;
@@ -24,44 +23,38 @@ function setOnline(on){
 
 function toJSON(r){
   return r.text().then(t=>{
-    if (!t || !t.trim()) {
-      // lege body — behandel als fout met status
-      throw new Error(`Lege respons (status ${r.status})`);
-    }
     try { return JSON.parse(t); }
-    catch(e){
-      throw new Error(`Geen geldige JSON (status ${r.status}): ${t.slice(0,160)}`);
-    }
+    catch(e){ throw new Error(`Geen geldige JSON (status ${r.status}): ${t.slice(0,140)}`); }
   });
 }
 
 function okData(obj){
-  // accepteer {ok:true,data:[..]}, direct array, of nested varianten
+  // accepteer {ok:true,data:[..]} of direct een array
   if (Array.isArray(obj)) return obj;
-  if (obj && obj.ok === true && Array.isArray(obj.data)) return obj.data;
+  if (obj && obj.ok === true) return obj.data;
   if (obj && Array.isArray(obj.data)) return obj.data;
-  if (obj && Array.isArray(obj.rows)) return obj.rows;
-  if (obj && obj.data && Array.isArray(obj.data.rows)) return obj.data.rows;
   throw new Error('Server gaf onverwachte respons');
 }
 
 function withTimeout(p, ms=15000, signal){
   if (!ms) return p;
-  return new Promise((resolve, reject)=>{
-    const t = setTimeout(()=> reject(new Error(`Timeout na ${ms}ms`)), ms);
-    const clear = ()=> clearTimeout(t);
-
-    if (signal?.aborted) { clear(); return reject(Object.assign(new Error('AbortError'),{name:'AbortError'})); }
-    const onAbort = ()=>{ clear(); reject(Object.assign(new Error('AbortError'),{name:'AbortError'})); };
-    signal?.addEventListener?.('abort', onAbort, { once:true });
-
-    p.then(v=>{ clear(); resolve(v); }, e=>{ clear(); reject(e); });
-  });
+  return Promise.race([
+    p,
+    new Promise((_,rej)=>{
+      const t = setTimeout(()=>{ rej(new Error(`Timeout na ${ms}ms`)); }, ms);
+      signal?.addEventListener?.('abort', ()=>{
+        clearTimeout(t);
+        const err = new Error('AbortError');
+        err.name = 'AbortError';
+        rej(err);
+      });
+    })
+  ]);
 }
 
 /* --------------------------------- Init --------------------------------- */
 export async function initFromConfig(){
-  // 1) query override (?apiBase=...)
+  // 1) query override
   try{
     const q = new URLSearchParams(location.search);
     const qBase = q.get('apiBase');
@@ -83,28 +76,25 @@ export async function initFromConfig(){
     if (ls) apiBase = ls;
   }
 
-  // Online check: proxy → GAS
+  // test online-status: proxy OF direct GAS
   try{
-    const rp = await fetch(`${PROXY}?action=ping&_=${Date.now()}`, { cache:'no-store' });
+    // eerst proxy
+    const rp = await fetch(`${PROXY}?action=ping`, { cache:'no-store' });
     if (rp.ok) { setOnline(true); return; }
-  }catch(e){
-    console.warn('[sheets] Proxy ping faalde:', e?.message || e);
-  }
+  }catch{}
   if (apiBase) {
     try{
-      const rg = await fetch(`${apiBase}?action=ping&_=${Date.now()}`, { cache:'no-store' });
+      const rg = await fetch(`${apiBase}?action=ping`, { cache:'no-store' });
       setOnline(rg.ok);
       return;
-    }catch(e){
-      console.warn('[sheets] GAS ping faalde:', e?.message || e);
-    }
+    }catch{}
   }
   setOnline(false);
 }
 
 /* ------------------------------ Low-level calls ------------------------------ */
 async function callProxy(path, { method='GET', body, timeout=15000, signal }={}){
-  const url = `${PROXY}${path}${path.includes('?') ? '&' : '?'}_=${Date.now()}`;
+  const url = `${PROXY}${path}`;
   const init = { method, cache:'no-store', signal };
   if (body != null) {
     init.headers = { 'Content-Type':'text/plain' };
@@ -119,8 +109,8 @@ async function callProxy(path, { method='GET', body, timeout=15000, signal }={})
 async function callGAS(params, { method='GET', body, timeout=15000, signal }={}){
   if (!apiBase) throw new Error('Geen apiBase ingesteld. Ga naar Instellingen en vul de GAS /exec URL in.');
   const url = method === 'GET'
-    ? `${apiBase}?${params}&_=${Date.now()}`
-    : `${apiBase}?_=${Date.now()}`;
+    ? `${apiBase}?${params}`
+    : apiBase;
 
   const init = { method, cache:'no-store', signal };
   if (body != null) {
@@ -135,14 +125,17 @@ async function callGAS(params, { method='GET', body, timeout=15000, signal }={})
 
 /* ------------------------------- Fetch helpers ------------------------------- */
 export async function fetchAction(action, { timeout=15000, signal, qs='' }={}){
+  // Probeer moderne "action" via proxy, dan direct GAS; val desnoods terug op legacy "mode"
   try {
     const obj = await callProxy(`?action=${encodeURIComponent(action)}${qs?`&${qs}`:''}`, { timeout, signal });
     return okData(obj);
   } catch (e1) {
+    // direct GAS action
     try {
       const obj = await callGAS(`action=${encodeURIComponent(action)}${qs?`&${qs}`:''}`, { timeout, signal });
       return okData(obj);
     } catch (e2) {
+      // legacy mode naam mapping (alleen waar logisch)
       const map = { getLeden:'klanten', getHonden:'honden', getKlassen:'klassen', getLessen:'lessen' };
       const legacy = map[action];
       if (!legacy) throw e1;
@@ -153,6 +146,7 @@ export async function fetchAction(action, { timeout=15000, signal, qs='' }={}){
 }
 
 export async function fetchSheet(tab, { timeout=15000, signal }={}){
+  // Eerst via action=getSheet&tab=...
   try {
     const obj = await callProxy(`?action=getSheet&tab=${encodeURIComponent(tab)}`, { timeout, signal });
     return okData(obj);
@@ -161,6 +155,7 @@ export async function fetchSheet(tab, { timeout=15000, signal }={}){
       const obj = await callGAS(`action=getSheet&tab=${encodeURIComponent(tab)}`, { timeout, signal });
       return okData(obj);
     } catch (e2) {
+      // Legacy: specifieke modes
       const legacy = {
         'Klanten':'klanten', 'Leden':'klanten',
         'Honden':'honden', 'Lessen':'lessen', 'Klassen':'klassen', 'Reeksen':'reeksen'
@@ -175,16 +170,19 @@ export async function fetchSheet(tab, { timeout=15000, signal }={}){
 /* ------------------------------- Post helpers ------------------------------- */
 export async function postAction(entity, action, payload, { timeout=15000, signal }={}){
   const body = { entity, action, payload };
+  // 1) proxy
   try {
     const obj = await callProxy('', { method:'POST', body, timeout, signal });
     if (obj?.ok === false) throw new Error(obj.error || 'Serverfout');
     return obj.data ?? obj;
   } catch (e1) {
+    // 2) direct GAS JSON
     try {
       const obj = await callGAS('', { method:'POST', body, timeout, signal });
       if (obj?.ok === false) throw new Error(obj.error || 'Serverfout');
       return obj.data ?? obj;
     } catch (e2) {
+      // 3) legacy per-entity mode
       const modeMap = { klant:'saveKlant', hond:'saveHond', klas:'saveKlas', les:'saveLes' };
       if (!modeMap[entity] || (action !== 'add' && action !== 'update')) throw e1;
       const legacy = modeMap[entity];
@@ -201,17 +199,11 @@ export const saveKlant = (k, opt) => postAction('klant','add',k,opt);
 export const saveHond  = (h, opt) => postAction('hond','add',h,opt);
 export const saveKlas  = (k, opt) => postAction('klas','add',k,opt);
 export const saveLes   = (l, opt) => postAction('les','add',l,opt);
-// onderaan sheets.js
 
-
-
-// Bestaande variabelen bovenin:
-// let apiBase = ''; 
-// const LS_KEY = 'superhond:apiBase';
-
+/* -------------------------- Nieuw: apiBase uitlezen -------------------------- */
 export function currentApiBase() {
   try {
-    return apiBase || localStorage.getItem('superhond:apiBase') || '';
+    return apiBase || localStorage.getItem(LS_KEY) || '';
   } catch {
     return apiBase || '';
   }
