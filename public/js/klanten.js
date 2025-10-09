@@ -1,22 +1,18 @@
 /**
- * public/js/klanten.js — Lijst + zoeken + toevoegen + acties (v0.26.0)
- * - Voorgedrukte status-select (actief/inactief)
- * - Actiekolom (👁️ ✏️ 🗑️) via actions.js
- * - Klik op naam opent details (met gekoppelde honden)
- * - Opslaan/Verwijderen/Wijzigen via sheets.js helpers
+ * public/js/klanten.js — Lijst + zoeken + toevoegen + acties (v0.26.6)
+ * - Centrale online/offline: geen directe setOnline() meer
+ * - Bij succes: SuperhondUI.noteSuccess(); bij fout: SuperhondUI.noteFailure()
  */
 
 import {
   initFromConfig,
   fetchSheet,
   saveKlant,
-  postAction
+  postAction,
+  currentApiBase
 } from './sheets.js';
 
-import {
-  actionBtns,
-  wireActionHandlers
-} from './actions.js';
+import * as Actions from './actions.js';
 
 // ───────────────────────── Utils ─────────────────────────
 const $  = (sel, root = document) => root.querySelector(sel);
@@ -34,9 +30,20 @@ function linkTel(s){
   const digits=v.replace(/[^\d+]/g,''); const href=/^\+/.test(digits)?digits:digits.replace(/^0/,'+32');
   return `<a href="tel:${escapeHtml(href)}">${escapeHtml(v)}</a>`;
 }
-function setState(text, kind='muted'){ const el=$('#state'); if(!el) return; el.className=kind; el.textContent=text; el.setAttribute('role', kind==='error'?'alert':'status'); }
+function setState(text, kind='muted'){
+  const el=$('#state'); if(!el) return;
+  el.className=kind; el.textContent=text;
+  el.setAttribute('role', kind==='error' ? 'alert' : 'status');
+}
 function clearErrors(form){ $$('.input-error',form).forEach(el=>el.classList.remove('input-error')); $$('.field-error',form).forEach(el=>el.remove()); }
-function setFieldError(input,msg){ if(!input) return; input.classList.add('input-error'); const hint=document.createElement('div'); hint.className='field-error'; hint.textContent=msg; input.insertAdjacentElement('afterend', hint); }
+function setFieldError(input,msg){
+  if(!input) return;
+  input.classList.add('input-error');
+  const hint=document.createElement('div');
+  hint.className='field-error';
+  hint.textContent=msg;
+  input.insertAdjacentElement('afterend', hint);
+}
 
 // ───────────────────────── Response helpers ─────────────────────────
 function toArrayRows(x){
@@ -45,6 +52,7 @@ function toArrayRows(x){
   if (x && Array.isArray(x.rows)) return x.rows;
   if (x && Array.isArray(x.result)) return x.result;
   if (x && x.ok === true && Array.isArray(x.data)) return x.data;
+  if (x && x.data && Array.isArray(x.data.rows)) return x.data.rows;
   throw new Error('Server gaf onverwachte respons (geen lijst).');
 }
 
@@ -55,9 +63,14 @@ let lastAbort = null;
 
 // voor “Honden bij klant”
 async function fetchHondenByOwner(ownerId){
-  const raw = await fetchSheet('Honden', { timeout: TIMEOUT_MS });
-  const list = toArrayRows(raw).map(normalizeHond);
-  return list.filter(h => String(h.ownerid) === String(ownerId));
+  try {
+    const raw = await fetchSheet('Honden', { timeout: TIMEOUT_MS });
+    const list = toArrayRows(raw).map(normalizeHond);
+    return list.filter(h => String(h.ownerid) === String(ownerId));
+  } catch (e) {
+    console.warn('[klanten] Honden laden faalde:', e?.message || e);
+    return [];
+  }
 }
 
 // ───────────────────────── Normalisatie ─────────────────────────
@@ -101,6 +114,17 @@ function rowMatchesQuery(row, q){
   return hay.includes(q);
 }
 
+function actionBtnsSafe({ id, entity }) {
+  // Fallback als actions.js (nog) niet beschikbaar is.
+  if (typeof Actions.actionBtns === 'function') return Actions.actionBtns({ id, entity });
+  return `
+    <div class="sh-actions">
+      <button class="btn btn-xs" data-act="view" data-id="${escapeHtml(id)}" title="Bekijken">👁️</button>
+      <button class="btn btn-xs" data-act="edit" data-id="${escapeHtml(id)}" title="Wijzigen">✏️</button>
+      <button class="btn btn-xs danger" data-act="delete" data-id="${escapeHtml(id)}" title="Verwijderen">🗑️</button>
+    </div>`;
+}
+
 function renderTable(rows){
   const tb = $('#tbl tbody'); if(!tb) return;
   tb.innerHTML='';
@@ -117,7 +141,7 @@ function renderTable(rows){
       <td>${linkEmail(r.email)}</td>
       <td>${linkTel(r.telefoon)}</td>
       <td>${escapeHtml(r.status||'')}</td>
-      <td class="nowrap">${actionBtns({ id:r.id, entity:'klant' })}</td>
+      <td class="nowrap">${actionBtnsSafe({ id:r.id, entity:'klant' })}</td>
     `;
     frag.appendChild(tr);
   }
@@ -177,10 +201,9 @@ async function openKlantView(id){
   const r = allRows.find(x => String(x.id) === String(id));
   if (!r) { toast('Klant niet gevonden','error'); return; }
 
-  setState('Honden ophalen…','muted');
   let honden=[];
-  try { honden = await fetchHondenByOwner(r.id); }
-  catch(e){ console.warn(e); }
+  try { setState('Honden ophalen…','muted'); honden = await fetchHondenByOwner(r.id); }
+  finally { setState(`✅ ${viewRows.length||allRows.length} klant(en) geladen`,'muted'); }
 
   const hondenRows = honden.length
     ? honden.map(h=>`<tr><td>${escapeHtml(h.name||'')}</td><td>${escapeHtml(h.breed||'')}</td><td>${escapeHtml(h.id||'')}</td></tr>`).join('')
@@ -239,24 +262,21 @@ function openKlantEdit(id){
       status:     String(fd.get('status')||'').trim() || 'actief'
     };
 
-    if (!payload.voornaam || !payload.achternaam) {
-      toast('Voornaam en achternaam zijn verplicht','error'); return;
-    }
-    if (payload.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(payload.email)) {
-      toast('Ongeldig e-mailadres','error'); return;
-    }
+    if (!payload.voornaam || !payload.achternaam) { toast('Voornaam en achternaam zijn verplicht','error'); return; }
+    if (payload.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(payload.email)) { toast('Ongeldig e-mailadres','error'); return; }
 
     try{
       await postAction('klant','update', payload);
-      // update lokaal
       Object.assign(r, normalizeKlant({ ...r, ...payload }));
       allRows.sort((a,b)=>collator.compare(a.naam||'',b.naam||''));
       renderTable(applyActiveFilter());
       toast('Wijzigingen opgeslagen','ok');
+      window.SuperhondUI?.noteSuccess?.();
       closeModal();
     }catch(err){
       console.error(err);
       toast('Opslaan mislukt: ' + (err?.message || err),'error');
+      window.SuperhondUI?.noteFailure?.();
     }
   });
 }
@@ -272,9 +292,11 @@ async function deleteKlant(id){
     allRows = allRows.filter(x => String(x.id)!==String(id));
     renderTable(applyActiveFilter());
     toast('Klant verwijderd','ok');
+    window.SuperhondUI?.noteSuccess?.();
   }catch(err){
     console.error(err);
     toast('Verwijderen mislukt: ' + (err?.message || err), 'error');
+    window.SuperhondUI?.noteFailure?.();
   }
 }
 
@@ -302,13 +324,14 @@ async function refresh(){
     renderTable(applyActiveFilter());
 
     setState(`✅ ${viewRows.length} klant${viewRows.length===1?'':'en'} geladen`,'muted');
-    window.SuperhondUI?.setOnline?.(true);
+    window.SuperhondUI?.noteSuccess?.();
   }catch(err){
     if (err?.name === 'AbortError') return;
     console.error(err);
-    setState(`❌ Fout bij laden: ${err?.message || err}`,'error');
+    const hint = currentApiBase() ? '' : ' (instellingen: ontbrekende Web-app URL?)';
+    setState(`❌ Fout bij laden: ${err?.message || err}${hint}`,'error');
     toast('Laden van klanten mislukt','error');
-    window.SuperhondUI?.setOnline?.(false);
+    window.SuperhondUI?.noteFailure?.();
   }
 }
 
@@ -324,8 +347,12 @@ function ensureStatusSelectDefault(){
   sel.value = sel.value || 'actief';
 }
 
+let addBusy = false;
 async function onSubmitAdd(e){
   e.preventDefault();
+  if (addBusy) return; // dubbelklikken voorkomen
+  addBusy = true;
+
   const form=e.currentTarget;
   clearErrors(form);
 
@@ -341,10 +368,13 @@ async function onSubmitAdd(e){
   if(!voornaam){ setFieldError(form.querySelector('[name="voornaam"]'),'Voornaam is verplicht'); hasErr=true; }
   if(!achternaam){ setFieldError(form.querySelector('[name="achternaam"]'),'Achternaam is verplicht'); hasErr=true; }
   if(email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ setFieldError(form.querySelector('[name="email"]'),'Ongeldig e-mailadres'); hasErr=true; }
-  if (hasErr) return;
+  if (hasErr) { addBusy=false; return; }
 
   const payload={ voornaam, achternaam, email, telefoon, status };
-  const msg=$('#form-msg'); if(msg){ msg.className='muted'; msg.textContent='⏳ Opslaan…'; }
+  const msg=$('#form-msg');
+  const btn = form.querySelector('button[type="submit"]') || form.querySelector('button');
+  if (btn) { btn.disabled = true; }
+  if(msg){ msg.className='muted'; msg.textContent='⏳ Opslaan…'; }
 
   try{
     const res=await saveKlant(payload);
@@ -358,10 +388,15 @@ async function onSubmitAdd(e){
     if(msg) msg.textContent=`✅ Bewaard (id: ${id})`;
     form.reset(); ensureStatusSelectDefault();
     const first=form.querySelector('input,select,textarea'); first && first.focus();
+    window.SuperhondUI?.noteSuccess?.();
   }catch(err){
     console.error(err);
     if(msg){ msg.className='error'; msg.textContent=`❌ Opslaan mislukt: ${err?.message||err}`; }
     toast('Opslaan mislukt','error');
+    window.SuperhondUI?.noteFailure?.();
+  } finally {
+    addBusy = false;
+    if (btn) { btn.disabled = false; }
   }
 }
 
@@ -383,16 +418,27 @@ async function main(){
   $('#search')?.addEventListener('input', doFilter);
   $('#form-add')?.addEventListener('submit', onSubmitAdd);
 
-  // forceer submit type (fix “Opslaan” niet actief)
+  // Forceer submit type (fix “Opslaan” niet actief)
   const submitBtn = $('#form-add button, #form-add [type="submit"]');
   if (submitBtn) submitBtn.type = 'submit';
 
   // Actieknoppen in tabel
-  wireActionHandlers('#tbl', {
-    view:   (id)=> openKlantView(id),
-    edit:   (id)=> openKlantEdit(id),
-    delete: (id)=> deleteKlant(id),
-  });
+  if (typeof Actions.wireActionHandlers === 'function') {
+    Actions.wireActionHandlers('#tbl', {
+      view:   (id)=> openKlantView(id),
+      edit:   (id)=> openKlantEdit(id),
+      delete: (id)=> deleteKlant(id),
+    });
+  } else {
+    // simpele fallback event-delegation
+    $('#tbl')?.addEventListener('click', (e)=>{
+      const b = e.target.closest('[data-act]'); if (!b) return;
+      const id = b.dataset.id;
+      if (b.dataset.act === 'view') return openKlantView(id);
+      if (b.dataset.act === 'edit') return openKlantEdit(id);
+      if (b.dataset.act === 'delete') return deleteKlant(id);
+    });
+  }
 
   // Klik op naam => bekijken
   $('#tbl')?.addEventListener('click', (e)=>{
