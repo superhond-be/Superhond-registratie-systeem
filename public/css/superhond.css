@@ -16,6 +16,13 @@
   --admin-border:#fca5a5;
 }
 
+/* Superhond actieknoppen */
+.btn-group { display:inline-flex; gap:.25rem; vertical-align:middle; }
+.btn-icon { width:2rem; height:2rem; padding:0; display:inline-grid; place-items:center; }
+.btn-icon.danger { background:#ef4444; border-color:#ef4444; color:#fff; }
+.btn-icon.danger:hover { background:#dc2626; }
+.btn-icon:hover { filter:brightness(.95); }
+
 /* ---------- Basis (zonder layout-conflicten) ---------- */
 * { box-sizing: border-box; }
 .page-title, h2 { margin: 0 0 12px; }
