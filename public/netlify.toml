@@ -1,0 +1,12 @@
+[build]
+  publish = "public"              # <-- heel belangrijk
+  command = ""
+
+[functions]
+  directory = "netlify/functions" # jouw get_agenda.js staat hier
+
+# optioneel maar handig: deep links zoals /honden/ werken altijd
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
