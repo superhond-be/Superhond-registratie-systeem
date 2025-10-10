@@ -11,7 +11,8 @@
     .muted{color:var(--muted)}
     .wrap{display:grid;gap:1rem}
     .card{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:1rem 1.25rem;box-shadow:0 1px 2px rgba(0,0,0,.05)}
-    .row{display:grid;grid-template-columns:160px 1fr;gap:.5rem 1rem;align-items:center;margin:.4rem 0}
+    .row{display:grid;grid-template-columns:160px 1fr;gap:.5rem 1rem;align-items:center;margin:.5rem 0}
+    .row .inline{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
     .actions{display:flex;gap:.5rem;flex-wrap:wrap}
     input,button,select,textarea{font:inherit}
     input,textarea,select{width:100%;padding:.55rem .6rem;border:1px solid #cbd5e1;border-radius:8px}
@@ -22,6 +23,7 @@
     .ok{color:var(--ok)} .err{color:var(--err)}
     .pill{display:inline-block;padding:.15rem .5rem;border-radius:999px;border:1px solid var(--bd);font-size:.8rem}
     pre{background:#f8fafc;border:1px solid var(--bd);border-radius:8px;padding:.75rem;overflow:auto;max-height:40vh}
+    .hint{font-size:.85rem;margin-top:.25rem}
     @media (max-width:640px){ .row{grid-template-columns:1fr} }
   </style>
 </head>
@@ -34,15 +36,28 @@
     <!-- CONFIG -->
     <section class="card" aria-labelledby="cfg-title">
       <h2 id="cfg-title">1) Config</h2>
+
       <div class="row">
         <label for="apiBase">Centrale apiBase (server)</label>
         <div>
           <input id="apiBase" placeholder="https://script.google.com/macros/s/.../exec" />
-          <div class="muted" style="margin-top:.25rem">
+          <div class="muted hint">
             Bron: <span id="cfgSource" class="pill">—</span>
           </div>
         </div>
       </div>
+
+      <div class="row">
+        <label for="adminToken">Admin token (optioneel)</label>
+        <div class="inline">
+          <input id="adminToken" placeholder="ADMIN_TOKEN (alleen nodig als server dit vereist)" />
+          <button id="saveToken" class="ghost" title="Sla token lokaal op">Token opslaan</button>
+          <button id="clearToken" class="ghost" title="Verwijder lokaal token">Token wissen</button>
+          <span id="tokState" class="muted">—</span>
+        </div>
+        <div class="muted hint">Het token wordt <em>alleen lokaal</em> in je browser opgeslagen (localStorage) en meegestuurd als header <code>X-Admin-Token</code>.</div>
+      </div>
+
       <div class="actions">
         <button id="btnCfgLoad" class="ghost">Config ophalen</button>
         <button id="btnCfgSave" class="primary">Centrale apiBase zetten</button>
@@ -71,7 +86,10 @@
     const out = $('#out');
     const cfgMsg = $('#cfgMsg');
     const cfgSource = $('#cfgSource');
+    const tokState = $('#tokState');
+    const LS_TOKEN = 'superhond:adminToken';
 
+    // UI note hooks
     function uiSuccess(){ try{ window.SuperhondUI?.noteSuccess?.(); }catch{} }
     function uiFailure(){ try{ window.SuperhondUI?.noteFailure?.(); }catch{} }
 
@@ -80,8 +98,26 @@
       (status >= 200 && status < 400) ? uiSuccess() : uiFailure();
     }
 
-    async function getJSON(url, init){
-      const r = await fetch(url, init);
+    function adminToken() {
+      return ($('#adminToken').value || '').trim();
+    }
+    function storeToken(){
+      try { localStorage.setItem(LS_TOKEN, adminToken()); tokState.textContent = 'Opgeslagen'; tokState.className='ok'; } catch { tokState.textContent='Opslaan mislukt'; tokState.className='err'; }
+    }
+    function clearStoredToken(){
+      try { localStorage.removeItem(LS_TOKEN); $('#adminToken').value=''; tokState.textContent = 'Gewist'; tokState.className='muted'; } catch {}
+    }
+    (function initToken(){
+      try { const t = localStorage.getItem(LS_TOKEN) || ''; if (t) $('#adminToken').value = t; tokState.textContent = t ? 'Gevonden' : '—'; tokState.className = t ? 'ok' : 'muted'; } catch {}
+    })();
+    $('#saveToken').addEventListener('click', storeToken);
+    $('#clearToken').addEventListener('click', clearStoredToken);
+
+    async function getJSON(url, init={}){
+      const headers = new Headers(init.headers || {});
+      const t = adminToken();
+      if (t) headers.set('X-Admin-Token', t);
+      const r = await fetch(url, { ...init, headers });
       const text = await r.text();
       let data;
       try { data = JSON.parse(text); }
@@ -99,7 +135,7 @@
       if (res.ok) {
         const apiBase = res?.data?.apiBase || '';
         $('#apiBase').value = apiBase;
-        const source = res?.data?.source || (res?.data?.adminToken !== undefined ? 'env' : '—');
+        const source = res?.data?.source || (res?.data?.adminToken ? 'env' : '—');
         cfgSource.textContent = source;
         cfgSource.className = 'pill ' + (source==='override' ? 'ok' : 'muted');
         cfgMsg.textContent = 'OK';
@@ -122,10 +158,12 @@
         return;
       }
       cfgMsg.textContent = 'Zetten…';
+      const body = { apiBase: val };
+      const t = adminToken(); if (t) body.adminToken = t;
       const res = await getJSON('/api/config/set', {
         method: 'POST',
         headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ apiBase: val })
+        body: JSON.stringify(body)
       });
       if (res.ok && (res?.data?.ok || res?.data?.apiBase)) {
         cfgMsg.textContent = 'Centrale apiBase actief ✔️';
@@ -134,7 +172,7 @@
         cfgSource.className = 'pill ok';
         uiSuccess();
       } else {
-        cfgMsg.textContent = 'Fout bij zetten';
+        cfgMsg.textContent = res?.data?.error ? 'Fout: ' + res.data.error : 'Fout bij zetten';
         cfgMsg.className = 'err';
         uiFailure();
       }
@@ -144,7 +182,13 @@
     // ----- Override wissen -----
     async function clearOverride(){
       cfgMsg.textContent = 'Wissen…';
-      const res = await getJSON('/api/config/clear', { method:'POST' });
+      const body = {};
+      const t = adminToken(); if (t) body.adminToken = t;
+      const res = await getJSON('/api/config/clear', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify(body)
+      });
       if (res.ok) {
         cfgMsg.textContent = 'Override gewist (terug naar ENV)';
         cfgMsg.className = 'ok';
@@ -153,7 +197,7 @@
         $('#apiBase').value = res?.data?.apiBase || '';
         uiSuccess();
       } else {
-        cfgMsg.textContent = 'Wissen mislukt';
+        cfgMsg.textContent = res?.data?.error ? 'Fout: ' + res.data.error : 'Wissen mislukt';
         cfgMsg.className = 'err';
         uiFailure();
       }
@@ -215,10 +259,11 @@
     $('#btnHonden').addEventListener('click', testHonden);
     $('#btnConfigRaw').addEventListener('click', showConfigRaw);
 
-    // Autofill vanaf query (?apiBase=...)
+    // Autofill vanaf query (?apiBase=...&token=...)
     try {
-      const q = new URL(location.href).searchParams.get('apiBase');
-      if (q) { $('#apiBase').value = q; }
+      const params = new URL(location.href).searchParams;
+      const qBase = params.get('apiBase'); if (qBase) $('#apiBase').value = qBase;
+      const qTok  = params.get('token');   if (qTok)  { $('#adminToken').value = qTok; storeToken(); }
     } catch {}
 
     // initial fetch
