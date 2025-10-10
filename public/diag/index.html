@@ -4,110 +4,37 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Superhond – Diagnose</title>
-  <link rel="stylesheet" href="/css/style.css?v=0.26.0" />
   <style>
-    body{font:14px/1.45 system-ui,Segoe UI,Roboto,Arial}
+    body{font:14px/1.45 system-ui,Segoe UI,Roboto,Arial;margin:20px}
     .ok{color:#16a34a} .err{color:#dc2626} .muted{color:#6b7280}
     code{background:#f3f4f6;padding:.1rem .25rem;border-radius:4px}
     table{border-collapse:collapse;width:100%;margin-top:1rem}
     th,td{border:1px solid #e5e7eb;padding:.5rem;text-align:left}
   </style>
 </head>
-<body class="dashboard-page">
-  <main class="container">
-    <h1>Diagnose</h1>
-    <p class="muted">Checkt <code>/api/config</code>, proxy, GAS en de tabs <em>Klanten</em> en <em>Honden</em>.</p>
-    <div id="out">Laden…</div>
-  </main>
+<body>
+  <h1>Diagnose</h1>
+  <p class="muted">Checkt <code>/api/config</code>, proxy, GAS en de tabs <em>Klanten</em> en <em>Honden</em>.</p>
+  <div id="out">Laden…</div>
 
   <script type="module">
     import * as S from '/js/sheets.js?v=0.26.3';
-
-    const el = document.getElementById('out');
-    const rows = [];
-
-    async function safe(label, fn){
-      try{
-        const v = await fn();
-        rows.push({label, status:'OK', note: JSON.stringify(v).slice(0,120)});
-        return v;
-      }catch(e){
-        rows.push({label, status:'ERR', note: String(e?.message||e)});
-        throw e;
-      }
-    }
-
-    (async () => {
-      // 1) /api/config
-      await safe('/api/config', async ()=>{
-        const r = await fetch('/api/config',{cache:'no-store'});
-        const t = await r.text();
-        return { status:r.status, body:t };
-      });
-
-      // 2) initFromConfig + apiBase
-      await safe('initFromConfig()', async ()=>{
-        await S.initFromConfig();
-        return { apiBase: S.currentApiBase() };
-      });
-
-      // 3) Proxy ping (mag falen)
-      await safe('/api/sheets?action=ping', async ()=>{
-        try{
-          const r = await fetch('/api/sheets?action=ping',{cache:'no-store'});
-          return { status:r.status, body:(await r.text()).slice(0,80) };
-        }catch(e){ throw e; }
-      }).catch(()=>{}); // ok als hij faalt
-
-      // 4) GAS ping
-      await safe('GAS ping', async ()=>{
-        const u = new URL(S.currentApiBase());
-        u.searchParams.set('action','ping');
-        const r = await fetch(u.toString(),{mode:'cors'});
-        return { status:r.status, body:(await r.text()).slice(0,80) };
-      });
-
-      // 5) Sheets
-      await safe('Sheet:Klanten', async ()=>{
-        const d = await S.fetchSheet('Klanten', { timeout: 12000 });
-        const len = Array.isArray(d) ? d.length :
-                    Array.isArray(d?.data) ? d.data.length :
-                    Array.isArray(d?.rows) ? d.rows.length :
-                    Array.isArray(d?.result) ? d.result.length : -1;
-        return { length: len, keys: Object.keys(d||{}).slice(0,5) };
-      }).catch(async ()=>{
-        // fallback op 'Leden' indien nodig
-        const d = await S.fetchSheet('Leden', { timeout: 12000 });
-        const len = Array.isArray(d) ? d.length :
-                    Array.isArray(d?.data) ? d.data.length :
-                    Array.isArray(d?.rows) ? d.rows.length :
-                    Array.isArray(d?.result) ? d.result.length : -1;
-        rows.push({label:'Sheet:Leden (fallback)', status:'OK', note:`length=${len}`});
-      });
-
-      await safe('Sheet:Honden', async ()=>{
-        const d = await S.fetchSheet('Honden', { timeout: 12000 });
-        const len = Array.isArray(d) ? d.length :
-                    Array.isArray(d?.data) ? d.data.length :
-                    Array.isArray(d?.rows) ? d.rows.length :
-                    Array.isArray(d?.result) ? d.result.length : -1;
-        return { length: len, keys: Object.keys(d||{}).slice(0,5) };
-      });
-
+    const el=document.getElementById('out'); const rows=[];
+    const j = x => JSON.stringify(x).slice(0,140);
+    async function step(label, fn){ try{const v=await fn(); rows.push({label,status:'OK',note:j(v)}); return v;}
+      catch(e){ rows.push({label,status:'ERR',note:String(e?.message||e)}); throw e; } }
+    (async()=>{
+      await step('/api/config', async()=>{ const r=await fetch('/api/config',{cache:'no-store'}); return {status:r.status, body:(await r.text()).slice(0,160)}; });
+      await step('initFromConfig()', async()=>{ await S.initFromConfig(); return { apiBase:S.currentApiBase() }; });
+      await step('/api/sheets?action=ping', async()=>{ try{ const r=await fetch('/api/sheets?action=ping'); return {status:r.status, body:(await r.text()).slice(0,80)}; }catch(e){ throw e; } }).catch(()=>{});
+      await step('GAS ping', async()=>{ const u=new URL(S.currentApiBase()); u.searchParams.set('action','ping'); const r=await fetch(u,{mode:'cors'}); return {status:r.status, body:(await r.text()).slice(0,80)}; });
+      await step('Sheet:Klanten', async()=>{ const d=await S.fetchSheet('Klanten',{timeout:12000}); const len=Array.isArray(d)?d.length:Array.isArray(d?.data)?d.data.length:Array.isArray(d?.rows)?d.rows.length:Array.isArray(d?.result)?d.result.length:-1; return {length:len, keys:Object.keys(d||{}).slice(0,5)}; })
+        .catch(async ()=>{ const d=await S.fetchSheet('Leden',{timeout:12000}); const len=Array.isArray(d)?d.length:Array.isArray(d?.data)?d.data.length:Array.isArray(d?.rows)?d.rows.length:Array.isArray(d?.result)?d.result.length:-1; rows.push({label:'Sheet:Leden (fallback)',status:'OK',note:'length='+len}); });
+      await step('Sheet:Honden', async()=>{ const d=await S.fetchSheet('Honden',{timeout:12000}); const len=Array.isArray(d)?d.length:Array.isArray(d?.data)?d.data.length:Array.isArray(d?.rows)?d.rows.length:Array.isArray(d?.result)?d.result.length:-1; return {length:len, keys:Object.keys(d||{}).slice(0,5)}; });
     })().finally(()=>{
-      el.innerHTML = `
-        <table>
-          <thead><tr><th>Stap</th><th>Status</th><th>Opmerking</th></tr></thead>
-          <tbody>
-            ${rows.map(r=>`
-              <tr>
-                <td>${r.label}</td>
-                <td class="${r.status==='OK'?'ok':'err'}">${r.status}</td>
-                <td><code>${(r.note||'').replace(/</g,'&lt;')}</code></td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-        <p class="muted">Kopieer de tabel of maak een screenshot en stuur ‘m hier.</p>`;
+      el.innerHTML = `<table><thead><tr><th>Stap</th><th>Status</th><th>Opmerking</th></tr></thead><tbody>${
+        rows.map(r=>`<tr><td>${r.label}</td><td class="${r.status==='OK'?'ok':'err'}">${r.status}</td><td><code>${(r.note||'').replace(/</g,'&lt;')}</code></td></tr>`).join('')
+      }</tbody></table><p class="muted">Stuur een screenshot van deze tabel.</p>`;
     });
   </script>
 </body>
