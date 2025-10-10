@@ -1,10 +1,10 @@
 /**
- * server/index.js — Superhond server (v0.26.6)
+ * server/index.js — Superhond server (v0.26.7)
  * - /api/config         → dynamisch uit ENV of in-memory override
- * - /api/config/set     → zet apiBase centraal (POST JSON | text/plain | GET)
- * - /api/config/clear   → wist override (valt terug op ENV)
- * - /api/ping           → health
- * - /api/sheets         → optionele proxy (GAS)
+ * - /api/config/set     → zet apiBase centraal (POST JSON | text/plain | GET)  [optioneel: ADMIN_TOKEN]
+ * - /api/config/clear   → wist override (valt terug op ENV)                     [optioneel: ADMIN_TOKEN]
+ * - /api/ping, /health  → health
+ * - /api/sheets         → proxy (GAS)
  * - statics uit /public
  */
 
@@ -30,7 +30,7 @@ app.use(
 );
 app.use(compression());
 
-// ── body parsers: JSON én text/plain (want frontend post soms text/plain)
+// ── body parsers: JSON én text/plain (frontend post soms text/plain)
 app.use(express.json({ limit: '2mb' }));
 app.use(express.text({ type: 'text/plain', limit: '2mb' }));
 
@@ -43,6 +43,9 @@ app.use(
     credentials: false,
   })
 );
+
+// Preflight helper (niet strikt nodig met cors(), maar nice to have)
+app.options('*', cors());
 
 // ── state
 let API_BASE_OVERRIDE = ''; // bv. https://script.google.com/macros/s/.../exec
@@ -58,24 +61,59 @@ function pickApiBase() {
   return process.env.API_BASE || '';
 }
 
+function requireAdminIfConfigured(req, res) {
+  const expected = (process.env.ADMIN_TOKEN || '').trim();
+  if (!expected) return true; // geen gating → toegestaan
+
+  // Zoek token in header, query of body
+  const headerToken = (req.headers['x-admin-token'] || '').toString().trim();
+  const queryToken = (req.query.adminToken || '').toString().trim();
+  const bodyToken =
+    (req.is('application/json') && (req.body?.adminToken || '')) ||
+    (req.is('text/plain') ? safeJson(req.body)?.adminToken || '' : '');
+  const provided = headerToken || queryToken || bodyToken || '';
+
+  if (provided && provided === expected) return true;
+
+  res.status(401).json({ ok: false, error: 'Unauthorized (ADMIN_TOKEN vereist)' });
+  return false;
+}
+
+function safeJson(x) {
+  try {
+    return JSON.parse(String(x || ''));
+  } catch {
+    return {};
+  }
+}
+
+// ─────────────────────────── Health ───────────────────────────
+app.get('/api/ping', (req, res) => res.json({ ok: true, t: Date.now() }));
+app.get('/health', (req, res) => res.type('text/plain').send('OK'));
+
 // ─────────────────────────── Config endpoints ───────────────────────────
 app.get('/api/config', (req, res) => {
+  const source = API_BASE_OVERRIDE ? 'override' : 'env';
+  res.setHeader('X-Config-Source', source);
   res.json({
     apiBase: pickApiBase(),
-    version: '0.26.6',
+    version: '0.26.7',
     env: process.env.NODE_ENV || 'prod',
-    adminToken: process.env.ADMIN_TOKEN || '', // voor toekomstig gebruik
-    source: API_BASE_OVERRIDE ? 'override' : 'env',
+    adminToken: process.env.ADMIN_TOKEN ? 'set' : '', // hint (geen lek)
+    source,
   });
 });
 
 /**
  * Zet de apiBase centraal (in-memory).
- * - POST /api/config/set  body: { apiBase }  (application/json)
- * - POST /api/config/set  body: '{"apiBase":".../exec"}' (text/plain)
- * - GET  /api/config/set?apiBase=.../exec
+ * - POST /api/config/set  body: { apiBase, adminToken? }  (application/json)
+ * - POST /api/config/set  body: '{"apiBase":".../exec","adminToken":"..."}' (text/plain)
+ * - GET  /api/config/set?apiBase=.../exec&adminToken=...
+ * Als ADMIN_TOKEN niet staat in ENV → geen gating (open).
  */
 app.all('/api/config/set', (req, res) => {
+  if (!requireAdminIfConfigured(req, res)) return;
+
   let candidate = '';
 
   if (req.method === 'GET') {
@@ -84,14 +122,10 @@ app.all('/api/config/set', (req, res) => {
     if (req.is('application/json')) {
       candidate = String(req.body?.apiBase || '');
     } else if (req.is('text/plain')) {
-      try {
-        const j = JSON.parse(String(req.body || ''));
-        candidate = String(j.apiBase || '');
-      } catch {
-        // fallback: raw waarde
-        candidate = String(req.body || '');
-      }
+      const j = safeJson(req.body);
+      candidate = String(j.apiBase || req.body || '');
     } else {
+      // andere content-types: probeer generiek
       candidate = String(req.body?.apiBase || '');
     }
   }
@@ -103,6 +137,7 @@ app.all('/api/config/set', (req, res) => {
   }
 
   API_BASE_OVERRIDE = candidate.trim();
+  console.log('🔧 apiBase OVERRIDE gezet →', API_BASE_OVERRIDE);
   return res.json({
     ok: true,
     apiBase: API_BASE_OVERRIDE,
@@ -112,14 +147,14 @@ app.all('/api/config/set', (req, res) => {
 
 // Wist de in-memory override (terug naar ENV)
 app.post('/api/config/clear', (req, res) => {
+  if (!requireAdminIfConfigured(req, res)) return;
+
   API_BASE_OVERRIDE = '';
+  console.log('🧹 apiBase OVERRIDE gewist; terug naar ENV');
   return res.json({ ok: true, apiBase: pickApiBase(), note: 'Override gewist; terug naar ENV.' });
 });
 
-// Health
-app.get('/api/ping', (req, res) => res.json({ ok: true, t: Date.now() }));
-
-// ─────────────────────────── Optionele proxy ───────────────────────────
+// ─────────────────────────── Proxy naar GAS ───────────────────────────
 app.all('/api/sheets', async (req, res) => {
   const target = pickApiBase();
   if (!target) return res.status(404).json({ error: 'API_BASE ontbreekt' });
@@ -129,30 +164,34 @@ app.all('/api/sheets', async (req, res) => {
     const qs = req.originalUrl.split('?')[1] || '';
     const url = `${target}${qs ? `?${qs}` : ''}`;
 
-    // Bouw body correct op, behoud content-type
+    // Body + headers
     const init = { method, mode: 'cors', headers: {} };
-    if (['POST', 'PUT', 'PATCH'].includes(method)) {
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
       if (req.is('application/json')) {
         init.headers['Content-Type'] = 'application/json';
         init.body = JSON.stringify(req.body || {});
       } else if (req.is('text/plain')) {
-        // frontend stuurt soms reeds JSON-string als text/plain
         init.headers['Content-Type'] = 'text/plain';
         init.body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
       } else {
         init.headers['Content-Type'] = 'application/json';
-        init.body = JSON.stringify(req.body || {});
+        try {
+          init.body = JSON.stringify(req.body || {});
+        } catch {
+          init.headers['Content-Type'] = 'text/plain';
+          init.body = String(req.body || '');
+        }
       }
     }
 
     const r = await fetch(url, init);
     const text = await r.text();
-    let data;
+
+    // probeer JSON; anders raw doorsturen
     try {
-      data = JSON.parse(text);
+      const data = JSON.parse(text);
       res.status(r.status).json(data);
     } catch {
-      // niet-JSON: stuur raw door
       res.status(r.status).type('text/plain').send(text);
     }
   } catch (e) {
@@ -165,7 +204,7 @@ app.all('/api/sheets', async (req, res) => {
 const publicDir = path.resolve(__dirname, '../public');
 app.use(express.static(publicDir, { extensions: ['html'] }));
 
-// Fallback naar dashboard (pas pad aan als nodig)
+// Fallback naar dashboard (pas pad aan indien nodig)
 app.get('*', (req, res) => {
   res.sendFile(path.join(publicDir, 'dashboard', 'index.html'));
 });
@@ -174,4 +213,5 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Superhond server @ http://localhost:${PORT}`);
   console.log(`   CORS_ORIGIN = ${CORS_ORIGIN}`);
+  console.log(`   ADMIN_TOKEN ${process.env.ADMIN_TOKEN ? 'is set (protected)' : 'not set (open)'} `);
 });
