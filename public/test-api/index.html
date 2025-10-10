@@ -1,16 +1,16 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Superhond – API Test & Config</title>
   <style>
-    :root{--muted:#6b7280;--ok:#16a34a;--err:#dc2626;--bg:#fafafa}
+    :root{--muted:#6b7280;--ok:#16a34a;--err:#dc2626;--bg:#fafafa;--bd:#e5e7eb}
     body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);padding:2rem;color:#111;max-width:1000px;margin:0 auto}
     h1{margin:0 0 .75rem}
     .muted{color:var(--muted)}
     .wrap{display:grid;gap:1rem}
-    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:1rem 1.25rem;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+    .card{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:1rem 1.25rem;box-shadow:0 1px 2px rgba(0,0,0,.05)}
     .row{display:grid;grid-template-columns:160px 1fr;gap:.5rem 1rem;align-items:center;margin:.4rem 0}
     .actions{display:flex;gap:.5rem;flex-wrap:wrap}
     input,button,select,textarea{font:inherit}
@@ -20,41 +20,48 @@
     button.ghost{background:#fff}
     button:disabled{opacity:.5;cursor:not-allowed}
     .ok{color:var(--ok)} .err{color:var(--err)}
-    pre{background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:.75rem;overflow:auto;max-height:40vh}
+    .pill{display:inline-block;padding:.15rem .5rem;border-radius:999px;border:1px solid var(--bd);font-size:.8rem}
+    pre{background:#f8fafc;border:1px solid var(--bd);border-radius:8px;padding:.75rem;overflow:auto;max-height:40vh}
     @media (max-width:640px){ .row{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
   <h1>🐶 Superhond – API Test & Config</h1>
-  <p class="muted">Controleer de koppeling tussen <strong>Superhond (Node)</strong> en <strong>Google Apps Script</strong>, en zet centraal de <code>apiBase</code>.</p>
+  <p class="muted">Controleer de koppeling tussen <strong>Superhond (Node)</strong> en <strong>Google Apps Script</strong>, en beheer centraal de <code>apiBase</code>.</p>
 
   <div class="wrap">
 
     <!-- CONFIG -->
-    <section class="card">
-      <h2>1) Config</h2>
+    <section class="card" aria-labelledby="cfg-title">
+      <h2 id="cfg-title">1) Config</h2>
       <div class="row">
-        <label for="apiBase">Huidige apiBase (server)</label>
-        <input id="apiBase" placeholder="https://script.google.com/macros/s/.../exec" />
+        <label for="apiBase">Centrale apiBase (server)</label>
+        <div>
+          <input id="apiBase" placeholder="https://script.google.com/macros/s/.../exec" />
+          <div class="muted" style="margin-top:.25rem">
+            Bron: <span id="cfgSource" class="pill">—</span>
+          </div>
+        </div>
       </div>
       <div class="actions">
         <button id="btnCfgLoad" class="ghost">Config ophalen</button>
         <button id="btnCfgSave" class="primary">Centrale apiBase zetten</button>
-        <button id="btnCfgQuick" class="ghost">Snel testen (alleen ping)</button>
-        <span id="cfgMsg" class="muted"></span>
+        <button id="btnCfgClear" class="ghost">Override wissen</button>
+        <button id="btnCfgQuick" class="ghost">Snel testen (alleen GAS ping)</button>
+        <span id="cfgMsg" class="muted">—</span>
       </div>
     </section>
 
     <!-- TESTS -->
-    <section class="card">
-      <h2>2) Snelle tests</h2>
-      <div class="actions">
+    <section class="card" aria-labelledby="tests-title">
+      <h2 id="tests-title">2) Snelle tests</h2>
+      <div class="actions" role="group" aria-label="Snelle tests">
         <button id="btnPing">Proxy ping</button>
         <button id="btnKlanten">Sheet: Klanten</button>
         <button id="btnHonden">Sheet: Honden</button>
         <button id="btnConfigRaw">/api/config (raw)</button>
       </div>
-      <pre id="out">—</pre>
+      <pre id="out" aria-live="polite">—</pre>
     </section>
 
   </div>
@@ -63,32 +70,45 @@
     const $ = s => document.querySelector(s);
     const out = $('#out');
     const cfgMsg = $('#cfgMsg');
+    const cfgSource = $('#cfgSource');
 
-    function show(json, status) {
-      out.textContent = JSON.stringify({ status, ...json }, null, 2);
+    function uiSuccess(){ try{ window.SuperhondUI?.noteSuccess?.(); }catch{} }
+    function uiFailure(){ try{ window.SuperhondUI?.noteFailure?.(); }catch{} }
+
+    function show(json, status, title='Resultaat') {
+      out.textContent = title + ' — status ' + status + '\n\n' + JSON.stringify(json, null, 2);
+      (status >= 200 && status < 400) ? uiSuccess() : uiFailure();
     }
+
     async function getJSON(url, init){
       const r = await fetch(url, init);
       const text = await r.text();
-      try { return { ok: r.ok, status: r.status, data: JSON.parse(text) }; }
-      catch { return { ok: r.ok, status: r.status, data: { raw: text } }; }
+      let data;
+      try { data = JSON.parse(text); }
+      catch { data = { raw: text }; }
+      return { ok: r.ok && data?.ok !== false, status: r.status, data };
     }
-    function isExec(u){ return /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(String(u||'').trim()); }
+
+    const isExec = (u) =>
+      /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(String(u||'').trim());
 
     // ----- Config ophalen -----
     async function loadConfig(){
       cfgMsg.textContent = 'Ophalen…';
-      const res = await getJSON('/api/config');
+      const res = await getJSON('/api/config', { cache:'no-store' });
       if (res.ok) {
         const apiBase = res?.data?.apiBase || '';
         $('#apiBase').value = apiBase;
+        const source = res?.data?.source || (res?.data?.adminToken !== undefined ? 'env' : '—');
+        cfgSource.textContent = source;
+        cfgSource.className = 'pill ' + (source==='override' ? 'ok' : 'muted');
         cfgMsg.textContent = 'OK';
         cfgMsg.className = 'ok';
-        show({ step:'config', config: res.data }, res.status);
+        show(res.data, res.status, '/api/config');
       } else {
         cfgMsg.textContent = 'Kon /api/config niet laden';
         cfgMsg.className = 'err';
-        show({ step:'config', error: res.data }, res.status);
+        show(res.data, res.status, '/api/config (fout)');
       }
     }
 
@@ -98,6 +118,7 @@
       if (!isExec(val)) {
         cfgMsg.textContent = 'Ongeldige /exec-URL';
         cfgMsg.className = 'err';
+        uiFailure();
         return;
       }
       cfgMsg.textContent = 'Zetten…';
@@ -106,14 +127,37 @@
         headers: { 'Content-Type':'application/json' },
         body: JSON.stringify({ apiBase: val })
       });
-      if (res.ok && res?.data?.ok) {
+      if (res.ok && (res?.data?.ok || res?.data?.apiBase)) {
         cfgMsg.textContent = 'Centrale apiBase actief ✔️';
         cfgMsg.className = 'ok';
+        cfgSource.textContent = 'override';
+        cfgSource.className = 'pill ok';
+        uiSuccess();
       } else {
         cfgMsg.textContent = 'Fout bij zetten';
         cfgMsg.className = 'err';
+        uiFailure();
       }
-      show({ step:'config/set', response: res.data }, res.status);
+      show(res.data, res.status, '/api/config/set');
+    }
+
+    // ----- Override wissen -----
+    async function clearOverride(){
+      cfgMsg.textContent = 'Wissen…';
+      const res = await getJSON('/api/config/clear', { method:'POST' });
+      if (res.ok) {
+        cfgMsg.textContent = 'Override gewist (terug naar ENV)';
+        cfgMsg.className = 'ok';
+        cfgSource.textContent = 'env';
+        cfgSource.className = 'pill muted';
+        $('#apiBase').value = res?.data?.apiBase || '';
+        uiSuccess();
+      } else {
+        cfgMsg.textContent = 'Wissen mislukt';
+        cfgMsg.className = 'err';
+        uiFailure();
+      }
+      show(res.data, res.status, '/api/config/clear');
     }
 
     // ----- Snel: ping rechtstreeks op opgegeven URL (zonder opslaan) -----
@@ -122,6 +166,7 @@
       if (!isExec(val)) {
         cfgMsg.textContent = 'Ongeldige /exec-URL voor quick test';
         cfgMsg.className = 'err';
+        uiFailure();
         return;
       }
       cfgMsg.textContent = 'Pingen…';
@@ -131,36 +176,38 @@
         const t = await r.text();
         cfgMsg.textContent = r.ok ? 'Ping OK' : `Ping HTTP ${r.status}`;
         cfgMsg.className = r.ok ? 'ok' : 'err';
-        show({ step:'quickPing', body: t.slice(0,200) }, r.status);
+        show({ body: t.slice(0,200) }, r.status, 'GAS quick ping');
+        r.ok ? uiSuccess() : uiFailure();
       }catch(e){
         cfgMsg.textContent = 'Ping mislukt';
         cfgMsg.className = 'err';
-        show({ step:'quickPing', error: String(e) }, 0);
+        show({ error: String(e) }, 0, 'GAS quick ping');
+        uiFailure();
       }
     }
 
     // ----- Proxy tests -----
     async function testPing(){
-      const res = await getJSON('/api/sheets?action=ping');
-      show({ step:'proxy:ping', data: res.data }, res.status);
+      const res = await getJSON('/api/sheets?action=ping', { cache:'no-store' });
+      show(res.data, res.status, 'Proxy ping');
     }
     async function testKlanten(){
-      // jouw server ondersteunt zowel action=getSheet&tab=Klanten als getLeden (legacy)
-      const res = await getJSON('/api/sheets?action=getSheet&tab=Klanten');
-      show({ step:'sheet:Klanten', data: res.data }, res.status);
+      const res = await getJSON('/api/sheets?action=getSheet&tab=Klanten', { cache:'no-store' });
+      show(res.data, res.status, 'Sheet: Klanten');
     }
     async function testHonden(){
-      const res = await getJSON('/api/sheets?action=getSheet&tab=Honden');
-      show({ step:'sheet:Honden', data: res.data }, res.status);
+      const res = await getJSON('/api/sheets?action=getSheet&tab=Honden', { cache:'no-store' });
+      show(res.data, res.status, 'Sheet: Honden');
     }
     async function showConfigRaw(){
-      const res = await getJSON('/api/config');
-      show({ step:'config:raw', data: res.data }, res.status);
+      const res = await getJSON('/api/config', { cache:'no-store' });
+      show(res.data, res.status, '/api/config (raw)');
     }
 
     // Events
     $('#btnCfgLoad').addEventListener('click', loadConfig);
     $('#btnCfgSave').addEventListener('click', saveConfig);
+    $('#btnCfgClear').addEventListener('click', clearOverride);
     $('#btnCfgQuick').addEventListener('click', quickPing);
 
     $('#btnPing').addEventListener('click', testPing);
