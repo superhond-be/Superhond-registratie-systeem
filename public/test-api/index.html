@@ -3,85 +3,179 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Superhond – API Test</title>
+  <title>Superhond – API Test & Config</title>
   <style>
-    body {
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      background:#fafafa;
-      padding:2rem;
-      color:#111;
-    }
-    h1 { margin-bottom:1rem; }
-    .card {
-      background:#fff;
-      border:1px solid #ddd;
-      border-radius:8px;
-      padding:1rem 1.5rem;
-      margin-bottom:1rem;
-      box-shadow:0 1px 2px rgba(0,0,0,.05);
-    }
-    button {
-      padding:.5rem 1rem;
-      border:1px solid #ccc;
-      border-radius:6px;
-      cursor:pointer;
-      background:#fff;
-    }
-    button:hover { background:#f3f4f6; }
-    pre {
-      background:#f9fafb;
-      padding:.75rem;
-      border-radius:6px;
-      font-size:.9rem;
-      overflow-x:auto;
-    }
-    .ok { color:#15803d; }
-    .fail { color:#b91c1c; }
+    :root{--muted:#6b7280;--ok:#16a34a;--err:#dc2626;--bg:#fafafa}
+    body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);padding:2rem;color:#111;max-width:1000px;margin:0 auto}
+    h1{margin:0 0 .75rem}
+    .muted{color:var(--muted)}
+    .wrap{display:grid;gap:1rem}
+    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:1rem 1.25rem;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+    .row{display:grid;grid-template-columns:160px 1fr;gap:.5rem 1rem;align-items:center;margin:.4rem 0}
+    .actions{display:flex;gap:.5rem;flex-wrap:wrap}
+    input,button,select,textarea{font:inherit}
+    input,textarea,select{width:100%;padding:.55rem .6rem;border:1px solid #cbd5e1;border-radius:8px}
+    button{padding:.5rem .9rem;border:1px solid #cbd5e1;border-radius:8px;background:#fff;cursor:pointer}
+    button.primary{background:#2563eb;color:#fff;border-color:#2563eb}
+    button.ghost{background:#fff}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .ok{color:var(--ok)} .err{color:var(--err)}
+    pre{background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:.75rem;overflow:auto;max-height:40vh}
+    @media (max-width:640px){ .row{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
-  <h1>🐶 Superhond – API Test</h1>
-  <p>Gebruik dit scherm om te controleren of de verbinding tussen <strong>Node</strong> en <strong>Google Apps Script</strong> werkt.</p>
+  <h1>🐶 Superhond – API Test & Config</h1>
+  <p class="muted">Controleer de koppeling tussen <strong>Superhond (Node)</strong> en <strong>Google Apps Script</strong>, en zet centraal de <code>apiBase</code>.</p>
 
-  <div class="card">
-    <h2>Snelle tests</h2>
-    <button id="btnPing">Ping</button>
-    <button id="btnCfg">Config ophalen</button>
-    <button id="btnSchema">Schema ophalen</button>
-    <button id="btnKlanten">Leden (Klanten)</button>
-    <div id="output"></div>
+  <div class="wrap">
+
+    <!-- CONFIG -->
+    <section class="card">
+      <h2>1) Config</h2>
+      <div class="row">
+        <label for="apiBase">Huidige apiBase (server)</label>
+        <input id="apiBase" placeholder="https://script.google.com/macros/s/.../exec" />
+      </div>
+      <div class="actions">
+        <button id="btnCfgLoad" class="ghost">Config ophalen</button>
+        <button id="btnCfgSave" class="primary">Centrale apiBase zetten</button>
+        <button id="btnCfgQuick" class="ghost">Snel testen (alleen ping)</button>
+        <span id="cfgMsg" class="muted"></span>
+      </div>
+    </section>
+
+    <!-- TESTS -->
+    <section class="card">
+      <h2>2) Snelle tests</h2>
+      <div class="actions">
+        <button id="btnPing">Proxy ping</button>
+        <button id="btnKlanten">Sheet: Klanten</button>
+        <button id="btnHonden">Sheet: Honden</button>
+        <button id="btnConfigRaw">/api/config (raw)</button>
+      </div>
+      <pre id="out">—</pre>
+    </section>
+
   </div>
 
   <script type="module">
-    async function runTest(name, url) {
-      const out = document.getElementById('output');
-      out.innerHTML = `<p>⏳ Test "${name}" bezig...</p>`;
-      try {
-        const r = await fetch(url);
-        const text = await r.text();
-        let json;
-        try { json = JSON.parse(text); } catch { json = { raw: text }; }
-        console.log(`[${name}]`, json);
-        out.innerHTML = `
-          <p class="${json.ok ? 'ok' : 'fail'}">✔️ ${name} — status: ${r.status}</p>
-          <pre>${JSON.stringify(json, null, 2)}</pre>`;
-      } catch (err) {
-        out.innerHTML = `<p class="fail">💥 ${name} mislukt: ${err}</p>`;
+    const $ = s => document.querySelector(s);
+    const out = $('#out');
+    const cfgMsg = $('#cfgMsg');
+
+    function show(json, status) {
+      out.textContent = JSON.stringify({ status, ...json }, null, 2);
+    }
+    async function getJSON(url, init){
+      const r = await fetch(url, init);
+      const text = await r.text();
+      try { return { ok: r.ok, status: r.status, data: JSON.parse(text) }; }
+      catch { return { ok: r.ok, status: r.status, data: { raw: text } }; }
+    }
+    function isExec(u){ return /^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec(?:\?.*)?$/.test(String(u||'').trim()); }
+
+    // ----- Config ophalen -----
+    async function loadConfig(){
+      cfgMsg.textContent = 'Ophalen…';
+      const res = await getJSON('/api/config');
+      if (res.ok) {
+        const apiBase = res?.data?.apiBase || '';
+        $('#apiBase').value = apiBase;
+        cfgMsg.textContent = 'OK';
+        cfgMsg.className = 'ok';
+        show({ step:'config', config: res.data }, res.status);
+      } else {
+        cfgMsg.textContent = 'Kon /api/config niet laden';
+        cfgMsg.className = 'err';
+        show({ step:'config', error: res.data }, res.status);
       }
     }
 
-    document.getElementById('btnPing').addEventListener('click', () =>
-      runTest('Ping', '/api/sheets?action=ping')
-    );
-    document.getElementById('btnCfg').addEventListener('click', () =>
-      runTest('Config ophalen', '/api/sheets?action=cfg.get')
-    );
-    document.getElementById('btnSchema').addEventListener('click', () =>
-      runTest('Schema ophalen', '/api/sheets?action=schema.get')
-    );
-    document.getElementById('btnKlanten').addEventListener('click', () =>
-      runTest('Klanten', '/api/sheets?action=getLeden')
-    );
+    // ----- Centrale apiBase zetten (POST /api/config/set) -----
+    async function saveConfig(){
+      const val = $('#apiBase').value.trim();
+      if (!isExec(val)) {
+        cfgMsg.textContent = 'Ongeldige /exec-URL';
+        cfgMsg.className = 'err';
+        return;
+      }
+      cfgMsg.textContent = 'Zetten…';
+      const res = await getJSON('/api/config/set', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json' },
+        body: JSON.stringify({ apiBase: val })
+      });
+      if (res.ok && res?.data?.ok) {
+        cfgMsg.textContent = 'Centrale apiBase actief ✔️';
+        cfgMsg.className = 'ok';
+      } else {
+        cfgMsg.textContent = 'Fout bij zetten';
+        cfgMsg.className = 'err';
+      }
+      show({ step:'config/set', response: res.data }, res.status);
+    }
+
+    // ----- Snel: ping rechtstreeks op opgegeven URL (zonder opslaan) -----
+    async function quickPing(){
+      const val = $('#apiBase').value.trim();
+      if (!isExec(val)) {
+        cfgMsg.textContent = 'Ongeldige /exec-URL voor quick test';
+        cfgMsg.className = 'err';
+        return;
+      }
+      cfgMsg.textContent = 'Pingen…';
+      const url = new URL(val); url.searchParams.set('action','ping');
+      try{
+        const r = await fetch(url.toString(), { mode:'cors' });
+        const t = await r.text();
+        cfgMsg.textContent = r.ok ? 'Ping OK' : `Ping HTTP ${r.status}`;
+        cfgMsg.className = r.ok ? 'ok' : 'err';
+        show({ step:'quickPing', body: t.slice(0,200) }, r.status);
+      }catch(e){
+        cfgMsg.textContent = 'Ping mislukt';
+        cfgMsg.className = 'err';
+        show({ step:'quickPing', error: String(e) }, 0);
+      }
+    }
+
+    // ----- Proxy tests -----
+    async function testPing(){
+      const res = await getJSON('/api/sheets?action=ping');
+      show({ step:'proxy:ping', data: res.data }, res.status);
+    }
+    async function testKlanten(){
+      // jouw server ondersteunt zowel action=getSheet&tab=Klanten als getLeden (legacy)
+      const res = await getJSON('/api/sheets?action=getSheet&tab=Klanten');
+      show({ step:'sheet:Klanten', data: res.data }, res.status);
+    }
+    async function testHonden(){
+      const res = await getJSON('/api/sheets?action=getSheet&tab=Honden');
+      show({ step:'sheet:Honden', data: res.data }, res.status);
+    }
+    async function showConfigRaw(){
+      const res = await getJSON('/api/config');
+      show({ step:'config:raw', data: res.data }, res.status);
+    }
+
+    // Events
+    $('#btnCfgLoad').addEventListener('click', loadConfig);
+    $('#btnCfgSave').addEventListener('click', saveConfig);
+    $('#btnCfgQuick').addEventListener('click', quickPing);
+
+    $('#btnPing').addEventListener('click', testPing);
+    $('#btnKlanten').addEventListener('click', testKlanten);
+    $('#btnHonden').addEventListener('click', testHonden);
+    $('#btnConfigRaw').addEventListener('click', showConfigRaw);
+
+    // Autofill vanaf query (?apiBase=...)
+    try {
+      const q = new URL(location.href).searchParams.get('apiBase');
+      if (q) { $('#apiBase').value = q; }
+    } catch {}
+
+    // initial fetch
+    loadConfig();
   </script>
 </body>
 </html>
