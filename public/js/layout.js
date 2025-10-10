@@ -1,25 +1,22 @@
 /**
- * public/js/layout.js — Topbar & Footer mount (v0.24.1)
- * - Dashboard = GEEL (#f4c400), Subpages = BLAUW (#2563eb)
- * - Versienummer: cfg.version -> APP_VERSION fallback
- * - Kleur geforceerd met !important (style.setProperty)
- * - Consistente .topbar-inner.container
- * - Exporteert: SuperhondUI.{ mount, setOnline, setAdmin, applyDensity }
+ * public/js/layout.js — Topbar & Footer mount (v0.24.2-net)
+ * - Bewaart netwerkstatus (noteSuccess/noteFailure) zelfs vóór mount()
+ * - Periodieke ping elke 45 s
+ * - Achterwaarts compatibel met setOnline()
  */
 
 (function () {
-  // ───────── Config
-  const APP_VERSION = '0.24.1';
-  const LS_ADMIN    = 'superhond:admin:enabled';
-  const LS_DENSITY  = 'superhond:density';
-  const API_CONFIG  = '/api/config';
-  const API_PING    = '/api/ping';
+  const APP_VERSION = '0.24.2-net';
+  const LS_ADMIN = 'superhond:admin:enabled';
+  const LS_DENSITY = 'superhond:density';
+  const API_CONFIG = '/api/config';
+  const API_PING = '/api/ping';
+  let LAST_NET_OK = null; // buffer
 
-  // ───────── Utils
   const onReady = (cb) =>
-    (document.readyState !== 'loading'
+    document.readyState !== 'loading'
       ? cb()
-      : document.addEventListener('DOMContentLoaded', cb, { once: true }));
+      : document.addEventListener('DOMContentLoaded', cb, { once: true });
 
   const onceStyle = (id, css) => {
     let t = document.getElementById(id);
@@ -40,10 +37,8 @@
       else if (k === 'html') n.innerHTML = v;
       else n.setAttribute(k, v);
     });
-    for (const c of kids) {
-      if (c == null) continue;
-      n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
-    }
+    for (const c of kids)
+      if (c != null) n.append(typeof c === 'string' ? document.createTextNode(c) : c);
     return n;
   };
 
@@ -62,7 +57,6 @@
     }
   };
 
-  // ───────── Prefs
   const isAdmin = () => localStorage.getItem(LS_ADMIN) === '1';
   const setAdmin = (on) => {
     localStorage.setItem(LS_ADMIN, on ? '1' : '0');
@@ -74,18 +68,15 @@
     document.documentElement.setAttribute('data-density', m);
   };
 
-  // ───────── Topbar/Footer intern
   const statusClass = (ok) => (ok ? 'is-online' : 'is-offline');
 
   function forceTopbarColors(container, { home }) {
-    // home === true => dashboard geel, anders blauw
     const isDashboard =
       home === true
         ? true
         : home === false
-          ? false
-          : document.body.classList.contains('dashboard-page');
-
+        ? false
+        : document.body.classList.contains('dashboard-page');
     const bg = isDashboard ? '#f4c400' : '#2563eb';
     const fg = isDashboard ? '#000' : '#fff';
     container.style.setProperty('background', bg, 'important');
@@ -96,19 +87,13 @@
     if (!container) return;
     container.innerHTML = '';
 
-    const {
-      title = 'Superhond',
-      icon = '🐾',
-      home = null,      // null -> autodetect via body.dashboard-page
-      back = null,
-      version = null
-    } = opts || {};
+    const { title = 'Superhond', icon = '🐾', home = null, back = null, version = null } =
+      opts || {};
 
     let backEl = null;
     if (back) {
-      if (typeof back === 'string') {
-        backEl = el('a', { class: 'btn-back', href: back }, '← Terug');
-      } else {
+      if (typeof back === 'string') backEl = el('a', { class: 'btn-back', href: back }, '← Terug');
+      else {
         backEl = el('button', { class: 'btn-back', type: 'button' }, '← Terug');
         backEl.addEventListener('click', () => history.back());
       }
@@ -120,7 +105,6 @@
       'div',
       { class: 'tb-left' },
       backEl,
-      // Als home expliciet true is => link naar dashboard, anders statische span
       (home === true || (home === null && document.body.classList.contains('dashboard-page')))
         ? el('a', { class: 'brand', href: '../dashboard/' }, `${icon} ${title}`)
         : el('span', { class: 'brand' }, `${icon} ${title}`)
@@ -129,13 +113,15 @@
     const right = el(
       'div',
       { class: 'tb-right' },
-      el('span', { class: `status-dot ${statusClass(online)}`, title: online ? 'Online' : 'Offline' }),
+      el('span', {
+        class: `status-dot ${statusClass(online)}`,
+        title: online ? 'Online' : 'Offline'
+      }),
       el('span', { class: 'status-text' }, online ? 'Online' : 'Offline'),
       el('span', { class: 'muted' }, `v${version || cfg?.version || APP_VERSION}`),
       cfg?.env ? el('span', { class: 'muted' }, `(${cfg.env})`) : null
     );
 
-    // Basis styles (eenmalig)
     onceStyle(
       'sh-topbar-style',
       `
@@ -150,14 +136,12 @@
       .status-dot.is-offline{background:#ef4444}
       .status-text{font-weight:600;color:inherit}
       .muted{opacity:.85}
-      @media (prefers-color-scheme: dark){ #topbar .topbar-inner{border-bottom-color:#374151} }
     `
     );
 
     forceTopbarColors(container, { home });
-
     inner.append(left, right);
-    container.appendChild(inner);
+    container.append(inner);
   }
 
   function renderFooter(container, cfg) {
@@ -188,36 +172,33 @@
     container.append(row);
   }
 
+  // ───────── Status handling
+  function applyNetStatus(ok) {
+    const dot = document.querySelector('#topbar .status-dot');
+    const txt = document.querySelector('#topbar .status-text');
+    if (dot) {
+      dot.classList.toggle('is-online', !!ok);
+      dot.classList.toggle('is-offline', !ok);
+    }
+    if (txt) txt.textContent = ok ? 'Online' : 'Offline';
+    LAST_NET_OK = !!ok;
+  }
+
   // ───────── Public API
   async function mount(opts = {}) {
-    // Wacht tot DOM gereed
     await new Promise((res) => onReady(res));
     applyDensity();
 
-    // Autodetect dashboard → body class
-    try {
-      const p = location.pathname.replace(/\/+$/, '');
-      const isDash =
-        /\/dashboard$/.test(p) ||
-        /\/dashboard\/index\.html$/.test(p) ||
-        opts.home === true;
-      if (isDash) {
-        document.body.classList.add('dashboard-page');
-        document.body.classList.remove('subpage');
-      } else if (opts.home === false) {
-        document.body.classList.remove('dashboard-page');
-        document.body.classList.add('subpage');
-      }
-    } catch { /* ignore */ }
+    const path = location.pathname.replace(/\/+$/, '');
+    const isDash =
+      /\/dashboard$/.test(path) ||
+      /\/dashboard\/index\.html$/.test(path) ||
+      opts.home === true;
+    document.body.classList.toggle('dashboard-page', isDash);
+    document.body.classList.toggle('subpage', !isDash);
 
-    // Admin badge
     document.body.classList.toggle('admin-page', isAdmin());
-
-    // Subpagina’s krijgen standaard back=true (dashboard niet)
-    const isSub =
-      document.body.classList.contains('subpage') &&
-      !document.body.classList.contains('dashboard-page');
-    const finalOpts = Object.assign({ back: isSub ? true : null }, opts);
+    const finalOpts = Object.assign({ back: !isDash }, opts);
 
     const [cfg, online] = await Promise.all([
       fetchJSON(API_CONFIG).catch(() => ({})),
@@ -228,27 +209,26 @@
     const footerEl = document.getElementById('footer');
     if (topbarEl) renderTopbar(topbarEl, finalOpts, cfg, online);
     if (footerEl) renderFooter(footerEl, cfg);
+
+    // Als er vóór mount() al een netstatus was → toepassen
+    if (LAST_NET_OK !== null) applyNetStatus(LAST_NET_OK);
+
+    // Automatisch periodiek ping
+    setInterval(async () => {
+      const ok = await ping();
+      applyNetStatus(ok);
+    }, 45000);
   }
 
-  function setOnline(ok) {
-    const dot = document.querySelector('#topbar .status-dot');
-    const txt = document.querySelector('#topbar .status-text');
-    const bar = document.getElementById('topbar');
-    if (dot) {
-      dot.classList.toggle('is-online', !!ok);
-      dot.classList.toggle('is-offline', !ok);
-    }
-    if (txt) txt.textContent = ok ? 'Online' : 'Offline';
-    // kleur blijft zoals pagina-type (niet afhankelijk van online)
-    if (bar) {
-      // niets: kleur wordt door forceTopbarColors bepaald
-    }
-  }
+  function setOnline(ok) { applyNetStatus(ok); }
+  const noteSuccess = () => applyNetStatus(true);
+  const noteFailure = () => applyNetStatus(false);
 
-  // Expose
   window.SuperhondUI = Object.assign(window.SuperhondUI || {}, {
     mount,
     setOnline,
+    noteSuccess,
+    noteFailure,
     setAdmin,
     applyDensity,
     APP_VERSION
