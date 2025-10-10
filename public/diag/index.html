@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="nl">
 <head>
@@ -7,53 +6,107 @@
   <title>Superhond – Diagnose</title>
   <style>
     body{font:14px/1.45 system-ui,Segoe UI,Roboto,Arial;margin:20px}
+    h1{margin-bottom:.25rem}
     .ok{color:#16a34a} .err{color:#dc2626} .muted{color:#6b7280}
-    code{background:#f3f4f6;padding:.1rem .25rem;border-radius:4px}
-    table{border-collapse:collapse;width:100%;margin-top:1rem}
-    th,td{border:1px solid #e5e7eb;padding:.5rem;text-align:left}
+    code{background:#f3f4f6;padding:.1rem .25rem;border-radius:4px;font-family:ui-monospace,monospace}
+    table{border-collapse:collapse;width:100%;margin-top:1rem;font-size:.9rem}
+    th,td{border:1px solid #e5e7eb;padding:.45rem .6rem;text-align:left;vertical-align:top}
+    tr:nth-child(even){background:#fafafa}
   </style>
 </head>
 <body>
-  <h1>Diagnose</h1>
-  <p class="muted">Checkt <code>/api/config</code>, proxy, GAS en de tabs <em>Klanten</em> en <em>Honden</em>.</p>
-  <div id="out">Laden…</div>
+  <h1>🧩 Diagnose</h1>
+  <p class="muted">Controleert <code>/api/config</code>, proxy, GAS en de tabs <em>Klanten</em> en <em>Honden</em>.</p>
+  <div id="out">⏳ Start...</div>
 
   <script type="module">
     import * as S from '/js/sheets.js?v=0.26.3';
-    const el=document.getElementById('out'); const rows=[];
-    const j = x => JSON.stringify(x).slice(0,140);
-    async function step(label, fn){
-      try{const v=await fn(); rows.push({label,status:'OK',note:j(v)}); return v;}
-      catch(e){ rows.push({label,status:'ERR',note:String(e?.message||e)}); throw e; }
+
+    const el = document.getElementById('out');
+    const rows = [];
+    const j = (x) => {
+      try { return JSON.stringify(x).slice(0,160); }
+      catch { return String(x).slice(0,160); }
+    };
+
+    async function step(label, fn) {
+      const row = { label, status:'…', note:'' };
+      rows.push(row);
+      update();
+      try {
+        const v = await fn();
+        row.status = 'OK';
+        row.note = j(v);
+        update();
+        return v;
+      } catch(e){
+        row.status = 'ERR';
+        row.note = String(e?.message || e);
+        update();
+        // geen throw: we willen verder testen
+      }
     }
+
+    function update(){
+      el.innerHTML = `
+        <table>
+          <thead><tr><th>Stap</th><th>Status</th><th>Opmerking</th></tr></thead>
+          <tbody>
+          ${rows.map(r=>`
+            <tr>
+              <td>${r.label}</td>
+              <td class="${r.status==='OK'?'ok':(r.status==='ERR'?'err':'muted')}">${r.status}</td>
+              <td><code>${(r.note||'').replace(/</g,'&lt;')}</code></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
     (async()=>{
-      await step('/api/config', async()=>{ const r=await fetch('/api/config',{cache:'no-store'}); return {status:r.status, body:(await r.text()).slice(0,160)}; });
-      await step('initFromConfig()', async()=>{ await S.initFromConfig(); return { apiBase:S.currentApiBase() }; });
-      await step('/api/sheets?action=ping', async()=>{
-        try{ const r=await fetch('/api/sheets?action=ping'); return {status:r.status, body:(await r.text()).slice(0,80)}; }catch(e){ throw e; }
-      }).catch(()=>{});
-      await step('GAS ping', async()=>{
-        const u=new URL(S.currentApiBase()); u.searchParams.set('action','ping');
-        const r=await fetch(u,{mode:'cors'}); return {status:r.status, body:(await r.text()).slice(0,80)};
+      const cfg = await step('/api/config', async ()=>{
+        const r = await fetch('/api/config',{cache:'no-store'});
+        const t = await r.text();
+        return {status:r.status, body:t.slice(0,160)};
       });
-      await step('Sheet:Klanten', async()=>{
-        const d=await S.fetchSheet('Klanten',{timeout:12000});
-        const len=Array.isArray(d)?d.length:Array.isArray(d?.data)?d.data.length:Array.isArray(d?.rows)?d.rows.length:Array.isArray(d?.result)?d.result.length:-1;
+
+      await step('initFromConfig()', async ()=>{
+        await S.initFromConfig();
+        return { apiBase: S.currentApiBase() };
+      });
+
+      await step('/api/sheets?action=ping', async ()=>{
+        const r = await fetch('/api/sheets?action=ping');
+        return {status:r.status, body:(await r.text()).slice(0,100)};
+      });
+
+      await step('GAS ping', async ()=>{
+        const u = new URL(S.currentApiBase());
+        u.searchParams.set('action','ping');
+        const r = await fetch(u,{mode:'cors'});
+        return {status:r.status, body:(await r.text()).slice(0,100)};
+      });
+
+      await step('Sheet:Klanten', async ()=>{
+        const d = await S.fetchSheet('Klanten',{timeout:20000});
+        const len = Array.isArray(d) ? d.length :
+          Array.isArray(d?.data)?d.data.length :
+          Array.isArray(d?.rows)?d.rows.length : -1;
         return {length:len, keys:Object.keys(d||{}).slice(0,5)};
-      }).catch(async ()=>{
-        const d=await S.fetchSheet('Leden',{timeout:12000});
-        const len=Array.isArray(d)?d.length:Array.isArray(d?.data)?d.data.length:Array.isArray(d?.rows)?d.rows.length:Array.isArray(d?.result)?d.result.length:-1;
-        rows.push({label:'Sheet:Leden (fallback)',status:'OK',note:'length='+len});
       });
-      await step('Sheet:Honden', async()=>{
-        const d=await S.fetchSheet('Honden',{timeout:12000});
-        const len=Array.isArray(d)?d.length:Array.isArray(d?.data)?d.data.length:Array.isArray(d?.rows)?d.rows.length:Array.isArray(d?.result)?d.result.length:-1;
+
+      await step('Sheet:Honden', async ()=>{
+        const d = await S.fetchSheet('Honden',{timeout:20000});
+        const len = Array.isArray(d) ? d.length :
+          Array.isArray(d?.data)?d.data.length :
+          Array.isArray(d?.rows)?d.rows.length : -1;
         return {length:len, keys:Object.keys(d||{}).slice(0,5)};
       });
     })().finally(()=>{
-      el.innerHTML = `<table><thead><tr><th>Stap</th><th>Status</th><th>Opmerking</th></tr></thead><tbody>${
-        rows.map(r=>`<tr><td>${r.label}</td><td class="${r.status==='OK'?'ok':'err'}">${r.status}</td><td><code>${(r.note||'').replace(/</g,'&lt;')}</code></td></tr>`).join('')
-      }</tbody></table><p class="muted">Stuur een screenshot van deze tabel.</p>`;
+      update();
+      el.insertAdjacentHTML('beforeend',
+        `<p class="muted" style="margin-top:.5rem">📸 Maak een screenshot van deze tabel en bewaar hem als testverslag.</p>`
+      );
     });
   </script>
 </body>
