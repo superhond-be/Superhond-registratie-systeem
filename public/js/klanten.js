@@ -1,5 +1,5 @@
 /**
- * public/js/klanten.js — Lijst + zoeken + toevoegen + acties (v0.26.6)
+ * public/js/klanten.js — Lijst + zoeken + toevoegen + acties (v0.26.6) 
  * - Voorgedrukte status-select (actief/inactief)
  * - Actiekolom (👁️ ✏️ 🗑️) via actions.js (met veilige fallback)
  * - Klik op naam opent details (met gekoppelde honden)
