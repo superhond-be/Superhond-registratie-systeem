@@ -5,70 +5,82 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Klanten – Superhond</title>
 
-  <!-- Centrale stijlen (alleen cache-buster verhogen wanneer je CSS wijzigt) -->
-  <link rel="stylesheet" href="../css/style.css?v=0.26.6" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.26.6" />
+  <!-- Centrale stijlen -->
+  <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
 </head>
 
 <body class="subpage page-klanten">
-  <!-- Topbar container -->
-  <div id="topbar"></div>
+  <header id="topbar"></header>
 
   <main class="container">
-    <header class="page-header">
-      <h1>Klanten</h1>
-      <div class="actions">
+    <h1 class="page-title">Klanten</h1>
+
+    <!-- Overzicht -->
+    <section class="card">
+      <div class="row" style="display:flex;gap:.5rem;align-items:center">
         <input id="search" class="input" placeholder="Zoek op naam of e-mail…" aria-label="Zoeken" />
-        <button id="refresh" class="btn" type="button">Verversen</button>
+        <button id="refresh" class="btn" type="button">🔄 Verversen</button>
       </div>
-    </header>
 
-    <p id="state" class="muted" aria-live="polite">—</p>
+      <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
 
-    <section class="card table-card">
-      <table class="table" id="tbl" aria-label="Klanten">
-        <thead>
-          <tr><th>Naam</th><th>E-mail</th><th>Telefoon</th><th>Status</th><th>Acties</th></tr>
-        </thead>
-        <tbody><tr><td colspan="5" class="muted">Laden…</td></tr></tbody>
-      </table>
+      <div class="table-wrap" style="margin-top:.5rem">
+        <table class="table" id="tbl">
+          <thead>
+            <tr>
+              <th>Naam</th>
+              <th>E-mail</th>
+              <th>Telefoon</th>
+              <th>Status</th>
+              <th style="width:1%">Acties</th>
+            </tr>
+          </thead>
+          <tbody><!-- dynamische rijen --></tbody>
+        </table>
+      </div>
     </section>
 
-    <section class="card">
+    <!-- Toevoegen -->
+    <section class="card" style="margin-top:1rem">
       <h2>Nieuwe klant toevoegen</h2>
-      <form id="form-add" autocomplete="off">
-        <div class="grid">
-          <label>Voornaam   <input name="voornaam"   class="input" required /></label>
-          <label>Achternaam <input name="achternaam" class="input" required /></label>
-          <label>E-mail     <input name="email"      class="input" type="email" /></label>
-          <label>Telefoon   <input name="telefoon"   class="input" /></label>
-          <label>Status
-            <select name="status" class="input">
-              <option value="actief" selected>actief</option>
-              <option value="inactief">inactief</option>
-            </select>
-          </label>
-        </div>
-        <div class="actions">
-          <button class="btn primary" type="submit">Opslaan</button>
-          <span id="form-msg" class="muted"></span>
-        </div>
+      <form id="form-add" class="form-grid" autocomplete="off">
+        <input name="voornaam"   class="input" placeholder="Voornaam"   required />
+        <input name="achternaam" class="input" placeholder="Achternaam" required />
+        <input name="email"      class="input" type="email" placeholder="E-mail" />
+        <input name="telefoon"   class="input" placeholder="Telefoon" />
+        <select name="status" class="input" aria-label="Status">
+          <option value="actief" selected>actief</option>
+          <option value="inactief">inactief</option>
+        </select>
+        <button class="btn primary" type="submit">💾 Opslaan</button>
       </form>
+      <div id="form-msg" class="muted" role="status" aria-live="polite"></div>
     </section>
   </main>
 
-  <div id="footer"></div>
+  <footer id="footer"></footer>
 
-  <!-- Scripts: EERST layout.js, DAN klanten.js. Gebruik juiste versies als cache-buster. -->
+  <!-- Scripts -->
   <script defer src="../js/layout.js?v=0.24.2-net"></script>
+
+  <!-- Fallback-mount zodat de topbar altijd verschijnt -->
   <script>
-    // Fallback-mount zodat de topbar er altijd is
     document.addEventListener('DOMContentLoaded', () => {
-      window.SuperhondUI?.mount?.({ title:'Klanten', icon:'👤', back:'../dashboard/', home:false });
+      window.SuperhondUI?.mount?.({
+        title: 'Klanten',
+        icon: '👤',
+        back: '../dashboard/',
+        home: false
+      });
     });
   </script>
-  <script type="module" src="../js/klanten.js?v=0.26.6"></script>
 
-  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p></noscript>
+  <!-- Functionele pagina-logica -->
+  <script type="module" src="../js/klanten.js?v=0.26.7"></script>
+
+  <noscript>
+    <p style="padding:1rem;color:#b91c1c">JavaScript is vereist om deze pagina te gebruiken.</p>
+  </noscript>
 </body>
 </html>
