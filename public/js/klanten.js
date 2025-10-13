@@ -1,5 +1,5 @@
 /** 
- * public/js/klanten.js — Lijst + zoeken + toevoegen + acties (v0.26.6)
+ * public/js/klanten.js — Lijst + zoeken + toevoegen + acties (v0.26.6) 
  * - Leest tab "Klanten" (fallback "Leden")
  * - Toont lijst, zoeken, toevoegen, bekijken/bewerken/verwijderen
  * - Owner-resolutie voor “Honden bij klant” via fetchSheet('Honden')
