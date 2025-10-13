@@ -8,6 +8,8 @@
   <!-- Centrale stijlen -->
   <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
+  <!-- Veilig: voorkom hardnekkige cache op iPad/Safari -->
+  <meta http-equiv="Cache-Control" content="no-store" />
 </head>
 
 <body class="subpage page-klanten">
@@ -61,18 +63,18 @@
 
   <footer id="footer"></footer>
 
-  <!-- Scripts -->
-  <script defer src="../js/layout.js?v=0.24.2-net"></script>
+  <!-- BELANGRIJK: layout.js met dezelfde versie als je release -->
+  <script defer src="../js/layout.js?v=0.26.7"></script>
 
-  <!-- Fallback-mount zodat de topbar altijd verschijnt -->
+  <!-- Fallback-mount zodat de topbar altijd verschijnt (en versie toont) -->
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      window.SuperhondUI?.mount?.({
-        title: 'Klanten',
-        icon: '👤',
-        back: '../dashboard/',
-        home: false
-      });
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        await window.SuperhondUI?.mount?.({ title:'Klanten', icon:'👤', back:'../dashboard/', home:false });
+        // snelle ping om dot meteen goed te zetten
+        const ok = await fetch('/api/ping', {cache:'no-store'}).then(r=>r.ok).catch(()=>false);
+        window.SuperhondUI?.setOnline?.(ok);
+      } catch {}
     });
   </script>
 
