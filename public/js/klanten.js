@@ -1,7 +1,10 @@
-/**
+/** 
  * public/js/klanten.js — Lijst + zoeken + toevoegen + acties (v0.26.6)
- * - Centrale online/offline: geen directe setOnline() meer
- * - Bij succes: SuperhondUI.noteSuccess(); bij fout: SuperhondUI.noteFailure()
+ * - Leest tab "Klanten" (fallback "Leden")
+ * - Toont lijst, zoeken, toevoegen, bekijken/bewerken/verwijderen
+ * - Owner-resolutie voor “Honden bij klant” via fetchSheet('Honden')
+ * - Centrale online/offline via SuperhondUI.noteSuccess/noteFailure
+ * - ES module
  */
 
 import {
@@ -17,13 +20,12 @@ import * as Actions from './actions.js';
 // ───────────────────────── Utils ─────────────────────────
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-
 const TIMEOUT_MS = 20000;
 const collator = new Intl.Collator('nl', { sensitivity: 'base', numeric: true });
 
 function debounce(fn, ms = 250) { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
 function toast(msg, type='info'){ (window.SuperhondToast||console.log)(msg, type); }
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeHtml(s){ return String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function linkEmail(s){ const v=String(s||'').trim(); return v?`<a href="mailto:${escapeHtml(v)}">${escapeHtml(v)}</a>`:''; }
 function linkTel(s){
   const v=String(s||'').trim(); if(!v) return '';
@@ -78,10 +80,20 @@ function normalizeKlant(row){
   const o = Object.create(null);
   for (const [k,v] of Object.entries(row || {})) o[String(k||'').toLowerCase()] = v;
 
-  const id = (o.id ?? o.klantid ?? o['klant id'] ?? o['id.'] ?? o['klant_id'] ?? o.col1 ?? '').toString();
-  const vn = (o.voornaam || '').toString().trim();
-  const an = (o.achternaam || '').toString().trim();
-  const naam = (o.naam || `${vn} ${an}`.trim()).toString();
+  // id mag uit verschillende varianten komen
+  const id = (o.id ?? o.klantid ?? o['klant-id'] ?? o['klant id'] ?? o['klant_id'] ?? o['id.'] ?? o.col1 ?? '').toString();
+
+  // Naam-opbouw: als alleen "Naam" bestaat, split naar voornaam/achternaam
+  let vn = (o.voornaam || '').toString().trim();
+  let an = (o.achternaam || '').toString().trim();
+  let naam = (o.naam || `${vn} ${an}`.trim()).toString();
+
+  if ((!vn || !an) && o.naam) {
+    const parts = String(o.naam).trim().split(/\s+/);
+    if (!vn && parts.length) vn = parts.shift();
+    if (!an && parts.length) an = parts.join(' ');
+    naam = (o.naam || `${vn} ${an}`.trim()).toString();
+  }
 
   return {
     id,
@@ -90,9 +102,10 @@ function normalizeKlant(row){
     naam,
     email: (o.email || '').toString(),
     telefoon: (o.telefoon || o.gsm || '').toString(),
-    status: (o.status || '').toString()
+    status: (o.status || '').toString() || 'actief'
   };
 }
+
 function normalizeHond(row){
   const o={}; for(const[k,v] of Object.entries(row||{})) o[String(k||'').toLowerCase()] = v;
   return {
@@ -100,7 +113,17 @@ function normalizeHond(row){
     name: (o.name ?? o.naam ?? '').toString(),
     breed: (o.breed ?? o.ras ?? '').toString(),
     birthdate: (o.birthdate ?? o.geboorte ?? o['geboortedatum'] ?? '').toString(),
-    ownerid: (o.ownerid ?? o['ownerid'] ?? o['eigenaar id'] ?? o['eigenaarid'] ?? o.eigenaar ?? '').toString(),
+    // ✅ owner uit “Klant-ID” varianten halen
+    ownerid: (
+      o.ownerid ??
+      o['ownerid'] ??
+      o['klant-id'] ?? 
+      o['klant id'] ?? 
+      o['klant_id'] ?? 
+      o['eigenaar id'] ?? 
+      o['eigenaarid'] ?? 
+      o.eigenaar ?? ''
+    ).toString(),
     chip: (o.chip ?? o['chipnummer'] ?? '').toString(),
     notes: (o.notes ?? o.notities ?? o.opm ?? o.opmerking ?? '').toString(),
     status: (o.status || '').toString()
@@ -115,7 +138,6 @@ function rowMatchesQuery(row, q){
 }
 
 function actionBtnsSafe({ id, entity }) {
-  // Fallback als actions.js (nog) niet beschikbaar is.
   if (typeof Actions.actionBtns === 'function') return Actions.actionBtns({ id, entity });
   return `
     <div class="sh-actions">
@@ -350,7 +372,7 @@ function ensureStatusSelectDefault(){
 let addBusy = false;
 async function onSubmitAdd(e){
   e.preventDefault();
-  if (addBusy) return; // dubbelklikken voorkomen
+  if (addBusy) return;
   addBusy = true;
 
   const form=e.currentTarget;
@@ -402,7 +424,6 @@ async function onSubmitAdd(e){
 
 // ───────────────────────── Mount ─────────────────────────
 async function main(){
-  // Topbar + terugknop
   if (window.SuperhondUI?.mount) {
     document.body.classList.add('subpage');
     window.SuperhondUI.mount({ title:'Klanten', icon:'👤', back:'../dashboard/', home:false });
@@ -410,19 +431,15 @@ async function main(){
 
   await initFromConfig();
 
-  // status-select (voorgedrukt)
   ensureStatusSelectDefault();
 
-  // events
   $('#refresh')?.addEventListener('click', refresh);
   $('#search')?.addEventListener('input', doFilter);
   $('#form-add')?.addEventListener('submit', onSubmitAdd);
 
-  // Forceer submit type (fix “Opslaan” niet actief)
   const submitBtn = $('#form-add button, #form-add [type="submit"]');
   if (submitBtn) submitBtn.type = 'submit';
 
-  // Actieknoppen in tabel
   if (typeof Actions.wireActionHandlers === 'function') {
     Actions.wireActionHandlers('#tbl', {
       view:   (id)=> openKlantView(id),
@@ -430,7 +447,6 @@ async function main(){
       delete: (id)=> deleteKlant(id),
     });
   } else {
-    // simpele fallback event-delegation
     $('#tbl')?.addEventListener('click', (e)=>{
       const b = e.target.closest('[data-act]'); if (!b) return;
       const id = b.dataset.id;
@@ -440,13 +456,11 @@ async function main(){
     });
   }
 
-  // Klik op naam => bekijken
   $('#tbl')?.addEventListener('click', (e)=>{
     const b = e.target.closest('.act-open'); if (!b) return;
     openKlantView(b.dataset.id);
   });
 
-  // Enter → submit
   $$('#form-add input').forEach(inp=>{
     inp.addEventListener('keydown',(e)=>{
       if(e.key==='Enter'){ e.preventDefault(); $('#form-add')?.requestSubmit(); }
