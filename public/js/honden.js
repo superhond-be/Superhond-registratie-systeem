@@ -1,5 +1,5 @@
 /**
- * public/js/honden.js — Lijst + zoeken + toevoegen (v0.26.6)
+ * public/js/honden.js — Lijst + zoeken + toevoegen (v0.26.6) 
  * - Actiekolom (👁️ ✏️ 🗑️) via actions.js
  * - Owner-koppeling verplicht (ownerId moet bestaan)
  * - Typeahead op bestaande klanten (bij toevoegen & wijzigen)
