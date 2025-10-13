@@ -1,10 +1,11 @@
 /**
- * public/js/honden.js — Lijst + zoeken + toevoegen (v0.26.1-net)
+ * public/js/honden.js — Lijst + zoeken + toevoegen (v0.26.6)
  * - Actiekolom (👁️ ✏️ 🗑️) via actions.js
  * - Owner-koppeling verplicht (ownerId moet bestaan)
- * - Typeahead op bestaande klanten (voor ownerId) bij toevoegen & wijzigen
+ * - Typeahead op bestaande klanten (bij toevoegen & wijzigen)
  * - Update/Delete via postAction('hond', ...)
- * - Centrale online/offline: noteSuccess()/noteFailure()
+ * - Centrale online/offline: SuperhondUI.noteSuccess()/noteFailure()
+ * - ES module
  */
 
 import {
@@ -23,15 +24,17 @@ import {
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
+const TIMEOUT_MS = 20000;
+const collator = new Intl.Collator('nl', { sensitivity: 'base', numeric: true });
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 function debounce(fn, ms = 250) {
   let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
-
 function toast(msg, type='info'){
   if (typeof window.SuperhondToast === 'function') window.SuperhondToast(msg, type);
   else console[(type === 'error' ? 'error' : 'log')](msg);
 }
-
 function setState(text, kind='muted'){
   const el = $('#state');
   if (!el) return;
@@ -39,13 +42,20 @@ function setState(text, kind='muted'){
   el.textContent = text;
   el.setAttribute('role', kind === 'error' ? 'alert' : 'status');
 }
-
 function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, c =>
+  return String(s ?? '').replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
   );
 }
+function isIsoDate(s){ return ISO_DATE_RE.test(String(s||'').trim()); }
 
+function fmtDateISOtoLocal(iso){
+  // 'YYYY-MM-DD' → 'DD/MM/YYYY'
+  const s = String(iso || '').trim();
+  if (!ISO_DATE_RE.test(s)) return s || '';
+  const [y,m,d] = s.split('-');
+  return `${d}/${m}/${y}`;
+}
 function clearErrors(form){
   $$('.input-error', form).forEach(el => el.classList.remove('input-error'));
   $$('.field-error', form).forEach(el => el.remove());
@@ -59,18 +69,7 @@ function setFieldError(input, msg){
   input.insertAdjacentElement('afterend', hint);
 }
 
-function fmtDateISOtoLocal(iso){
-  // 'YYYY-MM-DD' → 'DD/MM/YYYY'
-  const s = String(iso || '').trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s || '';
-  const [y,m,d] = s.split('-');
-  return `${d}/${m}/${y}`;
-}
-
 // ───────────────────────── Data & helpers ─────────────────────────
-const TIMEOUT_MS = 20000;
-const collator = new Intl.Collator('nl', { sensitivity: 'base', numeric: true });
-
 let allRows = [];        // honden
 let viewRows = [];
 let lastAbort = null;
@@ -84,8 +83,8 @@ function toArrayRows(x) {
   if (x && Array.isArray(x.data)) return x.data;
   if (x && Array.isArray(x.rows)) return x.rows;
   if (x && Array.isArray(x.result)) return x.result;
-  if (x && x.ok === true && Array.isArray(x.data)) return x.data;     // legacy ok+data
-  if (x && x.data && Array.isArray(x.data.rows)) return x.data.rows;  // nested data.rows
+  if (x && x.ok === true && Array.isArray(x.data)) return x.data;
+  if (x && x.data && Array.isArray(x.data.rows)) return x.data.rows;
   throw new Error('Server gaf onverwachte respons (geen lijst).');
 }
 
@@ -109,7 +108,18 @@ function normOwnerRow(row){
   for (const [k,v] of Object.entries(row || {})) {
     o[String(k||'').toLowerCase()] = v;
   }
-  const id = (o.id ?? o.klantid ?? o['klant id'] ?? o['id.'] ?? o['klant_id'] ?? o.col1 ?? '').toString();
+  // ✅ herken ook "Klant-ID" varianten
+  const id = (
+    o.id ??
+    o.klantid ??
+    o['klant-id'] ??
+    o['klant id'] ??
+    o['klant_id'] ??
+    o['id.'] ??
+    o.col1 ??
+    ''
+  ).toString();
+
   const vn = (o.voornaam || '').toString().trim();
   const an = (o.achternaam || '').toString().trim();
   const naam = (o.naam || `${vn} ${an}`.trim() || '').toString();
@@ -136,10 +146,21 @@ function normalizeRow(row){
   o.name      = (o.name ?? o.naam ?? '').toString();
   o.breed     = (o.breed ?? o.ras ?? '').toString();
   o.birthdate = (o.birthdate ?? o.geboorte ?? o['geboortedatum'] ?? '').toString();
-  o.ownerid   = (o.ownerid ?? o['ownerid'] ?? o['eigenaarid'] ?? o['eigenaar (id)'] ?? o.eigenaar ?? '').toString();
+  // ✅ owner-id: ook “Klant-ID” varianten
+  o.ownerid   = (
+    o.ownerid ??
+    o['ownerid'] ??
+    o['klant-id'] ??
+    o['klant id'] ??
+    o['klant_id'] ??
+    o['eigenaarid'] ??
+    o['eigenaar (id)'] ??
+    o.eigenaar ??
+    ''
+  ).toString();
   o.chip      = (o.chip ?? o['chipnummer'] ?? '').toString();
   o.notes     = (o.notes ?? o.notities ?? o.opm ?? o.opmerking ?? '').toString();
-  o.status    = (o.status ?? '').toString();
+  o.status    = (o.status ?? '').toString() || 'actief';
   return o;
 }
 
@@ -327,7 +348,6 @@ function openHondEdit(id){
     </form>`;
   modal(html, { title: 'Hond wijzigen' });
 
-  // typeahead op owner in edit
   attachOwnerTypeahead($('#edit-owner'), { prefillId: r.ownerid });
 
   $('#edit-form')?.addEventListener('submit', async (e)=>{
@@ -344,9 +364,8 @@ function openHondEdit(id){
       status:    String(fd.get('status')||'').trim() || 'actief'
     };
 
-    // validatie
     if (!payload.name) { toast('Naam is verplicht', 'error'); return; }
-    if (payload.birthdate && !/^\d{4}-\d{2}-\d{2}$/.test(payload.birthdate)) {
+    if (payload.birthdate && !isIsoDate(payload.birthdate)) {
       toast('Ongeldige geboortedatum (YYYY-MM-DD)', 'error'); return;
     }
     if (!ownersById.has(payload.ownerId)) {
@@ -355,14 +374,14 @@ function openHondEdit(id){
 
     try{
       await postAction('hond','update', payload);
-      window.SuperhondUI?.noteSuccess?.();     // ✅ centrale online
-      Object.assign(r, normalizeRow(payload));
+      window.SuperhondUI?.noteSuccess?.();
+      Object.assign(r, normalizeRow(payload), { id: r.id });
       renderTable(applyActiveFilter());
       closeModal();
       toast('Wijzigingen opgeslagen','ok');
     }catch(err){
       console.error(err);
-      window.SuperhondUI?.noteFailure?.();     // ❌ centrale online
+      window.SuperhondUI?.noteFailure?.(err);
       toast('Opslaan mislukt: '+(err?.message||err), 'error');
     }
   });
@@ -375,13 +394,13 @@ async function deleteHond(id){
   if (!confirm(`Weet je zeker dat je "${r.name || 'deze hond'}" wil verwijderen?`)) return;
   try{
     await postAction('hond','delete', { id });
-    window.SuperhondUI?.noteSuccess?.();       // ✅
+    window.SuperhondUI?.noteSuccess?.();
     allRows = allRows.filter(x => String(x.id)!==String(id));
     renderTable(applyActiveFilter());
     toast('Hond verwijderd', 'ok');
   }catch(err){
     console.error(err);
-    window.SuperhondUI?.noteFailure?.();       // ❌
+    window.SuperhondUI?.noteFailure?.(err);
     toast('Verwijderen mislukt: '+(err?.message||err), 'error');
   }
 }
@@ -403,14 +422,13 @@ async function refresh(){
 
     // eigenaars eerst (nodig voor labeling/validatie)
     const ownersRaw = await fetchOwnersArray({ timeout: TIMEOUT_MS, signal: ac.signal });
-    // als we hier komen, was er netwerk → success
     window.SuperhondUI?.noteSuccess?.();
     owners = ownersRaw.map(normOwnerRow).filter(o => o.id);
     buildOwnersIndex(owners);
 
     // honden
     const raw = await fetchSheet('Honden', { timeout: TIMEOUT_MS, signal: ac.signal });
-    window.SuperhondUI?.noteSuccess?.(); // tweede succes
+    window.SuperhondUI?.noteSuccess?.();
     const rows = toArrayRows(raw);
     allRows = rows.map(normalizeRow);
     allRows.sort((a,b) => collator.compare(a.name||'', b.name||''));
@@ -422,7 +440,7 @@ async function refresh(){
     console.error(err);
     setState(`❌ Fout bij laden: ${err?.message || err}`, 'error');
     toast('Laden van honden mislukt', 'error');
-    window.SuperhondUI?.noteFailure?.(); // check ping en zet dot alleen rood bij échte offline
+    window.SuperhondUI?.noteFailure?.(err);
   }
 }
 
@@ -430,7 +448,7 @@ async function refresh(){
 function wireAddFormValidation(){
   const form = $('#form-add'); if (!form) return;
   const btn  = form.querySelector('[type="submit"]') || form.querySelector('button') || null;
-  if (btn) btn.type = 'submit'; // forceer submit-type
+  if (btn) btn.type = 'submit';
   const name = form.querySelector('[name="name"]');
   const owner = form.querySelector('[name="ownerId"]');
   const birth = form.querySelector('[name="birthdate"]');
@@ -439,7 +457,7 @@ function wireAddFormValidation(){
     const okName  = !!String(name?.value||'').trim();
     const oid     = String(owner?.value||'').trim();
     const okOwner = oid && ownersById.has(oid);
-    const okDate  = !birth?.value || /^\d{4}-\d{2}-\d{2}$/.test(birth.value);
+    const okDate  = !birth?.value || isIsoDate(birth.value);
     const ok = okName && okOwner && okDate;
     if (btn) btn.disabled = !ok;
     return ok;
@@ -475,7 +493,7 @@ async function onSubmitAdd(e){
   if (!name)    { setFieldError(form.querySelector('[name="name"]'), 'Naam is verplicht'); hasErr = true; }
   if (!ownerId) { setFieldError(form.querySelector('[name="ownerId"]'), 'Eigenaar is verplicht'); hasErr = true; }
   if (ownerId && !ownersById.has(ownerId)) { setFieldError(form.querySelector('[name="ownerId"]'), 'Kies een bestaande eigenaar'); hasErr = true; }
-  if (birthdate && !/^\d{4}-\d{2}-\d{2}$/.test(birthdate)) {
+  if (birthdate && !isIsoDate(birthdate)) {
     setFieldError(form.querySelector('[name="birthdate"]'), 'Ongeldige datum (YYYY-MM-DD)'); hasErr = true;
   }
   if (hasErr) return;
@@ -487,14 +505,13 @@ async function onSubmitAdd(e){
 
   try {
     const res = await saveHond(payload);  // verwacht { id }
-    window.SuperhondUI?.noteSuccess?.();  // ✅
+    window.SuperhondUI?.noteSuccess?.();
     const id  = res?.id || '';
     toast('✅ Hond opgeslagen', 'ok');
 
     const nieuw = normalizeRow({ id, ...payload });
     allRows.push(nieuw);
     allRows.sort((a,b) => collator.compare(a.name||'', b.name||''));
-
     renderTable(applyActiveFilter());
 
     if (msg) { msg.textContent = `✅ Bewaard (id: ${id})`; }
@@ -503,7 +520,7 @@ async function onSubmitAdd(e){
     first && first.focus();
   } catch (err) {
     console.error(err);
-    window.SuperhondUI?.noteFailure?.(); // ❌
+    window.SuperhondUI?.noteFailure?.(err);
     if (msg) { msg.className = 'error'; msg.textContent = `❌ Opslaan mislukt: ${err?.message || err}`; }
     toast('Opslaan mislukt', 'error');
   }
@@ -511,35 +528,28 @@ async function onSubmitAdd(e){
 
 // ───────────────────────── Mount ─────────────────────────
 async function main(){
-  // Topbar
   if (window.SuperhondUI?.mount) {
     document.body.classList.add('subpage');
     window.SuperhondUI.mount({ title:'Honden', icon:'🐶', back:'../dashboard/' });
   }
 
-  // init config
   await initFromConfig();
 
-  // events
   $('#refresh')?.addEventListener('click', refresh);
   $('#search')?.addEventListener('input', doFilter);
   $('#form-add')?.addEventListener('submit', onSubmitAdd);
 
-  // Actieknoppen
   wireActionHandlers('#tbl', {
     view:   (id)=> openHondView(id),
     edit:   (id)=> openHondEdit(id),
     delete: (id)=> deleteHond(id),
   });
 
-  // initial load (laadt ook eigenaars)
   await refresh();
 
-  // setup typeahead + validatie voor 'nieuwe hond'
   setupOwnerTypeaheadForAdd();
   wireAddFormValidation();
 
-  // Enter → submit
   $$('#form-add input').forEach(inp => {
     inp.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -550,5 +560,4 @@ async function main(){
   });
 }
 
-// Start
 document.addEventListener('DOMContentLoaded', main, { once:true });
