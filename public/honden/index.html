@@ -5,66 +5,72 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Honden – Superhond</title>
 
-  <link rel="stylesheet" href="../css/style.css?v=0.26.6" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.26.6" />
+  <!-- Centrale stijlen -->
+  <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
 </head>
 
 <body class="subpage page-honden">
-  <div id="topbar"></div>
+  <header id="topbar"></header>
 
   <main class="container">
-    <header class="page-header">
-      <h1>Honden</h1>
-      <div class="actions">
-        <input id="search" class="input" placeholder="Zoek op naam, ras, eigenaar-id…" />
-        <button id="refresh" class="btn" type="button">Verversen</button>
+    <h1 class="page-title">Honden</h1>
+
+    <!-- Overzicht -->
+    <section class="card">
+      <div class="row" style="display:flex;gap:.5rem;align-items:center">
+        <input id="search" class="input" placeholder="Zoek op naam, ras of eigenaar-ID…" />
+        <button id="refresh" class="btn" type="button">🔄 Verversen</button>
       </div>
-    </header>
 
-    <p id="state" class="muted" aria-live="polite">—</p>
+      <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
 
-    <section class="card table-card">
-      <table class="table" id="tbl" aria-label="Honden">
-        <thead>
-          <tr><th>Naam</th><th>Ras</th><th>Geboorte</th><th>Eigenaar (ID)</th><th>Acties</th></tr>
-        </thead>
-        <tbody><tr><td colspan="5" class="muted">Laden…</td></tr></tbody>
-      </table>
+      <div class="table-wrap" style="margin-top:.5rem">
+        <table class="table" id="tbl">
+          <thead>
+            <tr>
+              <th>Naam</th>
+              <th>Ras</th>
+              <th>Geboorte</th>
+              <th>Eigenaar (ID)</th>
+              <th style="width:1%">Acties</th>
+            </tr>
+          </thead>
+          <tbody><!-- dynamische rijen --></tbody>
+        </table>
+      </div>
     </section>
 
-    <section class="card">
-      <h2>Nieuwe hond</h2>
-      <form id="form-add" autocomplete="off">
-        <div class="grid">
-          <label>Naam          <input class="input" name="name" required /></label>
-          <label>Ras           <input class="input" name="breed" /></label>
-          <label>Geboortedatum <input class="input" name="birthdate" type="date" /></label>
-          <label>Eigenaar (ID) <input class="input" name="ownerId" autocomplete="off" placeholder="Type om eigenaar te zoeken…" /></label>
-          <label>Chip          <input class="input" name="chip" /></label>
-          <label>Notities      <textarea class="input" name="notes" rows="2"></textarea></label>
-          <label>Status
-            <select class="input" name="status">
-              <option value="actief" selected>actief</option>
-              <option value="inactief">inactief</option>
-            </select>
-          </label>
-        </div>
-        <div class="actions">
-          <button class="btn primary" type="submit">Opslaan</button>
-          <span id="form-msg" class="muted"></span>
-        </div>
+    <!-- Toevoegen -->
+    <section class="card" style="margin-top:1rem">
+      <h2>Nieuwe hond toevoegen</h2>
+      <form id="form-add" class="form-grid" autocomplete="off">
+        <input name="name" class="input" placeholder="Naam" required />
+        <input name="breed" class="input" placeholder="Ras" />
+        <input name="birthdate" class="input" type="date" placeholder="Geboortedatum" />
+        <input name="ownerId" class="input" placeholder="Eigenaar ID (klant-id)" required />
+        <input name="chip" class="input" placeholder="Chipnummer" />
+        <input name="notes" class="input" placeholder="Notities" />
+        <button class="btn primary" type="submit">💾 Opslaan</button>
       </form>
+      <div id="form-msg" class="muted" role="status" aria-live="polite"></div>
     </section>
   </main>
 
-  <div id="footer"></div>
+  <footer id="footer"></footer>
 
+  <!-- Scripts -->
   <script defer src="../js/layout.js?v=0.24.2-net"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      window.SuperhondUI?.mount?.({ title:'Honden', icon:'🐶', back:'../dashboard/' });
+      window.SuperhondUI?.mount?.({
+        title: 'Honden',
+        icon: '🐶',
+        back: '../dashboard/',
+        home: false
+      });
     });
   </script>
-  <script type="module" src="../js/honden.js?v=0.26.6"></script>
+  <script type="module" src="../js/honden.js?v=0.26.7"></script>
 </body>
 </html>
