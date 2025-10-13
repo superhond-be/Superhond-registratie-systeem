@@ -5,30 +5,20 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Superhond — Dashboard</title>
 
-  <!-- Centrale UI -->
-  <link rel="stylesheet" href="../css/style.css?v=0.20.3" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.3" />
-
-  <!-- Sheets-config: backward compatible fallback -->
-  <script>
-    // Voorbeeld: 'https://script.google.com/macros/s/AKfycb.../exec'
-    window.SUPERHOND_SHEETS_URL = window.SUPERHOND_SHEETS_URL || 'https://script.google.com/macros/s/JOUW_EXEC_URL/exec';
-  </script>
+  <!-- Centrale UI (versie 0.26.7) -->
+  <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
 
   <!-- Dashboard-specifiek: GELE topbar hard-forceren -->
   <style>
-    /* Altijd geel op dashboard, zowel header als inner bar */
+    /* Altijd geel op dashboard, header én inner bar */
     body.dashboard-page #topbar,
     body.dashboard-page #topbar .topbar-inner {
-      background: var(--accent) !important;
+      background: var(--accent, #f4c400) !important;
       color: #000 !important;
     }
-    /* (optioneel) back-knop stijl op geel */
-    body.dashboard-page .btn-back {
-      border-color:#e5e7eb; background:#fff; color:#111827;
-    }
+    body.dashboard-page .btn-back { border-color:#e5e7eb; background:#fff; color:#111827; }
 
-    /* Kleine lokale tweaks voor dit scherm */
     .tabs{display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
     .tab{position:relative;padding:.4rem .8rem;border:1px solid #e5e7eb;border-radius:.5rem;background:#fff;cursor:pointer}
     .tab.active{background:var(--accent,#f4c400);font-weight:600}
@@ -53,9 +43,18 @@
 
     <!-- TEGELS -->
     <nav class="tiles" aria-label="Hoofdmenu">
-      <a class="tile" href="../klanten/"><span class="tile-icon">👤</span><div class="tile-body"><span class="tile-title">Klanten</span></div></a>
-      <a class="tile" href="../honden/"><span class="tile-icon">🐶</span><div class="tile-body"><span class="tile-title">Honden</span></div></a>
-      <a class="tile" href="../strippenkaarten/"><span class="tile-icon">🎫</span><div class="tile-body"><span class="tile-title">Strippenkaarten</span></div></a>
+      <!-- ✅ let op de hrefs: elke tegel naar de juiste map -->
+      <a class="tile" href="../klanten/">
+        <span class="tile-icon">👤</span><div class="tile-body"><span class="tile-title">Klanten</span></div>
+      </a>
+
+      <a class="tile" href="../honden/">
+        <span class="tile-icon">🐶</span><div class="tile-body"><span class="tile-title">Honden</span></div>
+      </a>
+
+      <a class="tile" href="../strippenkaarten/">
+        <span class="tile-icon">🎫</span><div class="tile-body"><span class="tile-title">Strippenkaarten</span></div>
+      </a>
 
       <a class="tile badged" href="../lessen/">
         <span class="tile-icon">📅</span>
@@ -66,7 +65,6 @@
         <span class="badge-dot" id="lessen-week-badge" aria-label="Aantal lessen">0</span>
       </a>
 
-      <!-- 📚 Klassen -->
       <a class="tile badged" href="../klassen/">
         <span class="tile-icon">📚</span>
         <div class="tile-body">
@@ -76,7 +74,6 @@
         <span class="badge-dot" id="klassen-badge" aria-label="Aantal actieve klassen">0</span>
       </a>
 
-      <!-- 📦 Lessenreeksen -->
       <a class="tile badged" href="../lessenreeks/">
         <span class="tile-icon">📦</span>
         <div class="tile-body">
@@ -129,32 +126,29 @@
 
   <footer id="footer" class="footer"></footer>
 
-  <!-- Basis scripts -->
-  <script src="../js/layout.js?v=0.20.3" defer></script>
-  <script src="../js/agenda.js?v=0.20.3" defer></script>
-  <script src="../js/admin-gate.js?v=0.20.3" defer></script>
+  <!-- Scripts -->
+  <!-- Layout toont rechtsboven versie: haalt /api/config (server v0.26.7) + ping -->
+  <script defer src="../js/layout.js?v=0.24.2-net"></script>
+  <!-- Agenda- en admin-gate logica op 0.26.7 -->
+  <script defer src="../js/agenda.js?v=0.26.7"></script>
+  <script defer src="../js/admin-gate.js?v=0.26.7"></script>
 
-  <!-- Tellers: Sheets-first (met baseUrl), fallback op store.js -->
+  <!-- Tellers & badges — gebruikt centrale /api/config via sheets.js -->
   <script type="module">
     const safeImport = async (path) => {
       try { return await import(path); }
       catch (e) { console.error(`Import mislukt: ${path}`, e); return {}; }
     };
 
-    const sheets = await safeImport('../js/sheets.js?v=0.20.3');
-    const store  = await safeImport('../js/store.js?v=0.20.3');
+    // Let op versie: jouw sheets.js met initFromConfig/fetchSheet
+    const sheets = await safeImport('../js/sheets.js?v=0.26.6');
 
     const fetchSheet     = sheets.fetchSheet     || (async () => { throw new Error('sheets.fetchSheet ontbreekt'); });
-    const normStatus     = sheets.normStatus     || ((s) => String(s||'').toLowerCase());
-    const setBaseUrl     = sheets.setBaseUrl     || (() => {});
     const initFromConfig = sheets.initFromConfig || (async () => {});
-    const ensureMigrated = store.ensureMigrated  || (() => {});
-    const getKlassen     = store.getKlassen      || (() => []);
-    const getReeksen     = store.getReeksen      || (() => []);
-    const isActiefStatus = store.isActiefStatus  || ((s) => String(s||'').toLowerCase()==='actief');
+    const normStatus     = (s) => String((s ?? '').toString().toLowerCase());
+    const isActief       = (s) => normStatus(s) === 'actief';
 
-    if (window.SUPERHOND_SHEETS_URL) setBaseUrl(window.SUPERHOND_SHEETS_URL);
-    await initFromConfig(); // haalt centrale apiBase op
+    await initFromConfig(); // haalt apiBase uit /api/config of localStorage
 
     async function updateBadges() {
       try {
@@ -162,28 +156,23 @@
           fetchSheet('Klassen'),
           fetchSheet('Reeksen'),
         ]);
-        const actKl = (klassen || []).filter(k => normStatus(k.status) === 'actief').length;
-        const actRs = (reeksen || []).filter(r => normStatus(r.status) === 'actief').length;
-        setBadges(actKl, actRs);
-        return;
-      } catch (e) {
-        console.warn('Sheets-laden faalde, val terug op local store:', e?.message || e);
-      }
+        const actKl = (klassen || []).filter(k => isActief(k.status)).length;
+        const actRs = (reeksen || []).filter(r => isActief(r.status)).length;
 
-      try {
-        ensureMigrated();
-        const actKl = (getKlassen() || []).filter(k => isActiefStatus(k.status)).length;
-        const actRs = (getReeksen() || []).filter(r => isActiefStatus(r.status)).length;
-        setBadges(actKl, actRs);
+        document.getElementById('klassen-badge').textContent = String(actKl);
+        document.getElementById('klassen-sub').textContent   = actKl ? `${actKl} actief` : '—';
+
+        document.getElementById('reeksen-badge').textContent = String(actRs);
+        document.getElementById('reeksen-sub').textContent   = actRs ? `${actRs} actief` : '—';
       } catch (e) {
-        console.error('Badges updaten mislukt:', e);
+        console.warn('Badges updaten faalde:', e?.message || e);
       }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      if (window.SuperhondUI?.mount) {
-        SuperhondUI.mount({ title: 'Superhond', icon: '🐾', home: true });
-      }
+      // Mount topbar/footer in dashboard-modus (geel)
+      window.SuperhondUI?.mount?.({ title: 'Superhond', icon: '🐾', home: true });
+
       updateBadges();
     });
   </script>
