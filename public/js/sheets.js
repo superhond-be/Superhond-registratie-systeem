@@ -1,209 +1,161 @@
-/**
- * public/js/sheets.js — proxy-first + GAS fallback + nette netstatus (v0.26.4-net)
- * Exports:
- *   initFromConfig, fetchSheet, fetchAction, postAction,
- *   saveKlant, saveHond, saveKlas, saveLes,
- *   currentApiBase
- */
+// public/js/sheets.js — v0.27.1 (diagnostics+timeouts)
 
-const PROXY = '/api/sheets';
-const CFG_EP = '/api/config';
-const LS_KEY = 'superhond:apiBase';
+const DEFAULT_TIMEOUT = 15_000;         // 15s (mag je verhogen)
+const DEFAULT_RETRIES = 1;              // 1 retry (dus max 2 pogingen)
+const LS_KEY_BASE     = 'superhond:apiBase';
 
-let apiBase = '';   // e.g. https://script.google.com/macros/s/.../exec
+let GAS_BASE_URL = '';
 
-// ───────────────────────── Netstatus helpers ─────────────────────────
-const UI = globalThis.SuperhondUI || {};
-const netOK   = (...a) => { try{ UI.noteSuccess?.(...a); }catch{} };
-const netFAIL = (...a) => { try{ UI.noteFailure?.(...a); }catch{} };
+/* ── Base helpers ── */
+function sanitizeExecUrl(url = '') {
+  try {
+    const u = new URL(String(url).trim());
+    if (u.hostname === 'script.google.com' && u.pathname.startsWith('/macros/s/') && u.pathname.endsWith('/exec')) {
+      return `${u.origin}${u.pathname}`;
+    }
+  } catch {}
+  return '';
+}
+export function setBaseUrl(url) {
+  const safe = sanitizeExecUrl(url);
+  GAS_BASE_URL = safe;
+  try { safe ? localStorage.setItem(LS_KEY_BASE, safe) : localStorage.removeItem(LS_KEY_BASE); } catch {}
+}
+export function getBaseUrl(){ return GAS_BASE_URL; }
 
-// onderscheid netwerk vs. functionele fout
-function isNetError(err){
-  return err?.name === 'AbortError' ||
-         err?.message === 'timeout'  ||
-         (err instanceof TypeError);
+export async function initFromConfig() {
+  if (!GAS_BASE_URL && typeof window.SUPERHOND_SHEETS_URL === 'string') setBaseUrl(window.SUPERHOND_SHEETS_URL);
+  if (!GAS_BASE_URL) { try { const ls = localStorage.getItem(LS_KEY_BASE); if (ls) setBaseUrl(ls); } catch {} }
 }
 
-function toJSON(r){
-  return r.text().then(t=>{
-    try { return JSON.parse(t); }
-    catch(e){ throw new Error(`Geen geldige JSON (status ${r.status}): ${t.slice(0,140)}`); }
+/* ── Fetch utils ── */
+function peek(s, n=160){ return String(s||'').replace(/\s+/g,' ').slice(0,n); }
+
+async function fetchWithTimeout(url, init={}, timeoutMs=DEFAULT_TIMEOUT){
+  const ac = new AbortController();
+  const to = setTimeout(() => ac.abort(new Error('timeout')), timeoutMs);
+  try { return await fetch(url, { ...init, signal: ac.signal, cache:'no-store' }); }
+  finally { clearTimeout(to); }
+}
+
+async function withRetry(doRequest, {retries=DEFAULT_RETRIES, baseDelay=350}={}){
+  let last;
+  for (let a=0; a<=retries; a++){
+    const t0 = performance.now();
+    try {
+      const out = await doRequest(a, t0);
+      return out;
+    } catch (err){
+      last = err;
+      const transient = err?.name === 'AbortError' || /timeout|Failed to fetch|NetworkError/i.test(String(err));
+      if (a < retries && transient){
+        const wait = baseDelay * Math.pow(2, a);
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
+      break;
+    }
+  }
+  throw last;
+}
+
+/* ── URL builder ── */
+function buildUrl(params){
+  if (!GAS_BASE_URL) throw new Error('GAS_BASE_URL ontbreekt (initFromConfig/setBaseUrl)');
+
+  const u = new URL(GAS_BASE_URL);
+  Object.entries(params||{}).forEach(([k,v]) => { if (v!=null && v!=='') u.searchParams.set(k, String(v)); });
+  // cache-buster
+  u.searchParams.set('t', Date.now().toString());
+  return u.toString();
+}
+
+/* ── Kern GET/POST ── */
+async function getJSON(params, {timeout=DEFAULT_TIMEOUT}={}){
+  return withRetry(async () => {
+    const url = buildUrl(params);
+    const r = await fetchWithTimeout(url, {method:'GET'}, timeout);
+    const text = await r.text();
+    let json; try { json = JSON.parse(text); } catch { throw new Error(`Geen geldige JSON (HTTP ${r.status}): ${peek(text)}`); }
+    if (!r.ok || json?.ok === false) throw new Error(json?.error || `HTTP ${r.status}: ${peek(text)}`);
+    return json;
+  });
+}
+async function postJSON(body, params, {timeout=DEFAULT_TIMEOUT}={}){
+  const payload = (typeof body === 'string') ? body : JSON.stringify(body||{});
+  return withRetry(async () => {
+    const url = buildUrl(params);
+    const r = await fetchWithTimeout(url,
+      { method:'POST', headers:{'Content-Type':'text/plain; charset=utf-8'}, body:payload },
+      timeout
+    );
+    const text = await r.text();
+    let json; try { json = JSON.parse(text); } catch { throw new Error(`Geen geldige JSON (HTTP ${r.status}): ${peek(text)}`); }
+    if (!r.ok || json?.ok === false) throw new Error(json?.error || `HTTP ${r.status}: ${peek(text)}`);
+    return json;
   });
 }
 
-function okData(obj){
-  // accepteer {ok:true,data:[..]} of direct een array
-  if (Array.isArray(obj)) return obj;
-  if (obj && obj.ok === true && Array.isArray(obj.data)) return obj.data;
-  if (obj && Array.isArray(obj.data)) return obj.data;
-  if (obj && Array.isArray(obj.rows)) return obj.rows;
-  if (obj && Array.isArray(obj.result)) return obj.result;
-  throw new Error('Server gaf onverwachte respons');
+/* ── Publiek API ── */
+export function normStatus(s){ return String(s ?? '').trim().toLowerCase(); }
+
+/** Legacy tabs: klanten|honden|klassen|lessen|reeksen|all|diag */
+export async function fetchSheet(tabName, {timeout}={}){
+  const mode = String(tabName||'').toLowerCase();
+  if (!mode) throw new Error('tabName vereist');
+  const json = await getJSON({ mode }, { timeout });
+  return json?.data || [];
 }
 
-function withTimeout(p, ms=15000, signal){
-  if (!ms) return p;
-  return Promise.race([
-    p,
-    new Promise((_,rej)=>{
-      const t = setTimeout(()=>{ const e=new Error('timeout'); e.name='AbortError'; rej(e); }, ms);
-      signal?.addEventListener?.('abort', ()=>{ clearTimeout(t); rej(Object.assign(new Error('AbortError'),{name:'AbortError'})); });
-    })
-  ]);
+/** Moderne GET action (als je die in GAS hebt) */
+export async function fetchAction(action, params={}, {timeout}={}){
+  const a = String(action||'').trim();
+  if (!a) throw new Error('action vereist');
+  const json = await getJSON({ action:a, ...params }, { timeout });
+  return json?.data || [];
 }
 
-// ───────────────────────── Init ─────────────────────────
-export async function initFromConfig(){
-  // 1) query override (alleen lokaal; overschrijft niet serverconfig)
+/** Moderne POST action */
+export async function postAction(entity, action, payload={}, {timeout}={}){
+  const e = String(entity||'').trim().toLowerCase();
+  const a = String(action||'').trim().toLowerCase();
+  if (!e || !a) throw new Error('entity en action vereist');
+  const json = await postJSON({ entity:e, action:a, payload }, {}, { timeout });
+  return json?.data || {};
+}
+
+/* Convenience savers (als je GAS doPost(mode=...) gebruikt) */
+export const saveKlant = (data, opts) => postJSON(data, { mode:'saveKlant' }, opts).then(j => j.data || {});
+export const saveHond  = (data, opts) => postJSON(data, { mode:'saveHond'  }, opts).then(j => j.data || {});
+
+/* ── Diagnostiek (console) ── */
+async function diagOnce(mode, timeout=12_000){
+  const start = performance.now();
   try{
-    const q = new URLSearchParams(location.search);
-    const qBase = q.get('apiBase');
-    if (qBase) localStorage.setItem(LS_KEY, qBase);
-  }catch{}
-
-  // 2) /api/config (primair)
-  try{
-    const r = await fetch(CFG_EP, { cache:'no-store' });
-    if (r.ok) {
-      const cfg = await r.json().catch(()=> ({}));
-      if (cfg?.apiBase) apiBase = cfg.apiBase;
-      netOK('config');
-    } else {
-      // server bereikbaar ⇒ functionele fout, maar online
-      netOK('config-http');
-    }
-  }catch(e){
-    // netwerkprobleem naar node-server
-    netFAIL(e);
-  }
-
-  // 3) localStorage fallback
-  if (!apiBase) {
-    try {
-      const ls = localStorage.getItem(LS_KEY);
-      if (ls) apiBase = ls;
-    } catch {}
-  }
-
-  // 4) snelle online check: proxy OF GAS
-  try{
-    const rp = await fetch(`${PROXY}?action=ping`, { cache:'no-store' });
-    rp.ok ? netOK('proxy') : netOK('proxy-http');
-    if (rp.ok) return;
-  }catch{}
-  if (apiBase) {
-    try{
-      const rg = await fetch(`${apiBase}?action=ping`, { cache:'no-store' });
-      rg.ok ? netOK('gas') : netOK('gas-http');
-      return;
-    }catch(e){ netFAIL(e); }
+    const data = await fetchSheet(mode, {timeout});
+    const ms = Math.round(performance.now() - start);
+    console.log(`✅ ${mode}: ${data.length} rijen in ${ms}ms`);
+    return { ok:true, mode, rows:data.length, ms };
+  }catch(err){
+    const ms = Math.round(performance.now() - start);
+    console.warn(`❌ ${mode} faalde na ${ms}ms:`, err?.message || err);
+    return { ok:false, mode, error:String(err), ms };
   }
 }
 
-// ───────────────────────── Low-level calls ─────────────────────────
-async function callProxy(path, { method='GET', body, timeout=15000, signal }={}){
-  const url = `${PROXY}${path}`;
-  const init = { method, cache:'no-store', signal };
-  if (body != null) {
-    init.headers = { 'Content-Type':'text/plain' };
-    init.body = (typeof body === 'string') ? body : JSON.stringify(body);
+window.SuperhondDiag = {
+  setBaseUrl,
+  getBaseUrl,
+  async ping(){ try { await fetchSheet('diag', {timeout:5000}); return true; } catch { return false; } },
+  async testAll(){
+    console.log('— SuperhondDiag: start —');
+    await initFromConfig();
+    console.log('base:', getBaseUrl());
+    const out = {
+      klanten: await diagOnce('Klanten', 20_000),
+      honden:  await diagOnce('Honden',  15_000),
+    };
+    console.log('— result —', out);
+    return out;
   }
-  try{
-    const r = await withTimeout(fetch(url, init), timeout, signal);
-    if (!r.ok) { netOK('proxy-http'); const data = await r.text(); throw new Error(`Proxy ${r.status}: ${data.slice(0,140)}`); }
-    netOK('proxy');
-    return toJSON(r);
-  }catch(e){ isNetError(e) ? netFAIL(e) : netOK('proxy-http'); throw e; }
-}
-
-async function callGAS(params, { method='GET', body, timeout=15000, signal }={}){
-  if (!apiBase) throw new Error('Geen apiBase ingesteld. Ga naar Instellingen en vul de GAS /exec URL in.');
-  const url = method === 'GET' ? `${apiBase}?${params}` : apiBase;
-
-  const init = { method, cache:'no-store', signal };
-  if (body != null) {
-    init.headers = { 'Content-Type':'text/plain' };
-    init.body = (typeof body === 'string') ? body : JSON.stringify(body);
-  }
-  try{
-    const r = await withTimeout(fetch(url, init), timeout, signal);
-    if (!r.ok) { netOK('gas-http'); const data = await r.text(); throw new Error(`GAS ${r.status}: ${data.slice(0,140)}`); }
-    netOK('gas');
-    return toJSON(r);
-  }catch(e){ isNetError(e) ? netFAIL(e) : netOK('gas-http'); throw e; }
-}
-
-// ───────────────────────── Fetch helpers ─────────────────────────
-export async function fetchAction(action, { timeout=15000, signal, qs='' }={}){
-  try {
-    const obj = await callProxy(`?action=${encodeURIComponent(action)}${qs?`&${qs}`:''}`, { timeout, signal });
-    return okData(obj);
-  } catch (e1) {
-    try {
-      const obj = await callGAS(`action=${encodeURIComponent(action)}${qs?`&${qs}`:''}`, { timeout, signal });
-      return okData(obj);
-    } catch (e2) {
-      const map = { getLeden:'klanten', getHonden:'honden', getKlassen:'klassen', getLessen:'lessen' };
-      const legacy = map[action];
-      if (!legacy) throw e1;
-      const obj = await callGAS(`mode=${legacy}`, { timeout, signal });
-      return okData(obj);
-    }
-  }
-}
-
-export async function fetchSheet(tab, { timeout=15000, signal }={}){
-  try {
-    const obj = await callProxy(`?action=getSheet&tab=${encodeURIComponent(tab)}`, { timeout, signal });
-    return okData(obj);
-  } catch (e1) {
-    try {
-      const obj = await callGAS(`action=getSheet&tab=${encodeURIComponent(tab)}`, { timeout, signal });
-      return okData(obj);
-    } catch (e2) {
-      const legacy = {
-        'Klanten':'klanten', 'Leden':'klanten',
-        'Honden':'honden', 'Lessen':'lessen', 'Klassen':'klassen', 'Reeksen':'reeksen'
-      }[tab] || '';
-      if (!legacy) throw e1;
-      const obj = await callGAS(`mode=${legacy}`, { timeout, signal });
-      return okData(obj);
-    }
-  }
-}
-
-// ───────────────────────── Post helpers ─────────────────────────
-export async function postAction(entity, action, payload, { timeout=15000, signal }={}){
-  const body = { entity, action, payload };
-  try {
-    const obj = await callProxy('', { method:'POST', body, timeout, signal });
-    if (obj?.ok === false) throw new Error(obj.error || 'Serverfout');
-    return obj.data ?? obj;
-  } catch (e1) {
-    try {
-      const obj = await callGAS('', { method:'POST', body, timeout, signal });
-      if (obj?.ok === false) throw new Error(obj.error || 'Serverfout');
-      return obj.data ?? obj;
-    } catch (e2) {
-      const modeMap = { klant:'saveKlant', hond:'saveHond', klas:'saveKlas', les:'saveLes' };
-      if (!modeMap[entity] || (action !== 'add' && action !== 'update')) throw e1;
-      const legacy = modeMap[entity];
-      const legacyBody = JSON.stringify(payload || {});
-      const r = await callGAS(`mode=${legacy}`, { method:'POST', body: legacyBody, timeout, signal });
-      if (r?.ok === false) throw new Error(r.error || 'Serverfout');
-      return r.data ?? r;
-    }
-  }
-}
-
-// ───────────────────────── Convenience saves ─────────────────────────
-export const saveKlant = (k, opt) => postAction('klant','add',k,opt);
-export const saveHond  = (h, opt) => postAction('hond','add',h,opt);
-export const saveKlas  = (k, opt) => postAction('klas','add',k,opt);
-export const saveLes   = (l, opt) => postAction('les','add',l,opt);
-
-// ───────────────────────── Utils ─────────────────────────
-export function currentApiBase() {
-  try { return apiBase || localStorage.getItem(LS_KEY) || ''; }
-  catch { return apiBase || ''; }
-}
+};
