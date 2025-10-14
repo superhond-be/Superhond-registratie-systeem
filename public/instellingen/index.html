@@ -1,76 +1,65 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Instellingen – Superhond</title>
 
-  <!-- Centrale UI -->
-  <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
+  <link rel="stylesheet" href="../css/style.css?v=0.26.7"/>
+  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7"/>
 
-  <!-- (optioneel) hard zetten van exec:
-  <meta name="superhond-exec" content="https://script.google.com/macros/s/XXX/exec">
-  -->
+  <!-- Optioneel kun je via meta defaults meegeven -->
+  <!-- <meta name="superhond-exec" content="https://script.google.com/macros/s/.../exec"> -->
+  <!-- <meta name="superhond-branch" content="Ontwikkeling"> -->
 </head>
-<body class="subpage page-instellingen">
-  <header id="topbar"></header>
+<body class="subpage">
+<header id="topbar"></header>
 
-  <main class="container">
-    <h1 class="page-title">Instellingen</h1>
+<main class="container">
+  <h1 class="page-title">Instellingen</h1>
 
-    <!-- Andere instellingen-kaarten kunnen hier staan -->
+  <section class="card">
+    <h2 style="margin:0 0 .5rem">Centrale verbinding</h2>
 
-    <!-- Diagnose -->
-    <section class="card" id="diag-card" style="margin-top:1rem">
-      <h2>Diagnose</h2>
-      <p class="muted" style="margin:.25rem 0 .75rem">
-        Controleer de verbinding met Google Apps Script (GAS) en de tabs <em>Klanten</em> en <em>Honden</em>.
-      </p>
+    <label class="muted" for="exec">Google Apps Script /exec URL</label>
+    <input id="exec" class="input" placeholder="https://script.google.com/macros/s/.../exec" />
 
-      <div class="grid" style="display:grid;gap:.5rem;max-width:980px">
-        <div style="display:grid;grid-template-columns:180px 1fr;gap:.5rem;align-items:center">
-          <label for="diag-exec" class="muted">GAS /exec-URL</label>
-          <input id="diag-exec" class="input" placeholder="https://script.google.com/macros/s/…/exec" />
-        </div>
-        <div class="toolbar" style="margin:.25rem 0 .5rem">
-          <button id="diag-use"   class="btn" type="button">💾 Gebruik & opslaan</button>
-          <button id="diag-clear" class="btn" type="button">🧹 Cache wissen</button>
-          <button id="diag-run"   class="btn" type="button">▶️ Test opnieuw</button>
-        </div>
-      </div>
+    <div style="height:.5rem"></div>
 
-      <div class="table-wrap" style="margin-top:.5rem">
-        <table class="table" id="diag-table">
-          <thead>
-            <tr><th>Stap</th><th>Status</th><th>Opmerking</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+    <label class="muted" for="branch">Branch label (optioneel)</label>
+    <input id="branch" class="input" list="branch-list" placeholder="Ontwikkeling / Staging / Productie" />
+    <datalist id="branch-list">
+      <option>Ontwikkeling</option>
+      <option>Staging</option>
+      <option>Productie</option>
+    </datalist>
 
-      <p class="muted" style="margin-top:.5rem">
-        Tip: na “🧹 Cache wissen” herlaad je best met <kbd>Cmd/Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd>.
-      </p>
-    </section>
-  </main>
+    <div style="display:flex;gap:.5rem;margin-top:.75rem">
+      <button id="apply" class="btn">💾 Gebruik & opslaan</button>
+      <button id="clear" class="btn">🧹 Cache wissen</button>
+      <button id="test"  class="btn">▶️ Test opnieuw</button>
+    </div>
 
-  <footer id="footer"></footer>
+    <div id="state" class="muted" style="margin-top:.75rem">—</div>
+  </section>
 
-  <!-- Topbar/Footer (zonder /api-afhankelijkheden) -->
-  <script defer src="../js/layout.js?v=0.24.3"></script>
-  <!-- Diagnose widget -->
-  <script type="module" src="../js/diag-widget.js?v=0.1.0"></script>
+  <section class="card" style="margin-top:1rem">
+    <h2 style="margin:0 0 .5rem">Diagnose</h2>
+    <div class="table-wrap">
+      <table class="table" id="diag">
+        <thead>
+          <tr><th>Stap</th><th>Status</th><th>Opmerking</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</main>
 
-  <script>
-    // Mount de topbar
-    document.addEventListener('DOMContentLoaded', () => {
-      window.SuperhondUI?.mount?.({ title:'Instellingen', icon:'⚙️', back:'../dashboard/' });
-    });
-  </script>
+<footer id="footer"></footer>
 
-  <noscript>
-    <p style="padding:1rem;color:#b91c1c">JavaScript is vereist voor deze pagina.</p>
-  </noscript>
+<script defer src="../js/layout.js?v=0.24.4"></script>
+<script type="module" src="../js/diag-widget.js?v=0.26.8"></script>
+
 </body>
 </html>
