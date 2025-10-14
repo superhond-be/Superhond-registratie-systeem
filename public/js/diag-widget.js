@@ -1,99 +1,103 @@
-// public/js/diag-widget.js — diagnose in Instellingen
-// Werkt met jouw sheets.js (initFromConfig, setBaseUrl, getBaseUrl, fetchSheet)
+/**
+ * public/js/diag-widget.js — Instellingen & Diagnose (v0.26.8)
+ * - Beheer GAS /exec base en Branch label (localStorage)
+ * - Test ping + lezen van Sheets (Klanten/Honden)
+ */
 
-import { initFromConfig, setBaseUrl, getBaseUrl, fetchSheet } from './sheets.js';
+import { setBaseUrl, getBaseUrl, initFromConfig, fetchSheet } from './sheets.js';
 
-const $ = (s, r = document) => r.querySelector(s);
+const LS_BRANCH = 'superhond:branch';
 
-function resolveExecFromPage() {
-  if (typeof window.SUPERHOND_SHEETS_URL === 'string' && window.SUPERHOND_SHEETS_URL) {
-    return window.SUPERHOND_SHEETS_URL;
-  }
-  const meta = document.querySelector('meta[name="superhond-exec"]');
-  return meta?.content?.trim() || '';
+const $  = (s, r=document)=>r.querySelector(s);
+const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+
+function setState(t, isErr=false){
+  const el = $('#state'); if(!el) return;
+  el.textContent = t; el.className = isErr ? 'error' : 'muted';
 }
-
-async function pingDirect(base) {
-  if (!base) return { ok: false, msg: 'Geen base-URL' };
-  const url = base + (base.includes('?') ? '&' : '?') + 'mode=ping&t=' + Date.now();
-  try {
-    const r = await fetch(url, { cache: 'no-store' });
-    const txt = await r.text();
-    return { ok: r.ok, msg: `HTTP ${r.status} — ${txt.slice(0, 120)}` };
-  } catch (e) {
-    return { ok: false, msg: String(e) };
-  }
-}
-
-function addRow(tbody, step, ok, note = '') {
+function addRow(step, ok, note){
   const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td>${step}</td>
-    <td class="${ok ? 'ok' : 'err'}" style="font-weight:700;${ok ? 'color:#16a34a' : 'color:#b91c1c'}">
-      ${ok ? 'OK' : 'ERR'}
-    </td>
-    <td><code style="font-size:.86em;word-break:break-all">${String(note || '').slice(0, 1000)}</code></td>
-  `;
-  tbody.appendChild(tr);
+  tr.innerHTML = `<td>${step}</td><td>${ok?'OK':'ERR'}</td><td>${note||''}</td>`;
+  if(!ok) tr.querySelector('td:nth-child(2)').style.color = '#b91c1c';
+  $('#diag tbody').appendChild(tr);
 }
 
-async function runDiag() {
-  const execInput = $('#diag-exec');
-  const tbody = $('#diag-table tbody');
-  tbody.innerHTML = '';
-
-  // 1) init → probeert /api/config, localStorage en window.SUPERHOND_SHEETS_URL
-  try { await initFromConfig(); } catch {}
-
-  let base = getBaseUrl() || resolveExecFromPage();
-  addRow(tbody, 'Basis-URL', !!base, base || '—');
-
-  // 2) Ping
-  if (base) {
-    const p = await pingDirect(base);
-    addRow(tbody, 'GAS ping', p.ok, p.msg);
-  } else {
-    addRow(tbody, 'GAS ping', false, 'Geen base-URL ingesteld');
+async function ping(base){
+  const sep = base.includes('?') ? '&':'?';
+  const url = `${base}${sep}mode=ping&t=${Date.now()}`;
+  try {
+    const r = await fetch(url, {cache:'no-store'});
+    return { ok: r.ok, status: r.status };
+  } catch (e) {
+    return { ok:false, status:'netwerk' };
   }
+}
 
-  // 3) Klanten
+async function runDiag(){
+  $('#diag tbody').innerHTML = '';
+  try {
+    await initFromConfig();
+  } catch {}
+
+  const base = getBaseUrl() || '';
+  addRow('Basis-URL', !!base, base || 'niet ingesteld');
+
+  if(!base){ setState('⚠️ Vul je /exec-URL in en klik “Gebruik & opslaan”.'); return; }
+
+  const p = await ping(base);
+  addRow('GAS ping', p.ok, `HTTP ${p.status}`);
+
+  if(!p.ok){ setState('❌ Ping faalde. Controleer de /exec-URL.'); return; }
+
   try {
     const k = await fetchSheet('Klanten');
-    addRow(tbody, 'Sheet:Klanten', true, `Rijen: ${k?.length ?? 0}`);
+    addRow('Sheet:Klanten', true, `Rijen: ${(k||[]).length}`);
   } catch (e) {
-    addRow(tbody, 'Sheet:Klanten', false, e?.message || String(e));
+    addRow('Sheet:Klanten', false, e?.message || String(e));
   }
 
-  // 4) Honden
   try {
     const h = await fetchSheet('Honden');
-    addRow(tbody, 'Sheet:Honden', true, `Rijen: ${h?.length ?? 0}`);
+    addRow('Sheet:Honden', true, `Rijen: ${(h||[]).length}`);
   } catch (e) {
-    addRow(tbody, 'Sheet:Honden', false, e?.message || String(e));
+    addRow('Sheet:Honden', false, e?.message || String(e));
   }
 
-  // Input updaten met huidige base
-  execInput.value = base || '';
+  setState('✅ Diagnose klaar');
 }
 
-function wireUi() {
-  const execInput = $('#diag-exec');
-  $('#diag-use')?.addEventListener('click', () => {
-    const v = execInput.value.trim();
-    if (!v) { alert('Vul een geldige /exec-URL in.'); return; }
-    setBaseUrl(v);   // sheets.js slaat dit ook op in localStorage
-    runDiag();
+function saveBranch(v){
+  try { v ? localStorage.setItem(LS_BRANCH, v) : localStorage.removeItem(LS_BRANCH); } catch {}
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // Mount topbar (subpage/blauw)
+  window.SuperhondUI?.mount?.({ title:'Instellingen', icon:'⚙️', back:'../dashboard/' });
+
+  // Prefill
+  $('#exec').value   = getBaseUrl() || (document.querySelector('meta[name="superhond-exec"]')?.content || '');
+  $('#branch').value = (localStorage.getItem(LS_BRANCH) || document.querySelector('meta[name="superhond-branch"]')?.content || '');
+
+  $('#apply').addEventListener('click', async () => {
+    const base   = String($('#exec').value || '').trim();
+    const branch = String($('#branch').value || '').trim();
+    if (!base) { setState('❌ /exec-URL is verplicht', true); return; }
+    setBaseUrl(base);
+    saveBranch(branch);
+    setState('💾 Opgeslagen. Testen…');
+    await runDiag();
   });
 
-  $('#diag-run')?.addEventListener('click', runDiag);
-
-  $('#diag-clear')?.addEventListener('click', () => {
+  $('#clear').addEventListener('click', async () => {
     try { localStorage.removeItem('superhond:apiBase'); } catch {}
-    alert('Cache gewist. Herlaad de pagina (Cmd/Ctrl + Shift + R) voor een schone start.');
+    try { localStorage.removeItem(LS_BRANCH); } catch {}
+    $('#exec').value = ''; $('#branch').value = '';
+    setState('🧹 Cache gewist.');
+    $('#diag tbody').innerHTML = '';
   });
-}
 
-document.addEventListener('DOMContentLoaded', () => {
-  wireUi();
-  runDiag();
+  $('#test').addEventListener('click', runDiag);
+
+  // Automatisch direct een test uitvoeren als er al een base bestaat
+  if (getBaseUrl()) { await runDiag(); }
 });
