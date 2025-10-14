@@ -5,24 +5,16 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Superhond — Dashboard</title>
 
-  <!-- Centrale UI (v0.26.7) -->
-  <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
+  <!-- Centrale UI -->
+  <link rel="stylesheet" href="../css/style.css?v=0.26.8" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.26.8" />
 
-  <!-- Optioneel: directe GAS /exec url voor ping (layout.js pakt deze op) -->
-  <!-- <meta name="superhond-exec" content="https://script.google.com/macros/s/JE_EXEC_URL/exec"> -->
+  <!-- (aanraden) zet je GAS /exec hier voor betrouwbare ping in layout.js -->
+  <!-- Voorbeeld: -->
+  <!-- <meta name="superhond-exec" content="https://script.google.com/macros/s/JOUW_EXEC_URL/exec"> -->
 
-  <!-- Dashboard-specifiek: GELE topbar hard-forceren -->
   <style>
-    /* Altijd geel op dashboard, header én inner bar */
-    body.dashboard-page #topbar,
-    body.dashboard-page #topbar .topbar-inner {
-      background: var(--accent, #f4c400) !important;
-      color: #000 !important;
-    }
-    body.dashboard-page .btn-back { border-color:#e5e7eb; background:#fff; color:#111827; }
-
-    /* Kleine lokale UI-tweaks voor dit scherm */
+    /* Kleine lokale UI-tweaks */
     .tabs{display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
     .tab{position:relative;padding:.4rem .8rem;border:1px solid #e5e7eb;border-radius:.5rem;background:#fff;cursor:pointer}
     .tab.active{background:var(--accent,#f4c400);font-weight:600}
@@ -39,6 +31,7 @@
     }
   </style>
 </head>
+
 <body class="dashboard-page">
   <header id="topbar"></header>
 
@@ -47,15 +40,9 @@
 
     <!-- TEGELS -->
     <nav class="tiles" aria-label="Hoofdmenu">
-      <a class="tile" href="../klanten/">
-        <span class="tile-icon">👤</span><div class="tile-body"><span class="tile-title">Klanten</span></div>
-      </a>
-      <a class="tile" href="../honden/">
-        <span class="tile-icon">🐶</span><div class="tile-body"><span class="tile-title">Honden</span></div>
-      </a>
-      <a class="tile" href="../strippenkaarten/">
-        <span class="tile-icon">🎫</span><div class="tile-body"><span class="tile-title">Strippenkaarten</span></div>
-      </a>
+      <a class="tile" href="../klanten/"><span class="tile-icon">👤</span><div class="tile-body"><span class="tile-title">Klanten</span></div></a>
+      <a class="tile" href="../honden/"><span class="tile-icon">🐶</span><div class="tile-body"><span class="tile-title">Honden</span></div></a>
+      <a class="tile" href="../strippenkaarten/"><span class="tile-icon">🎫</span><div class="tile-body"><span class="tile-title">Strippenkaarten</span></div></a>
 
       <a class="tile badged" href="../lessen/">
         <span class="tile-icon">📅</span>
@@ -91,7 +78,6 @@
       <a class="tile" href="../over/"><span class="tile-icon">ℹ️</span><div class="tile-body"><span class="tile-title">Over</span></div></a>
       <a class="tile" href="../lessen/beheer.html"><span class="tile-icon">⚙️</span><div class="tile-body"><span class="tile-title">Lessenbeheer</span></div></a>
 
-      <!-- 🛡️ Admin (verborgen tenzij admin-modus aan) -->
       <a class="tile" href="../admin/" data-admin-only style="display:none">
         <span class="tile-icon">🛡️</span>
         <div class="tile-body">
@@ -128,10 +114,9 @@
   <footer id="footer" class="footer"></footer>
 
   <!-- Scripts -->
-  <!-- Gebruik de no-api layout build (toont versie en forceert geel/blauw zelf) -->
-  <script defer src="../js/layout.js?v=0.24.3-noapi"></script>
-  <script defer src="../js/agenda.js?v=0.26.7"></script>
-  <script defer src="../js/admin-gate.js?v=0.26.7"></script>
+  <script defer src="../js/layout.js?v=0.24.4-stable"></script>
+  <script defer src="../js/agenda.js?v=0.26.8"></script>
+  <script defer src="../js/admin-gate.js?v=0.26.8"></script>
 
   <!-- Tellers & badges -->
   <script type="module">
@@ -140,11 +125,10 @@
       catch (e) { console.error(`Import mislukt: ${path}`, e); return {}; }
     };
 
-    const sheets = await safeImport('../js/sheets.js?v=0.26.7');
+    const sheets = await safeImport('../js/sheets.js?v=0.26.8');
     const fetchSheet     = sheets.fetchSheet     || (async () => { throw new Error('sheets.fetchSheet ontbreekt'); });
     const initFromConfig = sheets.initFromConfig || (async () => {});
-    const normStatus     = (s) => String((s ?? '').toString().toLowerCase());
-    const isActief       = (s) => normStatus(s) === 'actief';
+    const isActief = (s) => String(s ?? '').trim().toLowerCase() === 'actief';
 
     await initFromConfig();
 
@@ -172,8 +156,8 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      // Mount topbar/footer: home=true => dashboard-modus; versie meegeven voor weergave
-      window.SuperhondUI?.mount?.({ title: 'Superhond', icon: '🐾', home: true, version: '0.26.7' });
+      // Dashboard-modus (geel) + versieweergave in topbar
+      window.SuperhondUI?.mount?.({ title: 'Superhond', icon: '🐾', home: true, version: '0.26.8' });
       updateBadges();
     });
   </script>
