@@ -1,19 +1,21 @@
+
 /**
- * public/js/layout.js — Topbar & Footer mount (v0.24.3-noapi)
- * - GEEN /api/config of /api/ping meer nodig
- * - Versie uit APP_VERSION of inline opts
+ * public/js/layout.js — Topbar & Footer mount (v0.24.4-stable)
+ * - Geen /api/config of /api/ping nodig
+ * - Versie uit APP_VERSION of opts.version
  * - Ping rechtstreeks naar GAS /exec (SUPERHOND_SHEETS_URL of <meta name="superhond-exec">)
- * - Dashboard gele balk, subpagina’s blauwe balk (forceren via inline styles)
- * - Optionele Terug-knop, status-dot, periodieke ping (45s)
- * - Adminmodus (Shift+Ctrl+A toggle) en density (html[data-density])
+ * - Dashboard = GEEL, Subpagina = BLAUW (hard via inline styles, ongeacht CSS-volgorde)
+ * - Respecteert bestaande <body class="dashboard-page"> (overschrijft niet onnodig)
+ * - Optionele terugknop, status-dot, periodieke ping (45s)
+ * - Adminmodus (Shift+Ctrl+A) en density (html[data-density])
  */
 
 (function () {
-  const APP_VERSION = '0.24.3';
+  const APP_VERSION = '0.24.4';
   const LS_ADMIN   = 'superhond:admin:enabled';
   const LS_DENSITY = 'superhond:density';
 
-  // ───────────────────────── DOM helpers
+  /* ───────── DOM helpers ───────── */
   const onReady = (cb) =>
     document.readyState !== 'loading'
       ? cb()
@@ -42,13 +44,11 @@
     return n;
   };
 
-  // ───────────────────────── Config & ping zonder /api
+  /* ───────── Config & ping (zonder /api) ───────── */
   function resolveExecBase() {
-    // 1) window.SUPERHOND_SHEETS_URL (bv. gezet in HTML)
     if (typeof window.SUPERHOND_SHEETS_URL === 'string' && window.SUPERHOND_SHEETS_URL) {
-      return window.SUPERHOND_SHEETS_URL;
+      return window.SUPERHOND_SHEETS_URL.trim();
     }
-    // 2) <meta name="superhond-exec" content="...">
     const meta = document.querySelector('meta[name="superhond-exec"]');
     if (meta?.content) return meta.content.trim();
     return '';
@@ -67,7 +67,7 @@
     }
   }
 
-  // ───────────────────────── Admin & density
+  /* ───────── Admin & density ───────── */
   const isAdmin = () => localStorage.getItem(LS_ADMIN) === '1';
   const setAdmin = (on) => {
     localStorage.setItem(LS_ADMIN, on ? '1' : '0');
@@ -79,11 +79,11 @@
     document.documentElement.setAttribute('data-density', m);
   };
 
-  // ───────────────────────── UI helpers
+  /* ───────── UI helpers ───────── */
   const statusClass = (ok) => (ok ? 'is-online' : 'is-offline');
 
-  function forceTopbarColors(container, { isDashboard }) {
-    // Hard force: altijd kleur juist, onafhankelijk van CSS volgorde
+  function forceTopbarColors(container, isDashboard) {
+    // Hard force: correcte kleur ongeacht andere CSS
     const bg = isDashboard ? '#f4c400' : '#2563eb';
     const fg = isDashboard ? '#000'    : '#fff';
     container.style.setProperty('background', bg, 'important');
@@ -97,16 +97,10 @@
     const {
       title = 'Superhond',
       icon  = '🐾',
-      home  = null,        // true = dashboard link, false = span, null = auto
       back  = null,        // string (url) of true (history.back)
-      version = null,      // override versie
-      isDashboard = null,  // optionele forced flag
+      version = null,
+      isDashboard // verplicht meegeven vanuit mount()
     } = opts || {};
-
-    // Bepaal dashboard/subpage mode
-    const path = location.pathname.replace(/\/+$/, '');
-    const autoDash = /\/dashboard$/.test(path) || /\/dashboard\/index\.html$/.test(path);
-    const dash = (isDashboard != null) ? !!isDashboard : (home === true ? true : autoDash);
 
     // Terugknop
     let backEl = null;
@@ -124,7 +118,7 @@
       'div',
       { class: 'tb-left' },
       backEl,
-      dash
+      isDashboard
         ? el('a', { class: 'brand', href: '../dashboard/' }, `${icon} ${title}`)
         : el('span', { class: 'brand' }, `${icon} ${title}`)
     );
@@ -155,8 +149,8 @@
       .muted{opacity:.85}
     `);
 
-    // Kleur forceren (geel/blauw)
-    forceTopbarColors(container, { isDashboard: dash });
+    // Kleur forceren (GEEL voor dashboard, BLAUW voor subpages)
+    forceTopbarColors(container, isDashboard);
 
     inner.append(left, right);
     container.append(inner);
@@ -183,7 +177,7 @@
     container.append(row);
   }
 
-  // ───────────────────────── Net status updaten
+  /* ───────── Net status ───────── */
   function applyNetStatus(ok) {
     const dot = document.querySelector('#topbar .status-dot');
     const txt = document.querySelector('#topbar .status-text');
@@ -194,40 +188,55 @@
     if (txt) txt.textContent = ok ? 'Online' : 'Offline';
   }
 
-  // ───────────────────────── Public API
+  /* ───────── Mount ───────── */
   async function mount(opts = {}) {
     await new Promise((res) => onReady(res));
     applyDensity();
 
-    // Body class voor dashboard/subpage (voor je globale CSS)
+    // 1) Bepaal of dit dashboard is:
+    //    - expliciet via opts.isDashboard / opts.home
+    //    - anders: respecteer bestaande body.dashboard-page
+    //    - anders: heuristiek via URL
     const path = location.pathname.replace(/\/+$/, '');
-    const isDash = /\/dashboard$/.test(path) || /\/dashboard\/index\.html$/.test(path) || opts.home === true;
-    document.body.classList.toggle('dashboard-page', isDash);
-    document.body.classList.toggle('subpage', !isDash);
+    const urlLooksDash = /\/dashboard$/.test(path) || /\/dashboard\/index\.html$/.test(path);
 
-    // Admin thema (rode topbar) direct toepassen
+    const explicitDash = (opts.isDashboard === true || opts.home === true);
+    const explicitSub  = (opts.isDashboard === false || opts.home === false);
+
+    const bodySaysDash = document.body.classList.contains('dashboard-page');
+
+    const isDashboard = explicitDash ? true
+                      : explicitSub  ? false
+                      : bodySaysDash ? true
+                                     : urlLooksDash;
+
+    // 2) Body-classes alleen aanpassen als ze niet overeenkomen
+    document.body.classList.toggle('dashboard-page', isDashboard);
+    document.body.classList.toggle('subpage', !isDashboard);
+
+    // 3) Admin thema
     document.body.classList.toggle('admin-page', isAdmin());
 
-    // Standaard: terugknop op subpagina’s
-    const finalOpts = Object.assign({ back: !isDash }, opts);
+    // 4) Terugknop standaard op subpagina’s
+    const finalOpts = Object.assign({ back: !isDashboard, isDashboard }, opts);
 
+    // 5) Render + ping
     const topbarEl = document.getElementById('topbar');
     const footerEl = document.getElementById('footer');
 
-    // Eerste ping (rechtstreeks naar GAS)
     const online = await pingDirect();
 
     if (topbarEl) renderTopbar(topbarEl, finalOpts, online);
     if (footerEl) renderFooter(footerEl);
 
-    // Periodiek ping (45s)
+    // 6) Periodiek ping (45s)
     setInterval(async () => {
       const ok = await pingDirect();
       applyNetStatus(ok);
     }, 45_000);
   }
 
-  // Achterwaarts compatibele helpers (als je vanuit andere modules wil updaten)
+  /* ───────── Back-compat helpers ───────── */
   const setOnline    = (ok) => applyNetStatus(!!ok);
   const noteSuccess  = ()   => applyNetStatus(true);
   const noteFailure  = ()   => applyNetStatus(false);
@@ -237,12 +246,13 @@
     if (e.shiftKey && e.ctrlKey && e.key.toLowerCase() === 'a') {
       const next = !isAdmin();
       setAdmin(next);
+      // kleine feedback
       applyNetStatus(true);
       setTimeout(() => location.reload(), 350);
     }
   });
 
-  // Exporteer
+  // Export
   window.SuperhondUI = Object.assign(window.SuperhondUI || {}, {
     mount,
     setOnline,
