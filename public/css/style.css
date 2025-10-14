@@ -1,4 +1,4 @@
-/* Superhond UI – style.css v0.20.6 (uniform widths + topbar colors + a11y) */
+/* Superhond UI – style.css v0.20.7 (uniform widths + topbar hard overrides + a11y) */
 
 /* ---------- Tokens & basis ---------- */
 :root{
@@ -67,25 +67,24 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-ap
 .error{color:#b91c1c}
 .muted{color:var(--muted);font-size:.92em}
 
-/* ---------- Topbar (kleur via CSS-variabelen) ---------- */
-/* layout.js zet .topbar-inner; deze fallback houdt het consistent */
+/* ---------- Topbar (thema via variabelen) ---------- */
 #topbar{background:var(--topbar-bg);color:var(--topbar-ink)}
-/* back-knop – contrastrijke varianten per kleurthema */
 .btn-back{appearance:none;border:1px solid rgba(0,0,0,.15);background:#fff;color:#111827;border-radius:8px;padding:6px 10px;cursor:pointer}
 body.subpage .btn-back{border-color:#cbd5e1;background:#f8fafc;color:#0f172a}
 
-/* Dashboard = GEEL */
+/* Thema-variabelen per paginatype */
 body.dashboard-page{
   --topbar-bg: var(--accent);
   --topbar-ink:#000;
 }
-/* Subpagina’s = BLAUW met witten tekst */
 body.subpage{
   --topbar-bg:#2563eb;
   --topbar-ink:#fff;
 }
-/* Leesbaarheid status rechts in topbar verbeteren */
-body.subpage #topbar .tb-right .muted{color:rgba(255,255,255,.9)}
+
+/* Leesbaarheid rechts in de topbar (status + versie) */
+#topbar .tb-right .status-text{font-weight:700}
+body.subpage #topbar .tb-right .muted{color:rgba(255,255,255,.88)}
 body.dashboard-page #topbar .tb-right .muted{color:#1f2937}
 
 /* ---------- Desktop tuning ---------- */
@@ -102,3 +101,23 @@ body.dashboard-page #topbar .tb-right .muted{color:#1f2937}
   :root{--container-max:1360px}
   html{font-size:18px}
 }
+
+/* =======================================================================
+   HARD OVERRIDES — garanderen dat dashboard GEEL en subpagina’s BLAUW zijn
+   (zelfs als er nog oude styles of inline kleur opduiken)
+   ======================================================================= */
+
+body.dashboard-page #topbar,
+body.dashboard-page #topbar .topbar-inner{
+  background:#f4c400 !important;
+  color:#000 !important;
+}
+
+body.subpage #topbar,
+body.subpage #topbar .topbar-inner{
+  background:#2563eb !important;
+  color:#fff !important;
+}
+
+/* Zorg dat de topbar-inhoud nooit een afwijkende achtergrond erover zet */
+#topbar .topbar-inner{background:inherit !important;color:inherit !important}
