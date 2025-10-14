@@ -6,11 +6,11 @@
   <title>Klanten – Superhond</title>
 
   <!-- Centrale stijlen -->
-  <link rel="stylesheet" href="../css/style.css?v=0.26.8" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.26.8" />
+  <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
 
-  <!-- GAS /exec voor ping in layout.js -->
-  <meta name="superhond-exec" content="https://script.google.com/macros/s/JOUW_EXEC_URL/exec">
+  <!-- (optioneel) directe GAS /exec voor ping in layout.js -->
+  <!-- <meta name="superhond-exec" content="https://script.google.com/macros/s/JOUW_EXEC/exec"> -->
 </head>
 
 <body class="subpage page-klanten">
@@ -21,7 +21,7 @@
 
     <!-- Overzicht -->
     <section class="card" aria-labelledby="lijst-title">
-      <h2 id="lijst-title" class="visually-hidden">Overzicht</h2>
+      <h2 id="lijst-title" class="visually-hidden" style="position:absolute;left:-9999px;">Overzicht</h2>
 
       <div class="toolbar" role="group" aria-label="Zoeken en verversen">
         <input id="search" class="input" placeholder="Zoek op naam of e-mail…" aria-label="Zoeken" autocomplete="off" autofocus />
@@ -29,9 +29,9 @@
         <a href="../dashboard/" class="btn btn-secondary" role="button">← Terug</a>
       </div>
 
-      <div id="state" class="muted" aria-live="polite">⏳ Laden…</div>
+      <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
 
-      <div class="table-wrap">
+      <div class="table-wrap" style="margin-top:.5rem">
         <table class="table" id="tbl" aria-describedby="state">
           <thead>
             <tr>
@@ -67,27 +67,23 @@
 
   <footer id="footer" class="footer"></footer>
 
-  <!-- Layout-script: no-api build (forceert kleur + toont versie) -->
-  <script defer src="../js/layout.js?v=0.24.4-stable"></script>
-
-  <!-- Mount: subpagina (blauw) + terugknop + versieweergave -->
+  <!-- Layout: no-api build (forceert kleur + toont versie) -->
+  <script defer src="../js/layout.js?v=0.24.3-noapi"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       window.SuperhondUI?.mount?.({
         title: 'Klanten',
         icon: '👤',
         back: '../dashboard/',
-        isDashboard: false,
-        version: '0.26.8'
+        home: false,
+        version: '0.26.7'
       });
     });
   </script>
 
   <!-- Functionele pagina-logica -->
-  <script type="module" src="../js/klanten.js?v=0.26.8"></script>
+  <script type="module" src="../js/klanten.js?v=0.26.7"></script>
 
-  <noscript>
-    <p style="padding:1rem;color:#b91c1c">JavaScript is vereist om deze pagina te gebruiken.</p>
-  </noscript>
+  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist om deze pagina te gebruiken.</p></noscript>
 </body>
 </html>
