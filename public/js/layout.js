@@ -1,18 +1,21 @@
 /**
- * public/js/layout.js — Topbar & Footer mount (v0.24.2-net)
- * - Bewaart netwerkstatus (noteSuccess/noteFailure) zelfs vóór mount()
- * - Periodieke ping elke 45 s
- * - Achterwaarts compatibel met setOnline()
+ * public/js/layout.js — Topbar & Footer mount (v0.24.3-net)
+ * - Forceert topbar-kleur per modus: Dashboard = geel, Subpages = blauw, Admin = rood
+ * - Robuuste home/back: absolute link naar /dashboard/ (werkt in elke mapdiepte)
+ * - Netwerkstatus-buffer (noteSuccess/noteFailure) + periodieke ping
+ * - Eénmalige CSS-injectie, geen dubbele styles
  */
 
 (function () {
-  const APP_VERSION = '0.24.2-net';
-  const LS_ADMIN = 'superhond:admin:enabled';
-  const LS_DENSITY = 'superhond:density';
-  const API_CONFIG = '/api/config';
-  const API_PING = '/api/ping';
-  let LAST_NET_OK = null; // buffer
+  const APP_VERSION = '0.24.3-net';
+  const LS_ADMIN    = 'superhond:admin:enabled';
+  const LS_DENSITY  = 'superhond:density';
+  const API_CONFIG  = '/api/config';
+  const API_PING    = '/api/ping';
 
+  let LAST_NET_OK = null; // onthoudt laatste netwerkstatus (nog vóór mount)
+
+  /* ───────── Helpers ───────── */
   const onReady = (cb) =>
     document.readyState !== 'loading'
       ? cb()
@@ -57,6 +60,7 @@
     }
   };
 
+  /* ───────── Prefs ───────── */
   const isAdmin = () => localStorage.getItem(LS_ADMIN) === '1';
   const setAdmin = (on) => {
     localStorage.setItem(LS_ADMIN, on ? '1' : '0');
@@ -70,30 +74,53 @@
 
   const statusClass = (ok) => (ok ? 'is-online' : 'is-offline');
 
-  function forceTopbarColors(container, { home }) {
-    const isDashboard =
-      home === true
-        ? true
-        : home === false
-        ? false
-        : document.body.classList.contains('dashboard-page');
-    const bg = isDashboard ? '#f4c400' : '#2563eb';
-    const fg = isDashboard ? '#000' : '#fff';
+  /* ───────── Kleurforcering topbar ─────────
+     volgorde van prioriteit:
+     1) Admin (rood)
+     2) Dashboard (geel)
+     3) Subpage (blauw) */
+  function forceTopbarColors(container) {
+    const admin = document.body.classList.contains('admin-page');
+    const dash  = document.body.classList.contains('dashboard-page');
+
+    let bg, fg;
+    if (admin) { bg = '#dc2626'; fg = '#fff'; }          // rood/wit
+    else if (dash) { bg = '#f4c400'; fg = '#000'; }      // geel/zwart
+    else { bg = '#2563eb'; fg = '#fff'; }                // blauw/wit
+
     container.style.setProperty('background', bg, 'important');
     container.style.setProperty('color', fg, 'important');
+
+    // Zorg dat inner bar erft (geen witte strook)
+    const inner = container.querySelector('.topbar-inner');
+    if (inner) {
+      inner.style.background = 'transparent';
+      inner.style.color = 'inherit';
+    }
   }
 
+  /* ───────── Renders ───────── */
   function renderTopbar(container, opts, cfg, online) {
     if (!container) return;
     container.innerHTML = '';
 
-    const { title = 'Superhond', icon = '🐾', home = null, back = null, version = null } =
-      opts || {};
+    const {
+      title   = 'Superhond',
+      icon    = '🐾',
+      home    = null,     // null = autodetect via body-class, true = dashboard, false = subpage
+      back    = null,     // string (url) of true = history.back
+      version = null
+    } = opts || {};
 
+    // Bepaal of dit dashboard is (absolute link /dashboard/ werkt altijd)
+    const isDash = (home === true) || (home === null && document.body.classList.contains('dashboard-page'));
+
+    // Terugknop
     let backEl = null;
-    if (back) {
-      if (typeof back === 'string') backEl = el('a', { class: 'btn-back', href: back }, '← Terug');
-      else {
+    if (back || back === true || (!isDash && back !== false)) {
+      if (typeof back === 'string') {
+        backEl = el('a', { class: 'btn-back', href: back }, '← Terug');
+      } else {
         backEl = el('button', { class: 'btn-back', type: 'button' }, '← Terug');
         backEl.addEventListener('click', () => history.back());
       }
@@ -105,9 +132,9 @@
       'div',
       { class: 'tb-left' },
       backEl,
-      (home === true || (home === null && document.body.classList.contains('dashboard-page')))
-        ? el('a', { class: 'brand', href: '../dashboard/' }, `${icon} ${title}`)
-        : el('span', { class: 'brand' }, `${icon} ${title}`)
+      isDash
+        ? el('span', { class: 'brand' }, `${icon} ${title}`)
+        : el('a', { class: 'brand', href: '/dashboard/' }, `${icon} ${title}`)
     );
 
     const right = el(
@@ -115,13 +142,15 @@
       { class: 'tb-right' },
       el('span', {
         class: `status-dot ${statusClass(online)}`,
-        title: online ? 'Online' : 'Offline'
+        title: online ? 'Online' : 'Offline',
+        'aria-hidden': 'true'
       }),
-      el('span', { class: 'status-text' }, online ? 'Online' : 'Offline'),
+      el('span', { class: 'status-text', 'aria-live': 'polite' }, online ? 'Online' : 'Offline'),
       el('span', { class: 'muted' }, `v${version || cfg?.version || APP_VERSION}`),
       cfg?.env ? el('span', { class: 'muted' }, `(${cfg.env})`) : null
     );
 
+    // éénmalige basis-styles
     onceStyle(
       'sh-topbar-style',
       `
@@ -134,14 +163,17 @@
       .status-dot{width:.6rem;height:.6rem;border-radius:999px;display:inline-block;background:#9ca3af}
       .status-dot.is-online{background:#16a34a}
       .status-dot.is-offline{background:#ef4444}
-      .status-text{font-weight:600;color:inherit}
+      .status-text{font-weight:600}
       .muted{opacity:.85}
+      @media (prefers-color-scheme: dark){ #topbar .topbar-inner{border-bottom-color:#374151} }
     `
     );
 
-    forceTopbarColors(container, { home });
     inner.append(left, right);
     container.append(inner);
+
+    // Kleur afleiden van body-classes (admin/dash/sub)
+    forceTopbarColors(container);
   }
 
   function renderFooter(container, cfg) {
@@ -172,7 +204,7 @@
     container.append(row);
   }
 
-  // ───────── Status handling
+  /* ───────── Netwerkstatus ───────── */
   function applyNetStatus(ok) {
     const dot = document.querySelector('#topbar .status-dot');
     const txt = document.querySelector('#topbar .status-text');
@@ -184,22 +216,28 @@
     LAST_NET_OK = !!ok;
   }
 
-  // ───────── Public API
+  /* ───────── Mount ───────── */
   async function mount(opts = {}) {
     await new Promise((res) => onReady(res));
     applyDensity();
 
+    // autodetect pagina-type aan de hand van pad
     const path = location.pathname.replace(/\/+$/, '');
     const isDash =
       /\/dashboard$/.test(path) ||
       /\/dashboard\/index\.html$/.test(path) ||
       opts.home === true;
+
     document.body.classList.toggle('dashboard-page', isDash);
     document.body.classList.toggle('subpage', !isDash);
 
+    // admin-theme meteen toepassen
     document.body.classList.toggle('admin-page', isAdmin());
+
+    // back-knop standaard aan op subpages (tenzij expliciet false)
     const finalOpts = Object.assign({ back: !isDash }, opts);
 
+    // data voor topbar/footer
     const [cfg, online] = await Promise.all([
       fetchJSON(API_CONFIG).catch(() => ({})),
       ping()
@@ -210,16 +248,17 @@
     if (topbarEl) renderTopbar(topbarEl, finalOpts, cfg, online);
     if (footerEl) renderFooter(footerEl, cfg);
 
-    // Als er vóór mount() al een netstatus was → toepassen
+    // reeds bekende netstatus toepassen
     if (LAST_NET_OK !== null) applyNetStatus(LAST_NET_OK);
 
-    // Automatisch periodiek ping
+    // periodieke ping
     setInterval(async () => {
       const ok = await ping();
       applyNetStatus(ok);
     }, 45000);
   }
 
+  /* ───────── Public API ───────── */
   function setOnline(ok) { applyNetStatus(ok); }
   const noteSuccess = () => applyNetStatus(true);
   const noteFailure = () => applyNetStatus(false);
