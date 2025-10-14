@@ -55,6 +55,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-ap
 .btn-xs{padding:.2rem .45rem;font-size:.8rem}
 .nowrap{white-space:nowrap}
 
+.input-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
 /* Validatie */
 .input-error{border-color:#b91c1c!important;outline-color:#b91c1c!important}
 .field-error{color:#b91c1c;font-size:.85rem;margin-top:.25rem}
