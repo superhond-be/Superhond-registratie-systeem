@@ -1,21 +1,19 @@
 /**
- * public/js/layout.js — Topbar & Footer mount (v0.24.4)
- * - Geen /api/config nodig
- * - Versie uit APP_VERSION of opts.version
- * - Ping rechtstreeks naar GAS /exec (SUPERHOND_SHEETS_URL of <meta name="superhond-exec">)
- * - Dashboard = gele topbar, subpages = blauwe topbar (hard geforceerd)
- * - Toont branch (uit meta/localStorage) naast de versie
- * - Optionele Terug-knop, status-dot, periodieke ping (45s)
+ * public/js/layout.js — Topbar & Footer mount (v0.24.3)
+ * - Geen /api-config meer nodig
+ * - Versie uit APP_VERSION (of via opts.version)
+ * - Ping rechtstreeks naar GAS /exec (uit localStorage, window-var of <meta>)
+ * - Dashboard = geel, subpagina’s = blauw (hard geforceerd)
+ * - Optionele terugknop, status-dot, periodieke ping (45s)
  * - Adminmodus (Shift+Ctrl+A) en density (html[data-density])
  */
 
 (function () {
-  const APP_VERSION = '0.24.4';
+  const APP_VERSION = '0.24.3';
   const LS_ADMIN    = 'superhond:admin:enabled';
   const LS_DENSITY  = 'superhond:density';
-  const LS_BRANCH   = 'superhond:branch';     // ← toegevoegde branch-storage
 
-  /* ───────── DOM helpers ───────── */
+  /* ───────── Helpers ───────── */
   const onReady = (cb) =>
     document.readyState !== 'loading'
       ? cb()
@@ -45,13 +43,24 @@
     return n;
   };
 
-  /* ───────── Config & ping ───────── */
+  /* ───────── Exec-bron bepalen (zonder /api) ───────── */
   function resolveExecBase() {
+    // 1) window-var
     if (typeof window.SUPERHOND_SHEETS_URL === 'string' && window.SUPERHOND_SHEETS_URL) {
       return window.SUPERHOND_SHEETS_URL;
     }
+    // 2) meta-tag
     const meta = document.querySelector('meta[name="superhond-exec"]');
     if (meta?.content) return meta.content.trim();
+
+    // 3) localStorage (actuele + oude sleutel)
+    try {
+      const ls1 = localStorage.getItem('superhond:apiBase'); // current
+      const ls2 = localStorage.getItem('superhond:exec');    // legacy
+      const re  = /^https?:\/\/script\.google\.com\/macros\/s\/.+\/exec$/i;
+      if (ls1 && re.test(ls1)) return ls1;
+      if (ls2 && re.test(ls2)) return ls2;
+    } catch {}
     return '';
   }
 
@@ -60,29 +69,8 @@
     if (!base) return false;
     const sep = base.includes('?') ? '&' : '?';
     const url = `${base}${sep}mode=ping&t=${Date.now()}`;
-    try {
-      const r = await fetch(url, { cache: 'no-store' });
-      return r.ok;
-    } catch {
-      return false;
-    }
-  }
-
-  /* ───────── Branch helpers ───────── */
-  function resolveBranch() {
-    // 1) <meta name="superhond-branch" content="Ontwikkeling">
-    const m = document.querySelector('meta[name="superhond-branch"]')?.content?.trim();
-    if (m) return m;
-    // 2) window.BRANCH_NAME (optioneel)
-    if (typeof window.BRANCH_NAME === 'string' && window.BRANCH_NAME.trim()) {
-      return window.BRANCH_NAME.trim();
-    }
-    // 3) localStorage (ingesteld via instellingen-pagina)
-    try {
-      const ls = localStorage.getItem(LS_BRANCH);
-      if (ls) return ls;
-    } catch {}
-    return ''; // geen label
+    try { const r = await fetch(url, { cache: 'no-store' }); return r.ok; }
+    catch { return false; }
   }
 
   /* ───────── Admin & density ───────── */
@@ -111,43 +99,37 @@
     const {
       title = 'Superhond',
       icon  = '🐾',
-      home  = null,
-      back  = null,
-      version = null,
-      isDashboard = null,
+      home  = null,        // true = dashboard link, false = span, null = auto
+      back  = null,        // string (url) of true (history.back)
+      version = null,      // override versie
+      isDashboard = null,  // optioneel forceren
     } = opts || {};
 
+    // Dashboard/subpage bepalen
     const path = location.pathname.replace(/\/+$/, '');
     const autoDash = /\/dashboard$/.test(path) || /\/dashboard\/index\.html$/.test(path);
     const dash = (isDashboard != null) ? !!isDashboard : (home === true ? true : autoDash);
 
+    // Terugknop
     let backEl = null;
     if (back) {
       if (typeof back === 'string') backEl = el('a', { class: 'btn-back', href: back }, '← Terug');
-      else {
-        backEl = el('button', { class: 'btn-back', type: 'button' }, '← Terug');
-        backEl.addEventListener('click', () => history.back());
-      }
+      else { backEl = el('button', { class: 'btn-back', type: 'button' }, '← Terug'); backEl.addEventListener('click', () => history.back()); }
     }
 
     const inner = el('div', { class: 'topbar-inner container' });
 
-    const left = el(
-      'div', { class: 'tb-left' },
+    const left = el('div', { class: 'tb-left' },
       backEl,
       dash
         ? el('a', { class: 'brand', href: '../dashboard/' }, `${icon} ${title}`)
         : el('span', { class: 'brand' }, `${icon} ${title}`)
     );
 
-    const branch = resolveBranch();
-    const versionLabel = `v${version || APP_VERSION}${branch ? ` (${branch})` : ''}`;
-
-    const right = el(
-      'div', { class: 'tb-right' },
+    const right = el('div', { class: 'tb-right' },
       el('span', { class: `status-dot ${statusClass(online)}`, title: online ? 'Online' : 'Offline' }),
       el('span', { class: 'status-text' }, online ? 'Online' : 'Offline'),
-      el('span', { class: 'muted' }, versionLabel)
+      el('span', { class: 'muted' }, `v${version || APP_VERSION}`)
     );
 
     onceStyle('sh-topbar-style', `
@@ -177,12 +159,11 @@
       .footer .row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:space-between}
       .footer code{background:rgba(0,0,0,.05);padding:.1rem .35rem;border-radius:.25rem}
     `);
-    const execShort = (resolveExecBase().replace(/^https?:\/\/(www\.)?/, '') || 'n.v.t.');
-    const row = el(
-      'div', { class: 'row' },
+    const exec = (resolveExecBase() || '').replace(/^https?:\/\/(www\.)?/, '') || 'n.v.t.';
+    const row = el('div', { class: 'row' },
       el('div', {}, `© ${new Date().getFullYear()} Superhond`),
-      el('div', {}, el('code', {}, 'exec: ' + execShort)),
-      el('div', {}, `versie ${APP_VERSION}${resolveBranch() ? ' ('+resolveBranch()+')' : ''}`)
+      el('div', {}, el('code', {}, 'exec: ' + exec)),
+      el('div', {}, `versie ${APP_VERSION}`)
     );
     container.classList.add('footer');
     container.append(row);
@@ -192,10 +173,7 @@
   function applyNetStatus(ok) {
     const dot = document.querySelector('#topbar .status-dot');
     const txt = document.querySelector('#topbar .status-text');
-    if (dot) {
-      dot.classList.toggle('is-online', !!ok);
-      dot.classList.toggle('is-offline', !ok);
-    }
+    if (dot) { dot.classList.toggle('is-online', !!ok); dot.classList.toggle('is-offline', !ok); }
     if (txt) txt.textContent = ok ? 'Online' : 'Offline';
   }
 
@@ -204,11 +182,13 @@
     await new Promise((res) => onReady(res));
     applyDensity();
 
+    // body-classes voor globale CSS
     const path = location.pathname.replace(/\/+$/, '');
     const isDash = /\/dashboard$/.test(path) || /\/dashboard\/index\.html$/.test(path) || opts.home === true;
     document.body.classList.toggle('dashboard-page', isDash);
     document.body.classList.toggle('subpage', !isDash);
 
+    // admin thema
     document.body.classList.toggle('admin-page', isAdmin());
 
     const finalOpts = Object.assign({ back: !isDash }, opts);
@@ -217,29 +197,29 @@
     const footerEl = document.getElementById('footer');
 
     const online = await pingDirect();
-
     if (topbarEl) renderTopbar(topbarEl, finalOpts, online);
     if (footerEl) renderFooter(footerEl);
 
-    setInterval(async () => {
-      const ok = await pingDirect();
-      applyNetStatus(ok);
-    }, 45_000);
+    // periodiek ping
+    setInterval(async () => applyNetStatus(await pingDirect()), 45_000);
   }
 
   const setOnline   = (ok) => applyNetStatus(!!ok);
-  const noteSuccess = () => applyNetStatus(true);
-  const noteFailure = () => applyNetStatus(false);
+  const noteSuccess = ()   => applyNetStatus(true);
+  const noteFailure = ()   => applyNetStatus(false);
 
+  // Admin sneltoets: Shift + Ctrl + A
   window.addEventListener('keydown', (e) => {
     if (e.shiftKey && e.ctrlKey && e.key.toLowerCase() === 'a') {
       const next = !isAdmin();
       setAdmin(next);
+      applyNetStatus(true);
       setTimeout(() => location.reload(), 350);
     }
   });
 
   window.SuperhondUI = Object.assign(window.SuperhondUI || {}, {
-    mount, setOnline, noteSuccess, noteFailure, setAdmin, applyDensity, APP_VERSION
+    mount, setOnline, noteSuccess, noteFailure, setAdmin, applyDensity,
+    APP_VERSION
   });
 })();
