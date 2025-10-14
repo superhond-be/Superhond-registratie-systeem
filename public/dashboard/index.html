@@ -6,15 +6,21 @@
   <title>Superhond — Dashboard</title>
 
   <!-- Centrale UI -->
-  <link rel="stylesheet" href="../css/style.css?v=0.26.8" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.26.8" />
+  <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
 
-  <!-- (aanraden) zet je GAS /exec hier voor betrouwbare ping in layout.js -->
-  <!-- Voorbeeld: -->
-  <!-- <meta name="superhond-exec" content="https://script.google.com/macros/s/JOUW_EXEC_URL/exec"> -->
+  <!-- (aanrader) directe GAS /exec voor ping naar Online/Offline -->
+  <!-- <meta name="superhond-exec" content="https://script.google.com/macros/s/JOUW_EXEC/exec"> -->
 
+  <!-- Dashboard-specifiek: gele topbar extra hard forceren -->
   <style>
-    /* Kleine lokale UI-tweaks */
+    body.dashboard-page #topbar,
+    body.dashboard-page #topbar .topbar-inner {
+      background: var(--accent, #f4c400) !important;
+      color: #000 !important;
+    }
+    body.dashboard-page .btn-back{border-color:#e5e7eb;background:#fff;color:#111827}
+    /* Kleine lokale UI-tweaks voor dit scherm */
     .tabs{display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
     .tab{position:relative;padding:.4rem .8rem;border:1px solid #e5e7eb;border-radius:.5rem;background:#fff;cursor:pointer}
     .tab.active{background:var(--accent,#f4c400);font-weight:600}
@@ -31,7 +37,6 @@
     }
   </style>
 </head>
-
 <body class="dashboard-page">
   <header id="topbar"></header>
 
@@ -80,10 +85,7 @@
 
       <a class="tile" href="../admin/" data-admin-only style="display:none">
         <span class="tile-icon">🛡️</span>
-        <div class="tile-body">
-          <span class="tile-title">Admin</span>
-          <span class="tile-sub">Config & Schema</span>
-        </div>
+        <div class="tile-body"><span class="tile-title">Admin</span><span class="tile-sub">Config & Schema</span></div>
       </a>
     </nav>
 
@@ -114,56 +116,38 @@
   <footer id="footer" class="footer"></footer>
 
   <!-- Scripts -->
-  <script defer src="../js/layout.js?v=0.24.4-stable"></script>
-  <script defer src="../js/agenda.js?v=0.26.8"></script>
-  <script defer src="../js/admin-gate.js?v=0.26.8"></script>
+  <script defer src="../js/layout.js?v=0.24.3-noapi"></script>
+  <script defer src="../js/agenda.js?v=0.26.7"></script>
+  <script defer src="../js/admin-gate.js?v=0.26.7"></script>
 
   <!-- Tellers & badges -->
   <script type="module">
-    const safeImport = async (path) => {
-      try { return await import(path); }
-      catch (e) { console.error(`Import mislukt: ${path}`, e); return {}; }
-    };
-
-    const sheets = await safeImport('../js/sheets.js?v=0.26.8');
+    const safeImport = async (path) => { try { return await import(path); } catch(e){ console.error('Import mislukt:', path, e); return {}; } };
+    const sheets = await safeImport('../js/sheets.js?v=0.26.7');
     const fetchSheet     = sheets.fetchSheet     || (async () => { throw new Error('sheets.fetchSheet ontbreekt'); });
     const initFromConfig = sheets.initFromConfig || (async () => {});
-    const isActief = (s) => String(s ?? '').trim().toLowerCase() === 'actief';
+    const normStatus = (s) => String((s ?? '').toString().toLowerCase()) === 'actief';
 
     await initFromConfig();
 
     async function updateBadges() {
       try {
-        const [klassen, reeksen] = await Promise.all([
-          fetchSheet('Klassen'),
-          fetchSheet('Reeksen'),
-        ]);
-        const actKl = (klassen || []).filter(k => isActief(k.status)).length;
-        const actRs = (reeksen || []).filter(r => isActief(r.status)).length;
-
-        const kc = document.getElementById('klassen-badge');
-        const ks = document.getElementById('klassen-sub');
-        const rc = document.getElementById('reeksen-badge');
-        const rs = document.getElementById('reeksen-sub');
-
-        if (kc) kc.textContent = String(actKl);
-        if (ks) ks.textContent = actKl ? `${actKl} actief` : '—';
-        if (rc) rc.textContent = String(actRs);
-        if (rs) rs.textContent = actRs ? `${actRs} actief` : '—';
-      } catch (e) {
-        console.warn('Badges updaten faalde:', e?.message || e);
-      }
+        const [klassen, reeksen] = await Promise.all([fetchSheet('Klassen'), fetchSheet('Reeksen')]);
+        const actKl = (klassen || []).filter(k => normStatus(k.status)).length;
+        const actRs = (reeksen || []).filter(r => normStatus(r.status)).length;
+        const kc = document.getElementById('klassen-badge');  if (kc) kc.textContent = String(actKl);
+        const ks = document.getElementById('klassen-sub');     if (ks) ks.textContent = actKl ? `${actKl} actief` : '—';
+        const rc = document.getElementById('reeksen-badge');   if (rc) rc.textContent = String(actRs);
+        const rs = document.getElementById('reeksen-sub');     if (rs) rs.textContent = actRs ? `${actRs} actief` : '—';
+      } catch (e) { console.warn('Badges updaten faalde:', e?.message || e); }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      // Dashboard-modus (geel) + versieweergave in topbar
-      window.SuperhondUI?.mount?.({ title: 'Superhond', icon: '🐾', home: true, version: '0.26.8' });
+      window.SuperhondUI?.mount?.({ title:'Superhond', icon:'🐾', home:true, version:'0.26.7' });
       updateBadges();
     });
   </script>
 
-  <noscript>
-    <p style="padding:1rem;color:#b91c1c">JavaScript is vereist om het dashboard te laden.</p>
-  </noscript>
+  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist om het dashboard te laden.</p></noscript>
 </body>
 </html>
