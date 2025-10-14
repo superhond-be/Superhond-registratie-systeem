@@ -2,111 +2,161 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Superhond – Diagnose</title>
+  <link rel="stylesheet" href="../css/style.css?v=diag" />
+  <link rel="stylesheet" href="../css/superhond.css?v=diag" />
   <style>
-    body{font:14px/1.45 system-ui,Segoe UI,Roboto,Arial;margin:20px}
-    h1{margin-bottom:.25rem}
-    .ok{color:#16a34a} .err{color:#dc2626} .muted{color:#6b7280}
-    code{background:#f3f4f6;padding:.1rem .25rem;border-radius:4px;font-family:ui-monospace,monospace}
-    table{border-collapse:collapse;width:100%;margin-top:1rem;font-size:.9rem}
-    th,td{border:1px solid #e5e7eb;padding:.45rem .6rem;text-align:left;vertical-align:top}
-    tr:nth-child(even){background:#fafafa}
+    body { background:#f6f8fb }
+    .wrap { max-width: 980px; margin: 16px auto; padding: 16px }
+    .grid { display:grid; gap:8px }
+    .row  { display:grid; grid-template-columns: 190px 1fr; gap:8px; align-items:center }
+    .ok { color:#16a34a; font-weight:700 }
+    .err{ color:#b91c1c; font-weight:700 }
+    code.small { font-size:.85em; word-break:break-all }
+    table.table td:nth-child(1){white-space:nowrap}
   </style>
+
+  <!-- (optioneel) als je de exec hier al wil vastzetten: -->
+  <!--
+  <script>
+    window.SUPERHOND_SHEETS_URL = 'https://script.google.com/macros/s/XXXXX/exec';
+  </script>
+  -->
 </head>
-<body>
-  <h1>🧩 Diagnose</h1>
-  <p class="muted">Controleert <code>/api/config</code>, proxy, GAS en de tabs <em>Klanten</em> en <em>Honden</em>.</p>
-  <div id="out">⏳ Start...</div>
+<body class="subpage">
+  <header id="topbar"></header>
+
+  <main class="wrap card">
+    <h1 style="margin:0 0 12px">🩺 Diagnose</h1>
+
+    <div class="grid" style="margin:6px 0 12px">
+      <div class="row">
+        <label for="exec" class="muted">GAS /exec URL</label>
+        <input id="exec" class="input" placeholder="https://script.google.com/macros/s/…/exec" />
+      </div>
+      <div class="row">
+        <span></span>
+        <div class="toolbar">
+          <button id="btn-save"   class="btn">💾 Gebruik & opslaan</button>
+          <button id="btn-clear"  class="btn">🧹 Cache wissen</button>
+          <button id="btn-run"    class="btn">▶️ Test opnieuw</button>
+        </div>
+      </div>
+    </div>
+
+    <table class="table" id="tbl">
+      <thead>
+        <tr><th>Stap</th><th>Status</th><th>Opmerking</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <p class="muted" style="margin-top:10px">
+      Tip: na “🧹 Cache wissen” herlaad je best met <kbd>Cmd/Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd>.
+    </p>
+  </main>
+
+  <footer id="footer"></footer>
+
+  <script defer src="../js/layout.js?v=0.24.3-noapi"></script>
 
   <script type="module">
-    import * as S from '/js/sheets.js?v=0.26.3';
+    import { initFromConfig, setBaseUrl, getBaseUrl, fetchSheet } from '../js/sheets.js';
 
-    const el = document.getElementById('out');
-    const rows = [];
-    const j = (x) => {
-      try { return JSON.stringify(x).slice(0,160); }
-      catch { return String(x).slice(0,160); }
-    };
+    // Topbar mount
+    document.addEventListener('DOMContentLoaded', () => {
+      window.SuperhondUI?.mount?.({ title:'Diagnose', icon:'🩺', back:'../dashboard/' });
+    });
 
-    async function step(label, fn) {
-      const row = { label, status:'…', note:'' };
-      rows.push(row);
-      update();
-      try {
-        const v = await fn();
-        row.status = 'OK';
-        row.note = j(v);
-        update();
-        return v;
-      } catch(e){
-        row.status = 'ERR';
-        row.note = String(e?.message || e);
-        update();
-        // geen throw: we willen verder testen
+    const $ = (s,r=document)=>r.querySelector(s);
+    const tbody = $('#tbl tbody');
+    const execInput = $('#exec');
+    const btnSave = $('#btn-save');
+    const btnRun  = $('#btn-run');
+    const btnClear= $('#btn-clear');
+
+    function row(step, ok, note=''){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${step}</td>
+        <td class="${ok?'ok':'err'}">${ok?'OK':'ERR'}</td>
+        <td><code class="small">${String(note || '').slice(0,800)}</code></td>`;
+      tbody.appendChild(tr);
+    }
+
+    function resolveExecFromPage(){
+      if (typeof window.SUPERHOND_SHEETS_URL === 'string' && window.SUPERHOND_SHEETS_URL) {
+        return window.SUPERHOND_SHEETS_URL;
+      }
+      const meta = document.querySelector('meta[name="superhond-exec"]');
+      return meta?.content || '';
+    }
+
+    async function pingDirect(base){
+      if (!base) return { ok:false, msg:'Geen base-URL' };
+      const url = base + (base.includes('?') ? '&' : '?') + 'mode=ping&t=' + Date.now();
+      try{
+        const r = await fetch(url, { cache:'no-store' });
+        const txt = await r.text();
+        return { ok: r.ok, msg: `HTTP ${r.status} — ${txt.slice(0,120)}` };
+      }catch(e){
+        return { ok:false, msg: String(e) };
       }
     }
 
-    function update(){
-      el.innerHTML = `
-        <table>
-          <thead><tr><th>Stap</th><th>Status</th><th>Opmerking</th></tr></thead>
-          <tbody>
-          ${rows.map(r=>`
-            <tr>
-              <td>${r.label}</td>
-              <td class="${r.status==='OK'?'ok':(r.status==='ERR'?'err':'muted')}">${r.status}</td>
-              <td><code>${(r.note||'').replace(/</g,'&lt;')}</code></td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
-      `;
+    async function run(){
+      tbody.innerHTML = '';
+
+      // 1) Ophalen huidige exec (volgorde: setBaseUrl -> window -> meta)
+      await initFromConfig().catch(()=>{});
+      let base = getBaseUrl() || resolveExecFromPage();
+      row('Basis-URL', !!base, base || '—');
+
+      // 2) Ping direct
+      if (base){
+        const p = await pingDirect(base);
+        row('GAS ping', p.ok, p.msg);
+      } else {
+        row('GAS ping', false, 'Geen base-URL ingesteld');
+      }
+
+      // 3) Klanten
+      try{
+        const k = await fetchSheet('Klanten');
+        row('Sheet:Klanten', true, `Rijen: ${k?.length ?? 0}`);
+      }catch(e){
+        row('Sheet:Klanten', false, e?.message || String(e));
+      }
+
+      // 4) Honden
+      try{
+        const h = await fetchSheet('Honden');
+        row('Sheet:Honden', true, `Rijen: ${h?.length ?? 0}`);
+      }catch(e){
+        row('Sheet:Honden', false, e?.message || String(e));
+      }
     }
 
-    (async()=>{
-      const cfg = await step('/api/config', async ()=>{
-        const r = await fetch('/api/config',{cache:'no-store'});
-        const t = await r.text();
-        return {status:r.status, body:t.slice(0,160)};
-      });
+    // UI events
+    btnSave.addEventListener('click', () => {
+      const v = execInput.value.trim();
+      if (!v) { alert('Vul een geldige /exec-URL in.'); return; }
+      setBaseUrl(v);   // bewaart ook in localStorage
+      run();
+    });
 
-      await step('initFromConfig()', async ()=>{
-        await S.initFromConfig();
-        return { apiBase: S.currentApiBase() };
-      });
+    btnRun.addEventListener('click', run);
 
-      await step('/api/sheets?action=ping', async ()=>{
-        const r = await fetch('/api/sheets?action=ping');
-        return {status:r.status, body:(await r.text()).slice(0,100)};
-      });
+    btnClear.addEventListener('click', () => {
+      try { localStorage.removeItem('superhond:apiBase'); } catch {}
+      alert('Cache gewist. Herlaad de pagina (Cmd/Ctrl + Shift + R) voor een schone start.');
+    });
 
-      await step('GAS ping', async ()=>{
-        const u = new URL(S.currentApiBase());
-        u.searchParams.set('action','ping');
-        const r = await fetch(u,{mode:'cors'});
-        return {status:r.status, body:(await r.text()).slice(0,100)};
-      });
-
-      await step('Sheet:Klanten', async ()=>{
-        const d = await S.fetchSheet('Klanten',{timeout:20000});
-        const len = Array.isArray(d) ? d.length :
-          Array.isArray(d?.data)?d.data.length :
-          Array.isArray(d?.rows)?d.rows.length : -1;
-        return {length:len, keys:Object.keys(d||{}).slice(0,5)};
-      });
-
-      await step('Sheet:Honden', async ()=>{
-        const d = await S.fetchSheet('Honden',{timeout:20000});
-        const len = Array.isArray(d) ? d.length :
-          Array.isArray(d?.data)?d.data.length :
-          Array.isArray(d?.rows)?d.rows.length : -1;
-        return {length:len, keys:Object.keys(d||{}).slice(0,5)};
-      });
-    })().finally(()=>{
-      update();
-      el.insertAdjacentHTML('beforeend',
-        `<p class="muted" style="margin-top:.5rem">📸 Maak een screenshot van deze tabel en bewaar hem als testverslag.</p>`
-      );
+    // Prefill input en initiale run
+    document.addEventListener('DOMContentLoaded', () => {
+      execInput.value = getBaseUrl() || resolveExecFromPage();
+      run();
     });
   </script>
 </body>
