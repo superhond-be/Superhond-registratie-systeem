@@ -1,16 +1,21 @@
 /**
- * public/js/layout.js — Topbar & Footer (v0.24.6)
- * - Body-class first: 'dashboard-page' => dashboard, 'subpage' => subpage
- * - Hard color forcing (geel/blauw)
- * - Back-knop: standaard AAN op subpages, uit op dashboard (overschrijf met opts.back)
- * - Versie/branch via <meta> tags
- * - Ping via <meta name="superhond-exec">
+ * public/js/layout.js — Topbar & Footer mount (v0.24.4)
+ * - Geen /api/config nodig
+ * - Versie uit APP_VERSION of opts.version
+ * - Ping rechtstreeks naar GAS /exec (SUPERHOND_SHEETS_URL of <meta name="superhond-exec">)
+ * - Dashboard = gele topbar, subpages = blauwe topbar (hard geforceerd)
+ * - Toont branch (uit meta/localStorage) naast de versie
+ * - Optionele Terug-knop, status-dot, periodieke ping (45s)
+ * - Adminmodus (Shift+Ctrl+A) en density (html[data-density])
  */
 
 (function () {
-  const APP_VERSION_FALLBACK = '0.24.6';
+  const APP_VERSION = '0.24.4';
+  const LS_ADMIN    = 'superhond:admin:enabled';
+  const LS_DENSITY  = 'superhond:density';
+  const LS_BRANCH   = 'superhond:branch';     // ← toegevoegde branch-storage
 
-  // DOM helpers
+  /* ───────── DOM helpers ───────── */
   const onReady = (cb) =>
     document.readyState !== 'loading'
       ? cb()
@@ -35,62 +40,87 @@
       else if (k === 'html') n.innerHTML = v;
       else n.setAttribute(k, v);
     });
-    for (const c of kids) if (c != null) n.append(typeof c === 'string' ? document.createTextNode(c) : c);
+    for (const c of kids)
+      if (c != null) n.append(typeof c === 'string' ? document.createTextNode(c) : c);
     return n;
   };
 
-  // Meta helpers
-  const getMeta = (name) => document.querySelector(`meta[name="${name}"]`)?.content?.trim() || '';
-  const EXEC_BASE = () => getMeta('superhond-exec');
-  const DISPLAY_VERSION = () => getMeta('superhond-version') || APP_VERSION_FALLBACK;
-  const DISPLAY_BRANCH  = () => getMeta('superhond-branch')  || '';
+  /* ───────── Config & ping ───────── */
+  function resolveExecBase() {
+    if (typeof window.SUPERHOND_SHEETS_URL === 'string' && window.SUPERHOND_SHEETS_URL) {
+      return window.SUPERHOND_SHEETS_URL;
+    }
+    const meta = document.querySelector('meta[name="superhond-exec"]');
+    if (meta?.content) return meta.content.trim();
+    return '';
+  }
 
   async function pingDirect() {
-    const base = EXEC_BASE();
+    const base = resolveExecBase();
     if (!base) return false;
     const sep = base.includes('?') ? '&' : '?';
     const url = `${base}${sep}mode=ping&t=${Date.now()}`;
-    try { const r = await fetch(url, { cache: 'no-store' }); return r.ok; }
-    catch { return false; }
+    try {
+      const r = await fetch(url, { cache: 'no-store' });
+      return r.ok;
+    } catch {
+      return false;
+    }
   }
 
-  // UI helpers
+  /* ───────── Branch helpers ───────── */
+  function resolveBranch() {
+    // 1) <meta name="superhond-branch" content="Ontwikkeling">
+    const m = document.querySelector('meta[name="superhond-branch"]')?.content?.trim();
+    if (m) return m;
+    // 2) window.BRANCH_NAME (optioneel)
+    if (typeof window.BRANCH_NAME === 'string' && window.BRANCH_NAME.trim()) {
+      return window.BRANCH_NAME.trim();
+    }
+    // 3) localStorage (ingesteld via instellingen-pagina)
+    try {
+      const ls = localStorage.getItem(LS_BRANCH);
+      if (ls) return ls;
+    } catch {}
+    return ''; // geen label
+  }
+
+  /* ───────── Admin & density ───────── */
+  const isAdmin   = () => localStorage.getItem(LS_ADMIN) === '1';
+  const setAdmin  = (on) => { localStorage.setItem(LS_ADMIN, on ? '1' : '0'); document.body.classList.toggle('admin-page', !!on); };
+  const applyDensity = (mode) => {
+    const m = mode || localStorage.getItem(LS_DENSITY) || 'normal';
+    localStorage.setItem(LS_DENSITY, m);
+    document.documentElement.setAttribute('data-density', m);
+  };
+
+  /* ───────── UI helpers ───────── */
   const statusClass = (ok) => (ok ? 'is-online' : 'is-offline');
 
-  function forceTopbarColors(container, isDashboard) {
+  function forceTopbarColors(container, { isDashboard }) {
     const bg = isDashboard ? '#f4c400' : '#2563eb';
     const fg = isDashboard ? '#000'    : '#fff';
     container.style.setProperty('background', bg, 'important');
     container.style.setProperty('color', fg, 'important');
   }
 
-  function resolveIsDashboard(opts = {}) {
-    // 1) Body classes hebben voorrang
-    if (document.body.classList.contains('dashboard-page')) return true;
-    if (document.body.classList.contains('subpage'))       return false;
-
-    // 2) Handmatige override
-    if (typeof opts.isDashboard === 'boolean') return opts.isDashboard;
-    if (opts.home === true) return true;
-
-    // 3) Path-detectie
-    const path = location.pathname.replace(/\/+$/, '');
-    return /\/dashboard$/.test(path) || /\/dashboard\/index\.html$/.test(path);
-  }
-
   function renderTopbar(container, opts, online) {
     if (!container) return;
     container.innerHTML = '';
 
-    const isDash = resolveIsDashboard(opts);
     const {
       title = 'Superhond',
       icon  = '🐾',
-      // back: standaard true op subpage, false op dashboard
-      back  = (typeof opts.back !== 'undefined') ? opts.back : (!isDash),
+      home  = null,
+      back  = null,
+      version = null,
+      isDashboard = null,
     } = opts || {};
 
-    // Back button
+    const path = location.pathname.replace(/\/+$/, '');
+    const autoDash = /\/dashboard$/.test(path) || /\/dashboard\/index\.html$/.test(path);
+    const dash = (isDashboard != null) ? !!isDashboard : (home === true ? true : autoDash);
+
     let backEl = null;
     if (back) {
       if (typeof back === 'string') backEl = el('a', { class: 'btn-back', href: back }, '← Terug');
@@ -103,23 +133,21 @@
     const inner = el('div', { class: 'topbar-inner container' });
 
     const left = el(
-      'div',
-      { class: 'tb-left' },
+      'div', { class: 'tb-left' },
       backEl,
-      isDash
+      dash
         ? el('a', { class: 'brand', href: '../dashboard/' }, `${icon} ${title}`)
         : el('span', { class: 'brand' }, `${icon} ${title}`)
     );
 
-    const version = DISPLAY_VERSION();
-    const branch  = DISPLAY_BRANCH();
+    const branch = resolveBranch();
+    const versionLabel = `v${version || APP_VERSION}${branch ? ` (${branch})` : ''}`;
+
     const right = el(
-      'div',
-      { class: 'tb-right' },
+      'div', { class: 'tb-right' },
       el('span', { class: `status-dot ${statusClass(online)}`, title: online ? 'Online' : 'Offline' }),
       el('span', { class: 'status-text' }, online ? 'Online' : 'Offline'),
-      el('span', { class: 'muted' }, `v${version}`),
-      branch ? el('span', { class: 'muted' }, `(${branch})`) : null
+      el('span', { class: 'muted' }, versionLabel)
     );
 
     onceStyle('sh-topbar-style', `
@@ -127,7 +155,6 @@
       #topbar .topbar-inner{display:flex;align-items:center;gap:.75rem;min-height:56px;border-bottom:1px solid #e5e7eb;background:inherit;color:inherit}
       .tb-left{display:flex;align-items:center;gap:.5rem}
       .tb-right{margin-left:auto;display:flex;align-items:center;gap:.6rem;font-size:.95rem}
-      .tb-right *{appearance:none;background:none;border:none;outline:none}
       .brand{font-weight:800;font-size:20px;text-decoration:none;color:inherit}
       .btn-back{appearance:none;border:1px solid rgba(0,0,0,.15);background:#fff;color:#111827;border-radius:8px;padding:6px 10px;cursor:pointer}
       .status-dot{width:.6rem;height:.6rem;border-radius:999px;display:inline-block;background:#9ca3af}
@@ -137,9 +164,7 @@
       .muted{opacity:.85}
     `);
 
-    // kleur forceren
-    forceTopbarColors(container, isDash);
-
+    forceTopbarColors(container, { isDashboard: dash });
     inner.append(left, right);
     container.append(inner);
   }
@@ -147,24 +172,23 @@
   function renderFooter(container) {
     if (!container) return;
     container.innerHTML = '';
-
     onceStyle('sh-footer-style', `
       .footer{margin-top:2rem;padding:1rem;border-top:1px solid #e5e7eb;color:#6b7280;font-size:.9rem}
       .footer .row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:space-between}
       .footer code{background:rgba(0,0,0,.05);padding:.1rem .35rem;border-radius:.25rem}
     `);
-
+    const execShort = (resolveExecBase().replace(/^https?:\/\/(www\.)?/, '') || 'n.v.t.');
     const row = el(
-      'div',
-      { class: 'row' },
+      'div', { class: 'row' },
       el('div', {}, `© ${new Date().getFullYear()} Superhond`),
-      el('div', {}, el('code', {}, 'exec: ' + (EXEC_BASE().replace(/^https?:\/\/(www\.)?/, '') || 'n.v.t.'))),
-      el('div', {}, `versie ${DISPLAY_VERSION()}${DISPLAY_BRANCH() ? ' ('+DISPLAY_BRANCH()+')' : ''}`)
+      el('div', {}, el('code', {}, 'exec: ' + execShort)),
+      el('div', {}, `versie ${APP_VERSION}${resolveBranch() ? ' ('+resolveBranch()+')' : ''}`)
     );
     container.classList.add('footer');
     container.append(row);
   }
 
+  /* ───────── Net status ───────── */
   function applyNetStatus(ok) {
     const dot = document.querySelector('#topbar .status-dot');
     const txt = document.querySelector('#topbar .status-text');
@@ -175,26 +199,47 @@
     if (txt) txt.textContent = ok ? 'Online' : 'Offline';
   }
 
+  /* ───────── Public API ───────── */
   async function mount(opts = {}) {
     await new Promise((res) => onReady(res));
+    applyDensity();
+
+    const path = location.pathname.replace(/\/+$/, '');
+    const isDash = /\/dashboard$/.test(path) || /\/dashboard\/index\.html$/.test(path) || opts.home === true;
+    document.body.classList.toggle('dashboard-page', isDash);
+    document.body.classList.toggle('subpage', !isDash);
+
+    document.body.classList.toggle('admin-page', isAdmin());
+
+    const finalOpts = Object.assign({ back: !isDash }, opts);
 
     const topbarEl = document.getElementById('topbar');
     const footerEl = document.getElementById('footer');
 
-    // Eerste ping
     const online = await pingDirect();
 
-    if (topbarEl) renderTopbar(topbarEl, opts, online);
+    if (topbarEl) renderTopbar(topbarEl, finalOpts, online);
     if (footerEl) renderFooter(footerEl);
 
-    // Periodiek ping
     setInterval(async () => {
       const ok = await pingDirect();
       applyNetStatus(ok);
     }, 45_000);
   }
 
+  const setOnline   = (ok) => applyNetStatus(!!ok);
+  const noteSuccess = () => applyNetStatus(true);
+  const noteFailure = () => applyNetStatus(false);
+
+  window.addEventListener('keydown', (e) => {
+    if (e.shiftKey && e.ctrlKey && e.key.toLowerCase() === 'a') {
+      const next = !isAdmin();
+      setAdmin(next);
+      setTimeout(() => location.reload(), 350);
+    }
+  });
+
   window.SuperhondUI = Object.assign(window.SuperhondUI || {}, {
-    mount
+    mount, setOnline, noteSuccess, noteFailure, setAdmin, applyDensity, APP_VERSION
   });
 })();
