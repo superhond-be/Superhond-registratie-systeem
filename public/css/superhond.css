@@ -1,187 +1,216 @@
-/* Superhond UI – v0.18.12 (componenten, geen container overrides) */
+/* Superhond UI — superhond.css v0.19.0
+   Component-stijlen (geen container- of topbar-kleur overrides)
+   - Knoppen (incl. primary/secondary/danger + icon)
+   - Tabs / Tiles / Sections
+   - Tabellen / Form feedback
+   - Toasts
+   - Admin-badge
+   - A11y-tweaks voor status in topbar
+*/
 
-/* ---------- Design tokens / variabelen ---------- */
-/* (breedte en topbar-kleuren komen uit style.css via body-classes) */
-:root {
+/* ───────── Design tokens (sluit aan op style.css) ───────── */
+:root{
   --ink:#111827;
   --muted:#6b7280;
   --border:#e5e7eb;
   --shadow:0 1px 2px rgba(0,0,0,.06);
-  --accent:#f4c400; /* Superhond geel */
+  --accent:#f4c400;
   --radius:12px;
 
   --public-accent:#dbeafe; /* lichtblauw */
   --public-border:#93c5fd;
   --admin-accent:#fee2e2;  /* lichtrood */
   --admin-border:#fca5a5;
+
+  /* Button kleuren */
+  --btn-bg:#ffffff;
+  --btn-ink:#111827;
+  --btn-border:#d1d5db;
+
+  --btn-primary-bg:#1e70ff;
+  --btn-primary-ink:#ffffff;
+  --btn-primary-border:#1e70ff;
+
+  --btn-secondary-bg:#f8fafc;
+  --btn-secondary-ink:#0f172a;
+  --btn-secondary-border:#cbd5e1;
+
+  --btn-danger-bg:#ef4444;
+  --btn-danger-ink:#ffffff;
+  --btn-danger-border:#ef4444;
 }
 
-/* Superhond actieknoppen */
-.btn-group { display:inline-flex; gap:.25rem; vertical-align:middle; }
-.btn-icon { width:2rem; height:2rem; padding:0; display:inline-grid; place-items:center; }
-.btn-icon.danger { background:#ef4444; border-color:#ef4444; color:#fff; }
-.btn-icon.danger:hover { background:#dc2626; }
-.btn-icon:hover { filter:brightness(.95); }
+/* ───────── Basis (geen layout-conflicten) ───────── */
+*{box-sizing:border-box}
+.page-title,h2{margin:0 0 12px}
 
-/* ---------- Basis (zonder layout-conflicten) ---------- */
-* { box-sizing: border-box; }
-.page-title, h2 { margin: 0 0 12px; }
+/* Topbar: géén kleur/breedte hier (komt uit style.css + layout.js) */
+.topbar{}
+#topbar .topbar-inner.container{}
 
-/* Topbar: alleen visuele details, geen kleur/breedte (die komt uit style.css) */
-.topbar { /* kleur en bg via #topbar uit style.css */ }
-#topbar .topbar-inner.container { /* breedte via style.css */ }
+/* A11y: status rechts in topbar iets contrastrijker op blauw */
+body.subpage #topbar .tb-right .status-text{color:#fff}
+body.subpage #topbar .tb-right .muted{color:rgba(255,255,255,.92)}
+body.dashboard-page #topbar .tb-right .muted{color:#1f2937}
 
-/* Footer */
-.footer { border-top: 1px solid var(--border); color: var(--muted); }
-.footer .container { padding: 14px 16px; }
-
-/* ---------- Tabs ---------- */
-.tabs { display: flex; gap: .5rem; flex-wrap: wrap; margin: .5rem 0 1rem; }
-.tab {
-  padding: .35rem .7rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: #fff; cursor: pointer;
-  transition: background .12s ease, border-color .12s ease, transform .12s ease;
+/* ───────── Buttons ───────── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 12px;border:1px solid var(--btn-border);border-radius:8px;
+  background:var(--btn-bg);color:var(--btn-ink);text-decoration:none;cursor:pointer;
+  transition:filter .12s ease, background .12s ease, border-color .12s ease;
 }
-.tab:hover { transform: translateY(-1px); }
-.tab.active, [aria-pressed="true"].tab { background: var(--accent); border-color: var(--accent); font-weight: 600; }
+.btn:hover{background:#f8fafc}
+.btn:disabled{opacity:.6;cursor:not-allowed}
 
-/* ---------- Sections ---------- */
-.section { padding: 16px; }
-.section-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
-.section-header h2 { margin: 0; }
-.section-sub { color: var(--muted); font-size: .95rem; }
-.section--public {
+.btn-xs{padding:.2rem .45rem;font-size:.8rem}
+.btn.full{display:block;width:100%;text-align:center;margin-top:12px}
+.nowrap{white-space:nowrap}
+
+.btn-primary{
+  background:var(--btn-primary-bg);border-color:var(--btn-primary-border);color:var(--btn-primary-ink);
+}
+.btn-primary:hover{filter:brightness(.97)}
+
+.btn-secondary{
+  background:var(--btn-secondary-bg);
+  border-color:var(--btn-secondary-border);
+  color:var(--btn-secondary-ink);
+}
+
+.btn-danger{
+  background:var(--btn-danger-bg);
+  border-color:var(--btn-danger-border);
+  color:var(--btn-danger-ink);
+}
+.btn-danger:hover{filter:brightness(.96)}
+
+.btn-icon{width:2rem;height:2rem;padding:0;display:inline-grid;place-items:center}
+.btn-icon.danger{background:var(--btn-danger-bg);border-color:var(--btn-danger-border);color:#fff}
+.btn-icon.danger:hover{filter:brightness(.96)}
+
+/* Terug-knop styling (kleurcontrasten op blauw/geel geregeld in style.css) */
+.btn-back{
+  appearance:none;border:1px solid rgba(0,0,0,.15);background:#fff;color:#111827;
+  border-radius:8px;padding:6px 10px;cursor:pointer
+}
+body.subpage .btn-back{border-color:#cbd5e1;background:#f8fafc;color:#0f172a}
+
+/* ───────── Tabs ───────── */
+.tabs{display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0 1rem}
+.tab{
+  padding:.35rem .7rem;border:1px solid var(--border);border-radius:999px;
+  background:#fff;cursor:pointer;transition:background .12s ease,border-color .12s ease,transform .12s ease;
+}
+.tab:hover{transform:translateY(-1px)}
+.tab.active,[aria-pressed="true"].tab{background:var(--accent);border-color:var(--accent);font-weight:600}
+
+/* ───────── Sections ───────── */
+.section{padding:16px}
+.section-header{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.section-header h2{margin:0}
+.section-sub{color:var(--muted);font-size:.95rem}
+
+.section--public{
   border:1px solid var(--public-border);
-  background: linear-gradient(0deg,#fff,#fff), var(--public-accent);
+  background:linear-gradient(0deg,#fff,#fff),var(--public-accent);
 }
-.section--admin {
+.section--admin{
   border:1px solid var(--admin-border);
-  background: linear-gradient(0deg,#fff,#fff), var(--admin-accent);
+  background:linear-gradient(0deg,#fff,#fff),var(--admin-accent);
 }
 
-/* ---------- Tiles ---------- */
-.tiles {
-  display: grid; gap: 16px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+/* ───────── Tiles ───────── */
+.tiles{
+  display:grid;gap:16px;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
 }
-.tile {
-  display: flex; align-items: center; gap: 10px;
-  padding: 14px 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: #fff;
-  text-decoration: none; color: inherit;
-  box-shadow: var(--shadow);
-  transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease;
+.tile{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 16px;border:1px solid var(--border);border-radius:var(--radius);
+  background:#fff;text-decoration:none;color:inherit;box-shadow:var(--shadow);
+  transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease;
 }
-.tile:hover { border-color: #d1d5db; transform: translateY(-1px); }
-.tile-icon { font-size: 22px; line-height: 1; }
-.tile-body { display: grid; gap: 2px; }
-.tile-title { font-weight: 700; }
-.tile-sub { color: var(--muted); }
+.tile:hover{border-color:#d1d5db;transform:translateY(-1px)}
+.tile-icon{font-size:22px;line-height:1}
+.tile-body{display:grid;gap:2px}
+.tile-title{font-weight:700}
+.tile-sub{color:var(--muted)}
 
-/* Badged tile */
-.tile.badged { position: relative; }
+.tile.badged{position:relative}
 .tile .badge-dot{
-  position:absolute; top:8px; right:10px; min-width:22px; height:22px; padding:0 6px;
-  display:inline-flex; align-items:center; justify-content:center;
-  border-radius:999px; font-size:12px; line-height:1;
-  background: var(--accent); color:#000; border:1px solid rgba(0,0,0,.08);
+  position:absolute;top:8px;right:10px;min-width:22px;height:22px;padding:0 6px;
+  display:inline-flex;align-items:center;justify-content:center;border-radius:999px;
+  font-size:12px;line-height:1;background:var(--accent);color:#000;border:1px solid rgba(0,0,0,.08);
   box-shadow:0 1px 2px rgba(0,0,0,.08);
 }
 
-/* ---------- Toolbar ---------- */
+/* ───────── Toolbar ───────── */
 .toolbar{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
 @media (max-width:430px){
   .toolbar{flex-direction:column;align-items:stretch}
   .toolbar .input,.toolbar .btn{width:100%}
 }
 
-/* ---------- Table ---------- */
-.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.table { width: 100%; border-collapse: collapse; }
-.table th,.table td {
-  text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border);
-}
-.table thead th { font-weight: 700; background: #fafafa; }
-.table.compact th, .table.compact td { padding: .35rem .5rem; }
+/* ───────── Table ───────── */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--border)}
+.table thead th{font-weight:700;background:#fafafa}
+.table.compact th,.table.compact td{padding:.35rem .5rem}
 
-/* ---------- Form elements ---------- */
-.input,.select {
-  min-height:38px; padding:6px 10px;
-  border:1px solid #d1d5db; border-radius:8px; background:#fff;
+/* ───────── Forms & feedback ───────── */
+.input,.select{
+  min-height:38px;padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;background:#fff;
 }
-.input:focus-visible,.select:focus-visible { outline:2px solid rgba(30,112,255,.25); border-color:#9bbcff; }
-.input-nr { width:5.5rem; }
-
-.btn {
-  display:inline-flex; align-items:center; gap:6px;
-  padding:8px 12px; border:1px solid #d1d5db; border-radius:8px;
-  background:#fff; text-decoration:none; color:#111827; cursor:pointer;
+.input:focus-visible,.select:focus-visible{
+  outline:2px solid rgba(30,112,255,.25);border-color:#9bbcff;
 }
-.btn:hover { background:#f8fafc; }
-.btn.full { display:block; width:100%; text-align:center; margin-top:12px; }
-.btn-xs { padding:.2rem .45rem; font-size:.8rem; } /* compact variant */
-.nowrap { white-space: nowrap; }
+.input-nr{width:5.5rem}
 
-/* Form errors */
-.input-error { border-color:#b91c1c !important; outline-color:#b91c1c !important; }
-.field-error { color:#b91c1c; font-size:.85rem; margin-top:.25rem; }
+.input-error{border-color:#b91c1c!important;outline-color:#b91c1c!important}
+.field-error{color:#b91c1c;font-size:.85rem;margin-top:.25rem}
 
-/* Labels/badges */
-.badge { display:inline-block; padding:4px 8px; border-radius:999px; background:#eef2ff; color:#1e40af; }
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef2ff;color:#1e40af}
 
-/* Status/feedback */
-.loader { padding:.5rem 0; color:var(--muted); }
-.error  { color:#b91c1c; }
-.muted  { color:var(--muted); font-size:.92em; }
+.loader{padding:.5rem 0;color:var(--muted)}
+.error{color:#b91c1c}
+.muted{color:var(--muted);font-size:.92em}
 
-/* ---------- Toast component ---------- */
-.toast-container {
-  position: fixed;
-  bottom: 1.2rem;
-  right: 1.2rem;
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: .5rem;
+/* ───────── Toasts ───────── */
+.toast-container{
+  position:fixed;bottom:1.2rem;right:1.2rem;z-index:9999;
+  display:flex;flex-direction:column;align-items:flex-end;gap:.5rem;
 }
-.toast {
-  min-width: 220px;
-  max-width: 360px;
-  background: #fff;
-  border: 1px solid #d1d5db;
-  border-left: 6px solid var(--accent);
-  box-shadow: 0 2px 6px rgba(0,0,0,.15);
-  border-radius: 8px;
-  padding: .75rem 1rem;
-  color: #111827;
-  font-size: .92rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  animation: fadeIn .25s ease;
+.toast{
+  min-width:220px;max-width:360px;background:#fff;border:1px solid #d1d5db;border-left:6px solid var(--accent);
+  box-shadow:0 2px 6px rgba(0,0,0,.15);border-radius:8px;padding:.75rem 1rem;color:#111827;font-size:.92rem;
+  display:flex;align-items:center;justify-content:space-between;animation:fadeIn .25s ease;
 }
-.toast.success { border-left-color: #16a34a; } /* groen */
-.toast.error   { border-left-color: #b91c1c; } /* rood */
-.toast.info    { border-left-color: #2563eb; } /* blauw */
-.toast button {
-  background: none; border: none; color: #111827; font-size: 1rem; cursor: pointer; margin-left: .5rem;
-}
-.toast button:hover { opacity: .7; }
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+.toast.success{border-left-color:#16a34a}
+.toast.error  {border-left-color:#b91c1c}
+.toast.info   {border-left-color:#2563eb}
+.toast button{background:none;border:none;color:#111827;font-size:1rem;cursor:pointer;margin-left:.5rem}
+.toast button:hover{opacity:.75}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
-/* ---------- Responsive details ---------- */
+/* ───────── Admin-badge (bovenop topbar) ───────── */
+.admin-badge{
+  margin-left:auto;display:inline-flex;align-items:center;gap:.5rem;
+  padding:.25rem .5rem;border-radius:8px;border:1px dashed rgba(0,0,0,.25);
+  background:rgba(255,255,255,.6);backdrop-filter:saturate(120%) blur(2px);
+  font-size:.9rem;color:#111827;
+}
+.admin-badge .btn-exit{
+  appearance:none;border:1px solid #d1d5db;background:#fff;color:#111827;
+  border-radius:6px;padding:.15rem .4rem;cursor:pointer;font-size:.85rem;
+}
+.admin-badge .btn-exit:hover{background:#f8fafc}
+
+/* ───────── Kleine responsive details ───────── */
 @media (max-width:900px){
-  .dash-grid { grid-template-columns:1fr; }
+  .dash-grid{grid-template-columns:1fr}
 }
 @media (max-width:720px){
-  .brand { font-size:18px; }
+  .brand{font-size:18px}
 }
-
