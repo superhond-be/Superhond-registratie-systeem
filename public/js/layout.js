@@ -1,17 +1,15 @@
-
 /**
- * public/js/layout.js — Topbar & Footer mount (v0.24.4-stable)
- * - Geen /api/config of /api/ping nodig
- * - Versie uit APP_VERSION of opts.version
- * - Ping rechtstreeks naar GAS /exec (SUPERHOND_SHEETS_URL of <meta name="superhond-exec">)
- * - Dashboard = GEEL, Subpagina = BLAUW (hard via inline styles, ongeacht CSS-volgorde)
- * - Respecteert bestaande <body class="dashboard-page"> (overschrijft niet onnodig)
- * - Optionele terugknop, status-dot, periodieke ping (45s)
- * - Adminmodus (Shift+Ctrl+A) en density (html[data-density])
+ * public/js/layout.js — Topbar & Footer mount (v0.24.3-noapi+verjson)
+ * - GEEN /api/config of /api/ping nodig
+ * - Versie uit /version.json, fallback op APP_VERSION
+ * - Ping rechtstreeks naar GAS /exec (window.SUPERHOND_SHEETS_URL of <meta name="superhond-exec">)
+ * - Dashboard = gele balk, subpagina’s = blauwe balk (hard forced)
+ * - Optionele Terug-knop, status-dot, periodieke ping (45s)
+ * - Adminmodus (Shift+Ctrl+A toggle) en density (html[data-density])
  */
 
 (function () {
-  const APP_VERSION = '0.24.4';
+  const APP_VERSION = '0.24.3';
   const LS_ADMIN   = 'superhond:admin:enabled';
   const LS_DENSITY = 'superhond:density';
 
@@ -44,16 +42,38 @@
     return n;
   };
 
-  /* ───────── Config & ping (zonder /api) ───────── */
+  /* ───────── Versie uit /version.json ───────── */
+  async function fetchVersionJSON() {
+    try {
+      const r = await fetch('/version.json', { cache: 'no-store' });
+      if (!r.ok) return null;
+      const j = await r.json();
+      return j && typeof j === 'object' ? j : null;
+    } catch {
+      return null;
+    }
+  }
+  function fmtBuildTime(iso) {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      if (isNaN(d)) return '';
+      return new Intl.DateTimeFormat(undefined, {
+        year:'numeric', month:'2-digit', day:'2-digit',
+        hour:'2-digit', minute:'2-digit'
+      }).format(d);
+    } catch { return ''; }
+  }
+
+  /* ───────── Config & ping zonder /api ───────── */
   function resolveExecBase() {
     if (typeof window.SUPERHOND_SHEETS_URL === 'string' && window.SUPERHOND_SHEETS_URL) {
-      return window.SUPERHOND_SHEETS_URL.trim();
+      return window.SUPERHOND_SHEETS_URL;
     }
     const meta = document.querySelector('meta[name="superhond-exec"]');
     if (meta?.content) return meta.content.trim();
     return '';
   }
-
   async function pingDirect() {
     const base = resolveExecBase();
     if (!base) return false;
@@ -82,8 +102,7 @@
   /* ───────── UI helpers ───────── */
   const statusClass = (ok) => (ok ? 'is-online' : 'is-offline');
 
-  function forceTopbarColors(container, isDashboard) {
-    // Hard force: correcte kleur ongeacht andere CSS
+  function forceTopbarColors(container, { isDashboard }) {
     const bg = isDashboard ? '#f4c400' : '#2563eb';
     const fg = isDashboard ? '#000'    : '#fff';
     container.style.setProperty('background', bg, 'important');
@@ -97,10 +116,16 @@
     const {
       title = 'Superhond',
       icon  = '🐾',
+      home  = null,        // true = dashboard link, false = span, null = auto
       back  = null,        // string (url) of true (history.back)
-      version = null,
-      isDashboard // verplicht meegeven vanuit mount()
+      isDashboard = null,  // optionele forced flag
+      ctxVersion = APP_VERSION
     } = opts || {};
+
+    // Bepaal dashboard/subpage mode
+    const path = location.pathname.replace(/\/+$/, '');
+    const autoDash = /\/dashboard$/.test(path) || /\/dashboard\/index\.html$/.test(path);
+    const dash = (isDashboard != null) ? !!isDashboard : (home === true ? true : autoDash);
 
     // Terugknop
     let backEl = null;
@@ -118,7 +143,7 @@
       'div',
       { class: 'tb-left' },
       backEl,
-      isDashboard
+      dash
         ? el('a', { class: 'brand', href: '../dashboard/' }, `${icon} ${title}`)
         : el('span', { class: 'brand' }, `${icon} ${title}`)
     );
@@ -126,12 +151,9 @@
     const right = el(
       'div',
       { class: 'tb-right' },
-      el('span', {
-        class: `status-dot ${statusClass(online)}`,
-        title: online ? 'Online' : 'Offline'
-      }),
+      el('span', { class: `status-dot ${statusClass(online)}`, title: online ? 'Online' : 'Offline' }),
       el('span', { class: 'status-text' }, online ? 'Online' : 'Offline'),
-      el('span', { class: 'muted' }, `v${version || APP_VERSION}`)
+      el('span', { class: 'muted' }, `v${ctxVersion}`)
     );
 
     // Basis styles (eenmalig)
@@ -149,14 +171,14 @@
       .muted{opacity:.85}
     `);
 
-    // Kleur forceren (GEEL voor dashboard, BLAUW voor subpages)
-    forceTopbarColors(container, isDashboard);
+    // Kleur forceren (geel/blauw)
+    forceTopbarColors(container, { isDashboard: dash });
 
-    inner.append(left, right);
     container.append(inner);
+    inner.append(left, right);
   }
 
-  function renderFooter(container) {
+  function renderFooter(container, { ctxVersion, ctxBuildTime } = {}) {
     if (!container) return;
     container.innerHTML = '';
 
@@ -166,12 +188,14 @@
       .footer code{background:rgba(0,0,0,.05);padding:.1rem .35rem;border-radius:.25rem}
     `);
 
+    const buildTxt = ctxBuildTime ? ` • build ${fmtBuildTime(ctxBuildTime)}` : '';
+
     const row = el(
       'div',
       { class: 'row' },
       el('div', {}, `© ${new Date().getFullYear()} Superhond`),
       el('div', {}, el('code', {}, 'exec: ' + (resolveExecBase().replace(/^https?:\/\/(www\.)?/, '') || 'n.v.t.'))),
-      el('div', {}, `versie ${APP_VERSION}`)
+      el('div', {}, `versie ${ctxVersion}${buildTxt}`)
     );
     container.classList.add('footer');
     container.append(row);
@@ -188,55 +212,45 @@
     if (txt) txt.textContent = ok ? 'Online' : 'Offline';
   }
 
-  /* ───────── Mount ───────── */
+  /* ───────── Public API ───────── */
   async function mount(opts = {}) {
     await new Promise((res) => onReady(res));
     applyDensity();
 
-    // 1) Bepaal of dit dashboard is:
-    //    - expliciet via opts.isDashboard / opts.home
-    //    - anders: respecteer bestaande body.dashboard-page
-    //    - anders: heuristiek via URL
+    // Body class voor dashboard/subpage (voor globale CSS & kleur)
     const path = location.pathname.replace(/\/+$/, '');
-    const urlLooksDash = /\/dashboard$/.test(path) || /\/dashboard\/index\.html$/.test(path);
+    const isDash = /\/dashboard$/.test(path) || /\/dashboard\/index\.html$/.test(path) || opts.home === true;
+    document.body.classList.toggle('dashboard-page', isDash);
+    document.body.classList.toggle('subpage', !isDash);
 
-    const explicitDash = (opts.isDashboard === true || opts.home === true);
-    const explicitSub  = (opts.isDashboard === false || opts.home === false);
-
-    const bodySaysDash = document.body.classList.contains('dashboard-page');
-
-    const isDashboard = explicitDash ? true
-                      : explicitSub  ? false
-                      : bodySaysDash ? true
-                                     : urlLooksDash;
-
-    // 2) Body-classes alleen aanpassen als ze niet overeenkomen
-    document.body.classList.toggle('dashboard-page', isDashboard);
-    document.body.classList.toggle('subpage', !isDashboard);
-
-    // 3) Admin thema
+    // Admin thema direct toepassen
     document.body.classList.toggle('admin-page', isAdmin());
 
-    // 4) Terugknop standaard op subpagina’s
-    const finalOpts = Object.assign({ back: !isDashboard, isDashboard }, opts);
+    // Standaard: terugknop op subpagina’s
+    const finalOpts = Object.assign({ back: !isDash }, opts);
 
-    // 5) Render + ping
+    // Versie-info ophalen (met fallback)
+    const verInfo = await fetchVersionJSON();
+    const ctxVersion   = (opts.version || verInfo?.version || APP_VERSION);
+    const ctxBuildTime = (verInfo?.buildTime || '');
+
     const topbarEl = document.getElementById('topbar');
     const footerEl = document.getElementById('footer');
 
+    // Eerste ping (rechtstreeks naar GAS)
     const online = await pingDirect();
 
-    if (topbarEl) renderTopbar(topbarEl, finalOpts, online);
-    if (footerEl) renderFooter(footerEl);
+    if (topbarEl) renderTopbar(topbarEl, { ...finalOpts, ctxVersion }, online);
+    if (footerEl) renderFooter(footerEl, { ctxVersion, ctxBuildTime });
 
-    // 6) Periodiek ping (45s)
+    // Periodiek ping (45s)
     setInterval(async () => {
       const ok = await pingDirect();
       applyNetStatus(ok);
     }, 45_000);
   }
 
-  /* ───────── Back-compat helpers ───────── */
+  // Achterwaarts compatibele helpers
   const setOnline    = (ok) => applyNetStatus(!!ok);
   const noteSuccess  = ()   => applyNetStatus(true);
   const noteFailure  = ()   => applyNetStatus(false);
@@ -246,7 +260,7 @@
     if (e.shiftKey && e.ctrlKey && e.key.toLowerCase() === 'a') {
       const next = !isAdmin();
       setAdmin(next);
-      // kleine feedback
+      // kleine visuele cue
       applyNetStatus(true);
       setTimeout(() => location.reload(), 350);
     }
