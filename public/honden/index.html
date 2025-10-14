@@ -5,9 +5,16 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Honden – Superhond</title>
 
+  <!-- Branch & versie info -->
+  <meta name="superhond-branch" content="Ontwikkeling">
+  <meta name="superhond-version" content="0.26.7">
+
+  <!-- Google Apps Script exec -->
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbysc3pCUpgIxKl2aNPBgJGZIJcNcOvaqF48NG_NgBOGec9TIFKNSHS153NIsng0kE7E4Q/exec">
+
   <!-- Centrale stijlen -->
-  <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
+  <link rel="stylesheet" href="../css/style.css?v=0.26.7">
+  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7">
 </head>
 
 <body class="subpage page-honden">
@@ -16,10 +23,9 @@
   <main class="container">
     <h1 class="page-title">Honden</h1>
 
-    <!-- Overzicht -->
     <section class="card">
       <div class="row" style="display:flex;gap:.5rem;align-items:center">
-        <input id="search" class="input" placeholder="Zoek op naam, ras of eigenaar-ID…" aria-label="Zoeken" />
+        <input id="search" class="input" placeholder="Zoek op naam of chipnummer…" aria-label="Zoeken">
         <button id="refresh" class="btn" type="button">🔄 Verversen</button>
       </div>
 
@@ -31,8 +37,8 @@
             <tr>
               <th>Naam</th>
               <th>Ras</th>
-              <th>Geboorte</th>
-              <th>Eigenaar (ID)</th>
+              <th>Chipnummer</th>
+              <th>Geboortedatum</th>
               <th style="width:1%">Acties</th>
             </tr>
           </thead>
@@ -45,16 +51,10 @@
     <section class="card" style="margin-top:1rem">
       <h2>Nieuwe hond toevoegen</h2>
       <form id="form-add" class="form-grid" autocomplete="off">
-        <input name="name" class="input" placeholder="Naam" required />
-        <input name="breed" class="input" placeholder="Ras" />
-        <input name="birthdate" class="input" type="date" placeholder="Geboortedatum" />
-        <input name="ownerId" class="input" placeholder="Eigenaar ID (klant-id)" required />
-        <input name="chip" class="input" placeholder="Chipnummer" />
-        <input name="notes" class="input" placeholder="Notities" />
-        <select name="status" class="input" aria-label="Status">
-          <option value="actief" selected>actief</option>
-          <option value="inactief">inactief</option>
-        </select>
+        <input name="naam" class="input" placeholder="Naam" required>
+        <input name="ras" class="input" placeholder="Ras">
+        <input name="chipnummer" class="input" placeholder="Chipnummer">
+        <input name="geboortedatum" class="input" type="date" placeholder="Geboortedatum">
         <button class="btn primary" type="submit">💾 Opslaan</button>
       </form>
       <div id="form-msg" class="muted" role="status" aria-live="polite"></div>
@@ -64,9 +64,10 @@
   <footer id="footer"></footer>
 
   <!-- Scripts -->
-  <script defer src="../js/layout.js?v=0.24.2-net"></script>
+  <script defer src="../js/layout.js?v=0.24.4-branch"></script>
+
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', () => {
       window.SuperhondUI?.mount?.({
         title: 'Honden',
         icon: '🐶',
@@ -75,7 +76,8 @@
       });
     });
   </script>
-  <script type="module" src="../js/honden.js?v=0.26.7"></script>
+
+  <script type="module" src="../js/honden.js?v=0.18.9"></script>
 
   <noscript>
     <p style="padding:1rem;color:#b91c1c">JavaScript is vereist om deze pagina te gebruiken.</p>
