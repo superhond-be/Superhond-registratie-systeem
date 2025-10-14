@@ -3,196 +3,74 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Superhond — Eerste installatie</title>
+  <title>Instellingen – Superhond</title>
 
-  <link rel="stylesheet" href="/public/css/style.css?v=0.24.3" />
-  <link rel="stylesheet" href="/public/css/superhond.css?v=0.24.3" />
-  <script src="/public/js/layout.js?v=0.24.3" defer></script>
+  <!-- Centrale UI -->
+  <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
 
-  <style>
-    body{background:#fafafa}
-    main{max-width:880px;margin:2rem auto;padding:0 1rem}
-    .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1rem}
-    .row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
-    .btn{padding:.6rem .9rem;border:1px solid #cbd5e1;border-radius:10px;background:#fff;cursor:pointer}
-    .btn.primary{background:#2563eb;color:#fff;border-color:#2563eb}
-    .input{padding:.6rem .7rem;border:1px solid #d1d5db;border-radius:10px;min-width:300px}
-    .muted{opacity:.8}
-    .ok{color:#15803d}
-    .error{color:#b91c1c}
-    code.inline{background:#f3f4f6;padding:.1rem .35rem;border-radius:.25rem}
-    .notice{background:#ecfeff;border:1px solid #a5f3fc;color:#164e63;padding:.6rem .8rem;border-radius:10px}
-  </style>
+  <!-- (optioneel) hard zetten van exec:
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/XXX/exec">
+  -->
 </head>
-<body class="subpage">
-<header id="topbar"></header>
-<main>
-  <h1>Eerste installatie</h1>
-  <p class="muted">Stel deze browser 1× in. Daarna gebruikt de app automatisch de juiste backend.</p>
+<body class="subpage page-instellingen">
+  <header id="topbar"></header>
 
-  <!-- Snelste route: centrale config -->
-  <section class="card">
-    <h2 style="margin:0 0 .5rem">1) Centrale config ophalen</h2>
-    <p class="muted">We proberen eerst <code class="inline">/public/api/config</code> te lezen. Staat daar de <code class="inline">/exec</code>-URL in, dan bewaren we die lokaal.</p>
-    <div class="row" style="margin:.5rem 0">
-      <button id="btnSync" class="btn primary">Centrale config → lokaal bewaren</button>
-      <span id="syncState" class="muted">–</span>
-    </div>
-    <div class="notice" style="display:none" id="qrNotice">
-      Tip: je kunt ook een link met <code class="inline">?exec=…</code> gebruiken (QR of e-mail) om direct te installeren.
-    </div>
-  </section>
+  <main class="container">
+    <h1 class="page-title">Instellingen</h1>
 
-  <!-- Handmatig plakken (fallback) -->
-  <section class="card">
-    <h2 style="margin:0 0 .5rem">2) Handmatig (fallback)</h2>
-    <div class="row" style="margin:.5rem 0">
-      <input id="execUrl" class="input" type="url" placeholder="https://script.google.com/macros/s/…/exec" aria-label="GAS /exec URL" />
-      <button id="btnSaveLocal" class="btn">Lokaal bewaren</button>
-      <span id="localState" class="muted">–</span>
-    </div>
-    <p class="muted">Deze waarde wordt bewaard als <code class="inline">localStorage.apiBase</code>.</p>
-  </section>
+    <!-- Andere instellingen-kaarten kunnen hier staan -->
 
-  <!-- Test + doorgaan -->
-  <section class="card">
-    <h2 style="margin:0 0 .5rem">3) Test & start</h2>
-    <div class="row" style="margin:.5rem 0">
-      <button id="btnTest" class="btn">Verbinding testen</button>
-      <span id="testState" class="muted">–</span>
-    </div>
-    <div class="row" style="margin-top:.5rem">
-      <a href="/public/dashboard/" class="btn primary">Naar Dashboard</a>
-      <a href="/public/klanten/" class="btn">Naar Klanten</a>
-    </div>
-  </section>
+    <!-- Diagnose -->
+    <section class="card" id="diag-card" style="margin-top:1rem">
+      <h2>Diagnose</h2>
+      <p class="muted" style="margin:.25rem 0 .75rem">
+        Controleer de verbinding met Google Apps Script (GAS) en de tabs <em>Klanten</em> en <em>Honden</em>.
+      </p>
 
-  <section class="card">
-    <h3 style="margin:0 0 .5rem">Huidige status</h3>
-    <div class="row"><strong>apiBase:</strong> <span id="currBase" class="muted">n.v.t.</span></div>
-  </section>
-</main>
-<footer id="footer"></footer>
+      <div class="grid" style="display:grid;gap:.5rem;max-width:980px">
+        <div style="display:grid;grid-template-columns:180px 1fr;gap:.5rem;align-items:center">
+          <label for="diag-exec" class="muted">GAS /exec-URL</label>
+          <input id="diag-exec" class="input" placeholder="https://script.google.com/macros/s/…/exec" />
+        </div>
+        <div class="toolbar" style="margin:.25rem 0 .5rem">
+          <button id="diag-use"   class="btn" type="button">💾 Gebruik & opslaan</button>
+          <button id="diag-clear" class="btn" type="button">🧹 Cache wissen</button>
+          <button id="diag-run"   class="btn" type="button">▶️ Test opnieuw</button>
+        </div>
+      </div>
 
-<script type="module">
-  const $ = s => document.querySelector(s);
-  const LS_API = 'apiBase';
+      <div class="table-wrap" style="margin-top:.5rem">
+        <table class="table" id="diag-table">
+          <thead>
+            <tr><th>Stap</th><th>Status</th><th>Opmerking</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
 
-  document.addEventListener('DOMContentLoaded', () => {
-    // Mount topbar (blauwe balk + back naar home)
-    window.SuperhondUI?.mount?.({ title:'Eerste installatie', icon:'🛠️', back:'/public/dashboard/', home:false });
+      <p class="muted" style="margin-top:.5rem">
+        Tip: na “🧹 Cache wissen” herlaad je best met <kbd>Cmd/Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>R</kbd>.
+      </p>
+    </section>
+  </main>
 
-    // Toon QR-hint alleen als er GEEN apiBase staat
-    $('#qrNotice').style.display = localStorage.getItem(LS_API) ? 'none' : '';
-    refreshStatus();
-    // Auto-handle ?exec=… in URL (QR/quick link)
-    applyExecFromQuery();
-  });
+  <footer id="footer"></footer>
 
-  function refreshStatus(){
-    const base = localStorage.getItem(LS_API) || '';
-    $('#currBase').textContent = base || 'n.v.t.';
-  }
+  <!-- Topbar/Footer (zonder /api-afhankelijkheden) -->
+  <script defer src="../js/layout.js?v=0.24.3"></script>
+  <!-- Diagnose widget -->
+  <script type="module" src="../js/diag-widget.js?v=0.1.0"></script>
 
-  function validExec(url){
-    return /^https?:\/\/.+\/exec(\?.*)?$/.test(url || '');
-  }
+  <script>
+    // Mount de topbar
+    document.addEventListener('DOMContentLoaded', () => {
+      window.SuperhondUI?.mount?.({ title:'Instellingen', icon:'⚙️', back:'../dashboard/' });
+    });
+  </script>
 
-  async function getJSON(url){
-    const r = await fetch(url, { cache:'no-store' });
-    if (!r.ok) throw new Error('HTTP '+r.status);
-    return r.json();
-  }
-
-  async function tryConfigFile(){
-    // Leest /public/api/config als die bestaat
-    try {
-      const cfg = await getJSON('/public/api/config').catch(()=> getJSON('/api/config'));
-      if (cfg?.apiBase && validExec(cfg.apiBase)) return cfg.apiBase;
-    } catch {}
-    return '';
-  }
-
-  async function testPing(base){
-    const r = await fetch(base + '?mode=ping', { cache:'no-store' });
-    const j = await r.json().catch(()=> ({}));
-    return { ok: r.ok, body: j, status: r.status };
-  }
-
-  async function applyExecFromQuery(){
-    const u = new URL(location.href);
-    const param = u.searchParams.get('exec');
-    if (!param) return;
-    const dec = decodeURIComponent(param);
-    if (validExec(dec)) {
-      localStorage.setItem(LS_API, dec);
-      $('#localState').textContent = 'Ingesteld via link ✔️';
-      $('#localState').className = 'ok';
-      refreshStatus();
-      // optioneel: meteen testen
-      try {
-        const t = await testPing(dec);
-        $('#testState').textContent = t.ok ? 'Online ✔️' : ('Offline: ' + (t.body?.error || t.status));
-        $('#testState').className = t.ok ? 'ok' : 'error';
-        window.SuperhondUI?.setOnline?.(t.ok);
-      } catch(e){
-        $('#testState').textContent = 'Offline: ' + e.message;
-        $('#testState').className = 'error';
-        window.SuperhondUI?.setOnline?.(false);
-      }
-    } else {
-      $('#localState').textContent = 'Ongeldige exec-URL in link';
-      $('#localState').className = 'error';
-    }
-  }
-
-  // 1) Centrale config → lokaal
-  $('#btnSync')?.addEventListener('click', async () => {
-    const state = $('#syncState');
-    state.textContent = 'Ophalen…'; state.className = 'muted';
-    try {
-      const exec = await tryConfigFile();
-      if (!exec) throw new Error('Geen geldige apiBase gevonden in /public/api/config of /api/config');
-      localStorage.setItem(LS_API, exec);
-      state.textContent = 'Opgeslagen ✔️'; state.className = 'ok';
-      $('#execUrl').value = exec;
-      refreshStatus();
-    } catch(e){
-      state.textContent = e.message; state.className = 'error';
-    }
-  });
-
-  // 2) Handmatig plakken → lokaal
-  $('#btnSaveLocal')?.addEventListener('click', () => {
-    const url = $('#execUrl').value.trim();
-    if (!validExec(url)) {
-      $('#localState').textContent = 'Ongeldige /exec-URL';
-      $('#localState').className = 'error';
-      return;
-    }
-    localStorage.setItem(LS_API, url);
-    $('#localState').textContent = 'Opgeslagen ✔️';
-    $('#localState').className = 'ok';
-    refreshStatus();
-  });
-
-  // 3) Test verbinding
-  $('#btnTest')?.addEventListener('click', async () => {
-    const base = (localStorage.getItem(LS_API) || $('#execUrl').value || '').trim();
-    const el = $('#testState');
-    if (!validExec(base)) { el.textContent = 'Geen geldige /exec-URL'; el.className = 'error'; return; }
-    el.textContent = 'Testen…'; el.className = 'muted';
-    try {
-      const t = await testPing(base);
-      el.textContent = t.ok ? 'Online ✔️' : ('Offline: ' + (t.body?.error || t.status));
-      el.className = t.ok ? 'ok' : 'error';
-      window.SuperhondUI?.setOnline?.(t.ok);
-    } catch(e){
-      el.textContent = 'Offline: ' + e.message;
-      el.className = 'error';
-      window.SuperhondUI?.setOnline?.(false);
-    }
-  });
-</script>
+  <noscript>
+    <p style="padding:1rem;color:#b91c1c">JavaScript is vereist voor deze pagina.</p>
+  </noscript>
 </body>
 </html>
