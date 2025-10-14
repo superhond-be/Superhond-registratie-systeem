@@ -8,32 +8,38 @@
   <!-- Centrale stijlen -->
   <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
+
+  <!-- (optioneel) direct GAS /exec voor ping in layout.js -->
+  <!-- <meta name="superhond-exec" content="https://script.google.com/macros/s/JOUW_EXEC/exec"> -->
 </head>
 
 <body class="subpage page-klanten">
   <header id="topbar"></header>
 
-  <main class="container">
+  <main class="container" role="main">
     <h1 class="page-title">Klanten</h1>
 
     <!-- Overzicht -->
-    <section class="card">
-      <div class="row" style="display:flex;gap:.5rem;align-items:center">
-        <input id="search" class="input" placeholder="Zoek op naam of e-mail…" aria-label="Zoeken" />
+    <section class="card" aria-labelledby="lijst-title">
+      <h2 id="lijst-title" class="visually-hidden" style="position:absolute;left:-9999px;">Overzicht</h2>
+
+      <div class="toolbar" role="group" aria-label="Zoeken en verversen">
+        <input id="search" class="input" placeholder="Zoek op naam of e-mail…" aria-label="Zoeken" autocomplete="off" autofocus />
         <button id="refresh" class="btn" type="button">🔄 Verversen</button>
+        <a href="../dashboard/" class="btn btn-secondary" role="button">← Terug</a>
       </div>
 
       <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
 
       <div class="table-wrap" style="margin-top:.5rem">
-        <table class="table" id="tbl">
+        <table class="table" id="tbl" aria-describedby="state">
           <thead>
             <tr>
-              <th>Naam</th>
-              <th>E-mail</th>
-              <th>Telefoon</th>
-              <th>Status</th>
-              <th style="width:1%">Acties</th>
+              <th scope="col">Naam</th>
+              <th scope="col">E-mail</th>
+              <th scope="col">Telefoon</th>
+              <th scope="col">Status</th>
+              <th scope="col" style="width:1%">Acties</th>
             </tr>
           </thead>
           <tbody><!-- dynamische rijen --></tbody>
@@ -42,37 +48,37 @@
     </section>
 
     <!-- Toevoegen -->
-    <section class="card" style="margin-top:1rem">
-      <h2>Nieuwe klant toevoegen</h2>
-      <form id="form-add" class="form-grid" autocomplete="off">
-        <input name="voornaam"   class="input" placeholder="Voornaam"   required />
-        <input name="achternaam" class="input" placeholder="Achternaam" required />
-        <input name="email"      class="input" type="email" placeholder="E-mail" />
-        <input name="telefoon"   class="input" placeholder="Telefoon" />
-        <select name="status" class="input" aria-label="Status">
+    <section class="card" style="margin-top:1rem" aria-labelledby="add-title">
+      <h2 id="add-title">Nieuwe klant toevoegen</h2>
+      <form id="form-add" class="form-grid" autocomplete="off" novalidate>
+        <input name="voornaam"   class="input"  placeholder="Voornaam"   required aria-required="true" />
+        <input name="achternaam" class="input"  placeholder="Achternaam" required aria-required="true" />
+        <input name="email"      class="input"  type="email" placeholder="E-mail" inputmode="email" />
+        <input name="telefoon"   class="input"  placeholder="Telefoon" inputmode="tel" />
+        <select name="status" class="select" aria-label="Status">
           <option value="actief" selected>actief</option>
           <option value="inactief">inactief</option>
         </select>
-        <button class="btn primary" type="submit">💾 Opslaan</button>
+        <button class="btn" type="submit">💾 Opslaan</button>
       </form>
       <div id="form-msg" class="muted" role="status" aria-live="polite"></div>
     </section>
   </main>
 
-  <footer id="footer"></footer>
+  <footer id="footer" class="footer"></footer>
 
-  <!-- Scripts -->
-  <!-- Topbar/Footer + online indicator (v0.24.2-net, toont rechtsboven versie uit /api/config) -->
-  <script defer src="../js/layout.js?v=0.24.2-net"></script>
+  <!-- Layout: no-api build (forceert kleur + toont versie) -->
+  <script defer src="../js/layout.js?v=0.24.3-noapi"></script>
 
-  <!-- Fallback-mount zodat de topbar altijd verschijnt -->
+  <!-- Mount: subpagina (blauw) + backknop + versieweergave -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       window.SuperhondUI?.mount?.({
         title: 'Klanten',
         icon: '👤',
         back: '../dashboard/',
-        home: false
+        home: false,
+        version: '0.26.7'
       });
     });
   </script>
