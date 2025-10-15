@@ -1,133 +1,118 @@
 /**
- * public/js/sheets.js — Centrale API-laag voor Superhond (v0.27.4)
- *
- * Belangrijk:
- * - Eén bron van waarheid voor de EXEC-URL (Google Apps Script):
- *   localStorage keys:  'superhond:apiBase' (voorkeur) en 'superhond:exec' (legacy)
- * - Alle pagina’s (dashboard/klanten/honden/klassen/…) gebruiken deze module.
- * - Diagnose/Instellingen kunnen via setExecUrl() de URL instellen; iedereen volgt mee.
- *
- * Features:
- * - Timeouts + retries met exponential backoff
- * - GET (mode / action) + POST (entity/action/payload)
- * - Ping helper
- * - Eenvoudige save-helpers (compat met legacy doPost(mode=...))
+ * public/js/sheets.js — Centrale API-laag (v0.27.4 direct-exec)
+ * - GEEN /api-proxy: rechtstreeks naar Google Apps Script /exec
+ * - Bron van waarheid: <meta name="superhond-exec" content=".../exec">
+ * - Synchroniseert naar localStorage('superhond:execBase') zodat alle pagina’s dezelfde URL hebben
+ * - Timeouts, retries, nette fouten
+ * - Back-compat: export initFromConfig() als alias
  */
 
-const LS_KEY_BASE   = 'superhond:apiBase'; // voorkeurskey
-const LS_KEY_BASE_2 = 'superhond:exec';    // legacy key (backwards-compatible)
-const LS_KEY_BRANCH = 'superhond:branch';
+const DEFAULT_TIMEOUT = 12_000;   // 12s
+const DEFAULT_RETRIES = 2;        // totaal 3 pogingen
+const LS_KEY_BASE     = 'superhond:execBase';
 
-const DEFAULT_TIMEOUT = 12_000; // 12s
-const DEFAULT_RETRIES = 2;      // totaal 3 pogingen
+let EXEC_BASE = '';               // actuele /exec base (zonder querystring)
 
-let EXEC_BASE_URL = '';         // in-memory cache
+/* ─────────────────── Helpers: bron van waarheid ─────────────────── */
 
-/* ───────────────────────────── Helpers: URL sanitize & storage ───────────────────────────── */
+function getMetaExec() {
+  const m = document.querySelector('meta[name="superhond-exec"]');
+  const v = (m?.content || '').trim();
+  return v;
+}
 
 function sanitizeExecUrl(url = '') {
   try {
     const u = new URL(String(url).trim());
-    // Alleen echte GAS /exec toelaten
     if (
       u.hostname === 'script.google.com' &&
       u.pathname.startsWith('/macros/s/') &&
       u.pathname.endsWith('/exec')
-    ) return `${u.origin}${u.pathname}`;
-  } catch {}
-  return '';
-}
-
-function storeBase(url) {
-  EXEC_BASE_URL = url || '';
-  try {
-    if (EXEC_BASE_URL) {
-      localStorage.setItem(LS_KEY_BASE, EXEC_BASE_URL);
-      localStorage.setItem(LS_KEY_BASE_2, EXEC_BASE_URL); // legacy mirror
-    } else {
-      localStorage.removeItem(LS_KEY_BASE);
-      localStorage.removeItem(LS_KEY_BASE_2);
+    ) {
+      // alleen origin + path, geen query/fragment
+      return `${u.origin}${u.pathname}`;
     }
   } catch {}
+  return '';
 }
 
-function readBaseFromStorage() {
+function loadStoredExec() {
+  try { return localStorage.getItem(LS_KEY_BASE) || ''; }
+  catch { return ''; }
+}
+
+function storeExec(url) {
   try {
-    // voorkeur
-    const a = localStorage.getItem(LS_KEY_BASE);
-    if (a) return a;
-    // legacy fallback
-    const b = localStorage.getItem(LS_KEY_BASE_2);
-    if (b) return b;
+    if (url) localStorage.setItem(LS_KEY_BASE, url);
+    else localStorage.removeItem(LS_KEY_BASE);
   } catch {}
-  return '';
-}
-
-function readBaseFromWindowOrMeta() {
-  // 1) window.SUPERHOND_SHEETS_URL (indien in HTML gezet)
-  if (typeof window.SUPERHOND_SHEETS_URL === 'string' && window.SUPERHOND_SHEETS_URL) {
-    return window.SUPERHOND_SHEETS_URL;
-  }
-  // 2) <meta name="superhond-exec" content="...">
-  const meta = document.querySelector('meta[name="superhond-exec"]');
-  if (meta?.content) return meta.content.trim();
-  return '';
-}
-
-/* ───────────────────────────── Publieke configuratie-API ───────────────────────────── */
-
-export function setExecUrl(url) {
-  const safe = sanitizeExecUrl(url);
-  storeBase(safe);
-  // optioneel: UI meteen updaten
-  if (safe) window.SuperhondUI?.setOnline?.(true);
-  else window.SuperhondUI?.setOnline?.(false);
-  return safe;
-}
-
-export function getExecUrl() {
-  if (EXEC_BASE_URL) return EXEC_BASE_URL;
-  const fromLS = readBaseFromStorage();
-  if (fromLS) { EXEC_BASE_URL = sanitizeExecUrl(fromLS); return EXEC_BASE_URL; }
-  const fromDoc = readBaseFromWindowOrMeta();
-  if (fromDoc) { EXEC_BASE_URL = sanitizeExecUrl(fromDoc); return EXEC_BASE_URL; }
-  return '';
-}
-
-export function setBranchLabel(label = '') {
-  try { localStorage.setItem(LS_KEY_BRANCH, String(label || '')); } catch {}
-}
-export function getBranchLabel() {
-  try { return localStorage.getItem(LS_KEY_BRANCH) || ''; } catch { return ''; }
 }
 
 /**
- * Best-effort init: laad EXEC-URL uit localStorage of window/meta.
- * (Je kunt dit aanroepen in elke pagina vóór data-calls.)
+ * Initialiseer EXEC_BASE:
+ * 1) lees <meta name="superhond-exec">
+ * 2) fallback op localStorage
+ * 3) synchroniseer localStorage indien nodig
  */
-export async function initFromConfig() {
-  if (!EXEC_BASE_URL) {
-    // volgorde: LS → window/meta
-    const fromLS = readBaseFromStorage();
-    if (fromLS) storeBase(sanitizeExecUrl(fromLS));
-    if (!EXEC_BASE_URL) {
-      const fromDoc = readBaseFromWindowOrMeta();
-      if (fromDoc) storeBase(sanitizeExecUrl(fromDoc));
-    }
+export async function initFromMetaOrStorage() {
+  let base = sanitizeExecUrl(getMetaExec());
+  if (!base) base = sanitizeExecUrl(loadStoredExec());
+  if (!base) {
+    EXEC_BASE = '';
+    return;
+  }
+  EXEC_BASE = base;
+  // sync naar storage (één bron voor alle pagina’s)
+  storeExec(EXEC_BASE);
+}
+
+/** Back-compat: laat bestaande code die initFromConfig() aanroept gewoon werken */
+export const initFromConfig = initFromMetaOrStorage;
+
+/** Handig als je de base in runtime wil overschrijven (bv. instellingenscherm) */
+export function setExecBase(url) {
+  const safe = sanitizeExecUrl(url);
+  EXEC_BASE = safe;
+  storeExec(safe);
+}
+export function getExecBase() {
+  if (EXEC_BASE) return EXEC_BASE;
+  // lazy init: probeer alsnog meta/storage
+  const m = sanitizeExecUrl(getMetaExec());
+  if (m) { EXEC_BASE = m; storeExec(m); return EXEC_BASE; }
+  const s = sanitizeExecUrl(loadStoredExec());
+  if (s) { EXEC_BASE = s; return EXEC_BASE; }
+  return '';
+}
+
+/** Snelle ping naar /exec?mode=ping */
+export async function pingExec() {
+  const base = getExecBase();
+  if (!base) return false;
+  const sep = base.includes('?') ? '&' : '?';
+  const url = `${base}${sep}mode=ping&t=${Date.now()}`;
+  try {
+    const r = await fetch(url, { cache: 'no-store' });
+    return r.ok;
+  } catch {
+    return false;
   }
 }
 
-/* ───────────────────────────── Fetch utilities ───────────────────────────── */
+/* ─────────────────── Fetch utils ─────────────────── */
 
-function peekBody(s, n = 200) {
-  return String(s || '').replace(/\s+/g, ' ').slice(0, n);
+function peekBody(s, n = 180) {
+  return String(s || '').trim().replace(/\s+/g, ' ').slice(0, n);
 }
 
-function fetchWithTimeout(url, init = {}, timeoutMs = DEFAULT_TIMEOUT) {
+async function fetchWithTimeout(url, init = {}, timeoutMs = DEFAULT_TIMEOUT) {
   const ac = new AbortController();
-  const id = setTimeout(() => ac.abort(new Error('timeout')), timeoutMs);
-  return fetch(url, { ...init, signal: ac.signal, cache: 'no-store' })
-    .finally(() => clearTimeout(id));
+  const to = setTimeout(() => ac.abort(new Error('timeout')), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: ac.signal, cache: 'no-store' });
+  } finally {
+    clearTimeout(to);
+  }
 }
 
 async function withRetry(doRequest, { retries = DEFAULT_RETRIES, baseDelay = 300 } = {}) {
@@ -139,9 +124,9 @@ async function withRetry(doRequest, { retries = DEFAULT_RETRIES, baseDelay = 300
       lastErr = err;
       const isTimeout = err?.name === 'AbortError' || err?.message === 'timeout';
       const transient = isTimeout ||
-        /Failed to fetch|NetworkError|ECONNRESET|ENOTFOUND|aborted/i.test(String(err));
+        /Failed to fetch|NetworkError|ECONNRESET|ENOTFOUND|TLS|temporar/i.test(String(err));
       if (attempt < retries && transient) {
-        const wait = baseDelay * Math.pow(2, attempt);
+        const wait = baseDelay * Math.pow(2, attempt); // 300ms, 600ms, 1200ms
         await new Promise(r => setTimeout(r, wait));
         continue;
       }
@@ -151,111 +136,116 @@ async function withRetry(doRequest, { retries = DEFAULT_RETRIES, baseDelay = 300
   throw lastErr;
 }
 
-/* ───────────────────────────── URL bouwers ───────────────────────────── */
+/* ─────────────────── URL builder ─────────────────── */
 
-function ensureBaseOrThrow() {
-  const base = getExecUrl();
-  if (!base) throw new Error('Geen geldige Google Apps Script /exec URL ingesteld.');
-  return base;
-}
-
-function buildGetUrl(params = {}) {
-  const base = ensureBaseOrThrow();
+function buildExecUrl(paramsObj) {
+  const base = getExecBase();
+  if (!base) throw new Error('Geen geldige exec-base URL (superhond-exec/meta of localStorage ontbreekt).');
   const url = new URL(base);
-  Object.entries(params).forEach(([k, v]) => {
-    if (v == null || v === '') return;
-    url.searchParams.set(k, String(v));
-  });
-  // cache buster
-  url.searchParams.set('t', Date.now());
+  if (paramsObj) {
+    Object.entries(paramsObj).forEach(([k, v]) => {
+      if (v != null && v !== '') url.searchParams.set(k, String(v));
+    });
+  }
   return url.toString();
 }
 
-/* ───────────────────────────── Kern GET/POST ───────────────────────────── */
+/* ─────────────────── Kern GET/POST ─────────────────── */
 
-async function getJSON(params = {}, { timeout = DEFAULT_TIMEOUT, signal } = {}) {
+async function getJSON(paramsObj, { timeout = DEFAULT_TIMEOUT } = {}) {
   return withRetry(async () => {
-    const url = buildGetUrl(params);
-    const res = await fetchWithTimeout(url, { method: 'GET', signal }, timeout);
+    const url = buildExecUrl(paramsObj);
+    const res  = await fetchWithTimeout(url, { method: 'GET' }, timeout);
     const text = await res.text();
+
     let json;
     try { json = JSON.parse(text); }
-    catch { throw new Error(`Geen geldige JSON (HTTP ${res.status}): ${peekBody(text)}`); }
+    catch { throw new Error(`Geen geldige JSON (status ${res.status}): ${peekBody(text)}`); }
+
+    // GAS kan zowel { ok:true, data } als ruwe data[] teruggeven
     if (!res.ok || json?.ok === false) {
-      const msg = json?.error || `Upstream ${res.status}`;
-      throw new Error(`${msg}: ${peekBody(text)}`);
+      const err = json?.error || `Upstream ${res.status}`;
+      throw new Error(`${err}: ${peekBody(text)}`);
     }
     return json;
   });
 }
 
-async function postJSON(body, params = {}, { timeout = DEFAULT_TIMEOUT, signal } = {}) {
+async function postJSON(body, paramsObj, { timeout = DEFAULT_TIMEOUT } = {}) {
+  // Altijd als text/plain (GAS leest e.postData.contents; vermijdt CORS/preflight)
   const bodyText = typeof body === 'string' ? body : JSON.stringify(body || {});
   return withRetry(async () => {
-    const url = buildGetUrl(params); // zelfde base + query
-    const res = await fetchWithTimeout(url, {
+    const url = buildExecUrl(paramsObj);
+    const res  = await fetchWithTimeout(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' }, // voorkomt CORS preflight bij GAS
-      body: bodyText,
-      signal
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+      body: bodyText
     }, timeout);
     const text = await res.text();
+
     let json;
     try { json = JSON.parse(text); }
-    catch { throw new Error(`Geen geldige JSON (HTTP ${res.status}): ${peekBody(text)}`); }
+    catch { throw new Error(`Geen geldige JSON (status ${res.status}): ${peekBody(text)}`); }
+
     if (!res.ok || json?.ok === false) {
-      const msg = json?.error || `Upstream ${res.status}`;
-      throw new Error(`${msg}: ${peekBody(text)}`);
+      const err = json?.error || `Upstream ${res.status}`;
+      throw new Error(`${err}: ${peekBody(text)}`);
     }
     return json;
   });
 }
 
-/* ───────────────────────────── Publieke data-helpers ───────────────────────────── */
+/* ─────────────────── Publieke helpers ─────────────────── */
 
-/** Healthcheck naar jouw GAS /exec. Geeft true/false terug. */
-export async function pingExec() {
-  try {
-    const j = await getJSON({ mode: 'ping' }, { timeout: 6_000 });
-    return j?.ok === true || j?.data?.ok === true || j?.data?.ping === 'OK';
-  } catch {
-    return false;
-  }
+export function normStatus(s) {
+  return String(s == null ? '' : s).trim().toLowerCase();
 }
 
-/** Legacy GET: lees een tab via mode= */
+/** Vangt verschillende responsevormen op en geeft altijd een array terug. */
+export function toArrayRows(x){
+  if (Array.isArray(x)) return x;
+  if (x && Array.isArray(x.data)) return x.data;
+  if (x && Array.isArray(x.rows)) return x.rows;
+  if (x && Array.isArray(x.result)) return x.result;
+  if (x && x.ok === true && Array.isArray(x.data)) return x.data;
+  if (x && x.data && Array.isArray(x.data.rows)) return x.data.rows;
+  return [];
+}
+
+/** Lees een sheet-tab via legacy `mode=`: klanten|honden|klassen|lessen|reeksen|all|diag */
 export async function fetchSheet(tabName, opts = {}) {
-  const mode = String(tabName || '').trim();
+  const mode = String(tabName || '').toLowerCase();
   if (!mode) throw new Error('tabName vereist');
-  const json = await getJSON({ mode }, opts);
-  return json?.data || [];
+  const json = await getJSON({ mode }, { timeout: opts.timeout ?? DEFAULT_TIMEOUT });
+  // zowel {ok:true,data} als rauwe array
+  return json?.data ?? json ?? [];
 }
 
-/** Moderne GET: action=... */
+/** Moderne GET actions uit GAS (indien aanwezig): bv. action=getLeden */
 export async function fetchAction(action, params = {}, opts = {}) {
   const a = String(action || '').trim();
   if (!a) throw new Error('action vereist');
-  const json = await getJSON({ action: a, ...params }, opts);
-  return json?.data || [];
+  const json = await getJSON({ action: a, ...params }, { timeout: opts.timeout ?? DEFAULT_TIMEOUT });
+  return json?.data ?? json ?? [];
 }
 
-/** Moderne POST: { entity, action, payload } */
+/** Moderne POST actions (algemene router): { entity, action, payload } */
 export async function postAction(entity, action, payload = {}, opts = {}) {
   const e = String(entity || '').trim().toLowerCase();
   const a = String(action || '').trim().toLowerCase();
   if (!e || !a) throw new Error('entity en action vereist');
-  const json = await postJSON({ entity: e, action: a, payload }, {}, opts);
-  return json?.data || {};
+  const json = await postJSON({ entity: e, action: a, payload }, null, { timeout: opts.timeout ?? DEFAULT_TIMEOUT });
+  return json?.data ?? json ?? {};
 }
 
-/** Convenience legacy-saves (doPost mode=...) */
-export const saveKlant = (data, opts) => postJSON(data, { mode: 'saveKlant' }, opts).then(j => j.data || {});
-export const saveHond  = (data, opts) => postJSON(data, { mode: 'saveHond'  }, opts).then(j => j.data || {});
-export const saveKlas  = (data, opts) => postJSON(data, { mode: 'saveKlas'  }, opts).then(j => j.data || {});
-export const saveLes   = (data, opts) => postJSON(data, { mode: 'saveLes'   }, opts).then(j => j.data || {});
+/* Convenience: directe save-calls die mappen op doPost(mode=...) in je GAS */
+export const saveKlant = (data,   opts={}) => postJSON(data, { mode: 'saveKlant' },   { timeout: opts.timeout ?? DEFAULT_TIMEOUT }).then(j => j.data || {});
+export const saveHond  = (data,   opts={}) => postJSON(data, { mode: 'saveHond'  },   { timeout: opts.timeout ?? DEFAULT_TIMEOUT }).then(j => j.data || {});
+export const saveKlas  = (data,   opts={}) => postJSON(data, { mode: 'saveKlas'  },   { timeout: opts.timeout ?? DEFAULT_TIMEOUT }).then(j => j.data || {});
+export const saveLes   = (data,   opts={}) => postJSON(data, { mode: 'saveLes'   },   { timeout: opts.timeout ?? DEFAULT_TIMEOUT }).then(j => j.data || {});
 
-/* ───────────────────────────── Auto-init ───────────────────────────── */
-
-(async function autoInit() {
-  try { await initFromConfig(); } catch {}
+/* ─────────────────── Auto-init ─────────────────── */
+/** Best-effort init bij load (kan je ook handmatig aanroepen vóór fetchSheet/save...) */
+(async function autoInit(){
+  try { await initFromMetaOrStorage(); } catch {}
 })();
