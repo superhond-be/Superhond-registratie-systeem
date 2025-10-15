@@ -1,85 +1,64 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Klassen – Superhond</title>
 
-  <!-- (optioneel) rechtstreeks pingen naar jouw GAS /exec; laat staan als je Instellingen gebruikt -->
-  <!-- <meta name="superhond-exec" content="https://script.google.com/macros/s/JE_EIGEN_EXEC/exec"> -->
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/____JOUW_EXEC____/exec"/>
+  <meta name="superhond-branch" content="Ontwikkeling"/>
 
-  <!-- Centrale stijlen (actuele versies) -->
-  <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
+  <link rel="stylesheet" href="../css/style.css?v=0.27.2"/>
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.2"/>
 </head>
-
 <body class="subpage page-klassen">
   <header id="topbar"></header>
 
   <main class="container">
     <h1 class="page-title">Klassen</h1>
 
-    <!-- Overzicht -->
     <section class="card">
-      <div class="row" style="display:flex;gap:.5rem;align-items:center">
-        <input id="search" class="input" placeholder="Zoek op naam, niveau, trainer of status…" aria-label="Zoeken" />
-        <button id="refresh" class="btn" type="button">🔄 Verversen</button>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <input id="search" class="input" placeholder="Zoek op naam, niveau, trainer of status…"/>
+        <button id="refresh" class="btn">🔄 Ververs</button>
       </div>
-
       <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
 
       <div class="table-wrap" style="margin-top:.5rem">
         <table class="table" id="tbl">
           <thead>
-            <tr>
-              <th>Naam</th>
-              <th>Niveau</th>
-              <th>Trainer</th>
-              <th>Status</th>
-              <th style="width:1%">Max</th>
-              <th style="width:1%">Acties</th>
-            </tr>
+            <tr><th>Naam</th><th>Niveau</th><th>Trainer</th><th>Status</th><th>Max</th><th style="width:1%">Acties</th></tr>
           </thead>
-          <tbody><!-- dynamische rijen --></tbody>
+          <tbody></tbody>
         </table>
       </div>
     </section>
 
-    <!-- Toevoegen -->
     <section class="card" style="margin-top:1rem">
       <h2>Nieuwe klas toevoegen</h2>
       <form id="form-add" class="form-grid" autocomplete="off">
-        <input name="naam" class="input" placeholder="Naam" required />
-        <input name="niveau" class="input" placeholder="Niveau (bv. Puppy, Gevorderd…)" />
-        <input name="trainer" class="input" placeholder="Trainer" />
-        <select name="status" class="input" aria-label="Status">
-          <option value="actief" selected>actief</option>
-          <option value="inactief">inactief</option>
-        </select>
-        <!-- optioneel, ondersteunt saveKlas_: -->
-        <input name="max_deelnemers" class="input input-nr" placeholder="Max" inputmode="numeric" />
-        <input name="geldigheid_weken" class="input input-nr" placeholder="Weken" inputmode="numeric" />
+        <input name="naam" class="input" placeholder="Naam" required/>
+        <input name="niveau" class="input" placeholder="Niveau (bv. Puppy, Gevorderd…)"/>
+        <input name="trainer" class="input" placeholder="Trainer"/>
+        <select name="status" class="input"><option value="actief" selected>actief</option><option value="inactief">inactief</option></select>
+        <input name="max_deelnemers" class="input" type="number" min="0" step="1" placeholder="Max"/>
+        <input name="geldigheid_weken" class="input" type="number" min="0" step="1" placeholder="Weken"/>
         <button class="btn" type="submit">💾 Opslaan</button>
       </form>
-      <div id="form-msg" class="muted" role="status" aria-live="polite"></div>
+      <div id="form-msg" class="muted" style="margin-top:.35rem"></div>
     </section>
   </main>
 
   <footer id="footer" class="footer"></footer>
 
-  <!-- Scripts (actuele versies) -->
-  <script defer src="../js/layout.js?v=0.24.3"></script>
-  <script type="module" defer src="../js/klassen.js?v=0.27.1"></script>
+  <script defer src="../js/layout.js?v=0.27.2"></script>
+  <script type="module" src="../js/actions.js?v=0.27.2"></script>
+  <script type="module" src="../js/sheets.js?v=0.27.2"></script>
+  <script type="module" src="../js/klassen.js?v=0.27.2"></script>
 
-  <!-- Fallback: monteer topbar ook als module faalt -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      window.SuperhondUI?.mount?.({ title: 'Klassen', icon: '📚', back: '../dashboard/', home:false });
-    });
-    // zichtbare JS-fouten (handig bij debuggen)
-    window.addEventListener('error', e => {
-      const s = document.getElementById('state');
-      if (s) s.textContent = '❌ JS-fout: ' + (e?.message || e);
+      window.SuperhondUI?.mount?.({ title:'Klassen', icon:'📚', back:'../dashboard/' });
     });
   </script>
 </body>
