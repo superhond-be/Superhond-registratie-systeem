@@ -1,9 +1,6 @@
 /**
- * public/js/klanten.js — Lijst + zoeken + toevoegen + acties (v0.26.6) 
- * - Voorgedrukte status-select (actief/inactief)
- * - Actiekolom (👁️ ✏️ 🗑️) via actions.js (met veilige fallback)
- * - Klik op naam opent details (met gekoppelde honden)
- * - Opslaan/Verwijderen/Wijzigen via sheets.js helpers
+ * public/js/klanten.js — Lijst + zoeken + toevoegen + acties (v0.26.8)
+ * Werkt met public/js/sheets.js (directe GAS-verbinding via initFromConfig)
  */
 
 import {
@@ -15,74 +12,58 @@ import {
 
 import * as Actions from './actions.js';
 
-// ───────────────────────── Utils ─────────────────────────
+/* ───────────────────── Utils ───────────────────── */
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-const TIMEOUT_MS = 20000;
 const collator = new Intl.Collator('nl', { sensitivity: 'base', numeric: true });
 
-function debounce(fn, ms = 250) { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; }
-function toast(msg, type='info'){ (window.SuperhondToast||console.log)(msg, type); }
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function linkEmail(s){ const v=String(s||'').trim(); return v?`<a href="mailto:${escapeHtml(v)}">${escapeHtml(v)}</a>`:''; }
-function linkTel(s){
-  const v=String(s||'').trim(); if(!v) return '';
-  const digits=v.replace(/[^\d+]/g,''); const href=/^\+/.test(digits)?digits:digits.replace(/^0/,'+32');
+const debounce = (fn, ms = 250) => { let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); }; };
+const toast    = (msg, type='info') => (window.SuperhondToast || console.log)(msg, type);
+
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
+);
+
+const linkEmail = (s) => {
+  const v = String(s||'').trim();
+  return v ? `<a href="mailto:${escapeHtml(v)}">${escapeHtml(v)}</a>` : '';
+};
+const linkTel = (s) => {
+  const v = String(s||'').trim(); if (!v) return '';
+  const digits = v.replace(/[^\d+]/g,'');
+  const href   = /^\+/.test(digits) ? digits : digits.replace(/^0/, '+32');
   return `<a href="tel:${escapeHtml(href)}">${escapeHtml(v)}</a>`;
-}
+};
+
 function setState(text, kind='muted'){
-  const el=$('#state'); if(!el) return;
-  el.className=kind; el.textContent=text;
+  const el = $('#state'); if (!el) return;
+  el.className = kind;
+  el.textContent = text;
   el.setAttribute('role', kind==='error' ? 'alert' : 'status');
 }
-function clearErrors(form){ $$('.input-error',form).forEach(el=>el.classList.remove('input-error')); $$('.field-error',form).forEach(el=>el.remove()); }
-function setFieldError(input,msg){
-  if(!input) return;
+function clearErrors(form){
+  $$('.input-error', form).forEach(el => el.classList.remove('input-error'));
+  $$('.field-error', form).forEach(el => el.remove());
+}
+function setFieldError(input, msg){
+  if (!input) return;
   input.classList.add('input-error');
-  const hint=document.createElement('div');
-  hint.className='field-error';
-  hint.textContent=msg;
+  const hint = document.createElement('div');
+  hint.className = 'field-error';
+  hint.textContent = msg;
   input.insertAdjacentElement('afterend', hint);
 }
 
-// ───────────────────────── Response helpers ─────────────────────────
-function toArrayRows(x){
-  if (Array.isArray(x)) return x;
-  if (x && Array.isArray(x.data)) return x.data;
-  if (x && Array.isArray(x.rows)) return x.rows;
-  if (x && Array.isArray(x.result)) return x.result;
-  if (x && x.ok === true && Array.isArray(x.data)) return x.data;
-  if (x && x.data && Array.isArray(x.data.rows)) return x.data.rows;
-  throw new Error('Server gaf onverwachte respons (geen lijst).');
-}
-
-// ───────────────────────── Data ─────────────────────────
-let allRows = [];     // klanten
-let viewRows = [];
-let lastAbort = null;
-
-// voor “Honden bij klant”
-async function fetchHondenByOwner(ownerId){
-  try {
-    const raw = await fetchSheet('Honden', { timeout: TIMEOUT_MS });
-    const list = toArrayRows(raw).map(normalizeHond);
-    return list.filter(h => String(h.ownerid) === String(ownerId));
-  } catch (e) {
-    console.warn('[klanten] Honden laden faalde:', e?.message || e);
-    return [];
-  }
-}
-
-// ───────────────────────── Normalisatie ─────────────────────────
+/* ───────────────────── Normalisatie ───────────────────── */
 function normalizeKlant(row){
   const o = Object.create(null);
   for (const [k,v] of Object.entries(row || {})) o[String(k||'').toLowerCase()] = v;
 
-  const id = (o.id ?? o.klantid ?? o['klant id'] ?? o['id.'] ?? o['klant_id'] ?? o.col1 ?? '').toString();
-  const vn = (o.voornaam || '').toString().trim();
-  const an = (o.achternaam || '').toString().trim();
-  const naam = (o.naam || `${vn} ${an}`.trim()).toString();
+  const id  = (o.id ?? o.klantid ?? o['klant id'] ?? o['id.'] ?? o['klant_id'] ?? o.col1 ?? '').toString();
+  const vn  = (o.voornaam || '').toString().trim();
+  const an  = (o.achternaam || '').toString().trim();
+  const naam= (o.naam || `${vn} ${an}`.trim()).toString();
 
   return {
     id,
@@ -95,49 +76,69 @@ function normalizeKlant(row){
   };
 }
 function normalizeHond(row){
-  const o={}; for(const[k,v] of Object.entries(row||{})) o[String(k||'').toLowerCase()] = v;
+  const o = {}; for (const [k,v] of Object.entries(row||{})) o[String(k||'').toLowerCase()] = v;
   return {
     id: (o.id ?? o.hondid ?? o['hond id'] ?? o['id.'] ?? o.col1 ?? '').toString(),
     name: (o.name ?? o.naam ?? '').toString(),
     breed: (o.breed ?? o.ras ?? '').toString(),
     birthdate: (o.birthdate ?? o.geboorte ?? o['geboortedatum'] ?? '').toString(),
-    ownerid: (o.ownerid ?? o['ownerid'] ?? o['eigenaar id'] ?? o['eigenaarid'] ?? o.eigenaar ?? '').toString(),
+    ownerid: (o.ownerid ?? o['eigenaar id'] ?? o['eigenaarid'] ?? o.eigenaar ?? '').toString(),
     chip: (o.chip ?? o['chipnummer'] ?? '').toString(),
     notes: (o.notes ?? o.notities ?? o.opm ?? o.opmerking ?? '').toString(),
     status: (o.status || '').toString()
   };
 }
 
-// ───────────────────────── Filter/Render ─────────────────────────
+/* ───────────────────── Data ───────────────────── */
+let allRows   = [];
+let viewRows  = [];
+
+/** Honden per klant ophalen (zelfde GAS, via sheets.js) */
+async function fetchHondenByOwner(ownerId){
+  try {
+    const raw = await fetchSheet('Honden');       // sheets.js geeft al array terug
+    const list = (raw || []).map(normalizeHond);
+    return list.filter(h => String(h.ownerid) === String(ownerId));
+  } catch (e) {
+    console.warn('[klanten] Honden laden faalde:', e?.message || e);
+    return [];
+  }
+}
+
+/* ───────────────────── Filter + render ───────────────────── */
 function rowMatchesQuery(row, q){
   if (!q) return true;
-  const hay=[row.naam,row.email,row.telefoon,row.status].map(x=>String(x||'').toLowerCase()).join(' ');
+  const hay = [row.naam, row.email, row.telefoon, row.status]
+    .map(x => String(x||'').toLowerCase()).join(' ');
   return hay.includes(q);
 }
 
 function actionBtnsSafe({ id, entity }) {
-  // Fallback als actions.js (nog) niet beschikbaar is.
   if (typeof Actions.actionBtns === 'function') return Actions.actionBtns({ id, entity });
   return `
     <div class="sh-actions">
-      <button class="btn btn-xs" data-act="view" data-id="${escapeHtml(id)}" title="Bekijken">👁️</button>
-      <button class="btn btn-xs" data-act="edit" data-id="${escapeHtml(id)}" title="Wijzigen">✏️</button>
+      <button class="btn btn-xs" data-act="view"   data-id="${escapeHtml(id)}" title="Bekijken">👁️</button>
+      <button class="btn btn-xs" data-act="edit"   data-id="${escapeHtml(id)}" title="Wijzigen">✏️</button>
       <button class="btn btn-xs danger" data-act="delete" data-id="${escapeHtml(id)}" title="Verwijderen">🗑️</button>
     </div>`;
 }
 
 function renderTable(rows){
-  const tb = $('#tbl tbody'); if(!tb) return;
-  tb.innerHTML='';
-  if(!rows.length){ tb.innerHTML = `<tr><td colspan="5" class="muted">Geen resultaten.</td></tr>`; return; }
-
-  const frag=document.createDocumentFragment();
-  for(const r of rows){
-    const tr=document.createElement('tr');
+  const tb = $('#tbl tbody'); if (!tb) return;
+  tb.innerHTML = '';
+  if (!rows.length) {
+    tb.innerHTML = `<tr><td colspan="5" class="muted">Geen resultaten.</td></tr>`;
+    return;
+  }
+  const frag = document.createDocumentFragment();
+  for (const r of rows){
+    const tr = document.createElement('tr');
     tr.dataset.id = r.id || '';
-    tr.innerHTML=`
+    tr.innerHTML = `
       <td class="cell-name">
-        <button class="linklike act-open" data-id="${escapeHtml(r.id||'')}" aria-label="Klant bekijken">${escapeHtml(r.naam||'')}</button>
+        <button class="linklike act-open" data-id="${escapeHtml(r.id||'')}" aria-label="Klant bekijken">
+          ${escapeHtml(r.naam||'')}
+        </button>
       </td>
       <td>${linkEmail(r.email)}</td>
       <td>${linkTel(r.telefoon)}</td>
@@ -155,16 +156,16 @@ const doFilter = debounce(() => {
   renderTable(viewRows);
 }, 150);
 
-// ───────────────────────── Modals ─────────────────────────
+/* ───────────────────── Modals (view/edit) ───────────────────── */
 function ensureModalRoot(){
-  let root=document.getElementById('modal-root');
-  if(!root){ root=document.createElement('div'); root.id='modal-root'; document.body.appendChild(root); }
+  let root = document.getElementById('modal-root');
+  if (!root){ root = document.createElement('div'); root.id = 'modal-root'; document.body.appendChild(root); }
   return root;
 }
-function closeModal(){ const r=document.getElementById('modal-root'); if(r) r.innerHTML=''; }
+function closeModal(){ const r = document.getElementById('modal-root'); if (r) r.innerHTML=''; }
 function modal(contentHTML, { title='Details' }={}){
   ensureModalRoot();
-  const root=document.getElementById('modal-root');
+  const root = document.getElementById('modal-root');
   root.innerHTML = `
     <style>
       #modal-root .sh-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:1000}
@@ -197,14 +198,13 @@ function modal(contentHTML, { title='Details' }={}){
   document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); }, { once:true });
 }
 
-// ───────── Bekijken (incl. honden) ─────────
 async function openKlantView(id){
   const r = allRows.find(x => String(x.id) === String(id));
   if (!r) { toast('Klant niet gevonden','error'); return; }
 
-  let honden=[];
-  try { setState('Honden ophalen…','muted'); honden = await fetchHondenByOwner(r.id); }
-  finally { setState(`✅ ${viewRows.length||allRows.length} klant(en) geladen`,'muted'); }
+  setState('Honden ophalen…','muted');
+  const honden = await fetchHondenByOwner(r.id).catch(()=>[]);
+  setState(`✅ ${viewRows.length||allRows.length} klant(en) geladen`,'muted');
 
   const hondenRows = honden.length
     ? honden.map(h=>`<tr><td>${escapeHtml(h.name||'')}</td><td>${escapeHtml(h.breed||'')}</td><td>${escapeHtml(h.id||'')}</td></tr>`).join('')
@@ -226,7 +226,6 @@ async function openKlantView(id){
   modal(html, { title: 'Klant bekijken' });
 }
 
-// ───────── Wijzigen ─────────
 function openKlantEdit(id){
   const r = allRows.find(x => String(x.id) === String(id));
   if (!r) { toast('Klant niet gevonden','error'); return; }
@@ -280,7 +279,6 @@ function openKlantEdit(id){
   });
 }
 
-// ───────── Verwijderen ─────────
 async function deleteKlant(id){
   const r = allRows.find(x => String(x.id) === String(id));
   if (!r) { toast('Klant niet gevonden','error'); return; }
@@ -303,27 +301,23 @@ function applyActiveFilter(){
   return viewRows;
 }
 
-// ───────────────────────── Data laden ─────────────────────────
+/* ───────────────────── Laden ───────────────────── */
 async function refresh(){
-  if (lastAbort) lastAbort.abort();
-  const ac = new AbortController(); lastAbort = ac;
-
   try{
     setState('⏳ Laden…','muted');
 
     // Probeer 'Klanten', fallback 'Leden'
-    let rows;
-    try { rows = toArrayRows(await fetchSheet('Klanten',{ timeout: TIMEOUT_MS, signal: ac.signal })); }
-    catch { rows = toArrayRows(await fetchSheet('Leden',{ timeout: TIMEOUT_MS, signal: ac.signal })); }
+    let rows = [];
+    try { rows = await fetchSheet('Klanten'); }
+    catch { rows = await fetchSheet('Leden'); }
 
-    allRows = rows.map(normalizeKlant);
+    allRows = (rows || []).map(normalizeKlant);
     allRows.sort((a,b)=>collator.compare(a.naam||'', b.naam||''));
     renderTable(applyActiveFilter());
 
     setState(`✅ ${viewRows.length} klant${viewRows.length===1?'':'en'} geladen`,'muted');
     window.SuperhondUI?.setOnline?.(true);
   }catch(err){
-    if (err?.name === 'AbortError') return;
     console.error(err);
     setState(`❌ Fout bij laden: ${err?.message || err}`,'error');
     toast('Laden van klanten mislukt','error');
@@ -331,7 +325,7 @@ async function refresh(){
   }
 }
 
-// ───────────────────────── Form: nieuw klant ─────────────────────────
+/* ───────────────────── Toevoegen ───────────────────── */
 function ensureStatusSelectDefault(){
   const sel = document.querySelector('#form-add [name="status"]');
   if (!sel || sel.tagName !== 'SELECT') return;
@@ -346,13 +340,13 @@ function ensureStatusSelectDefault(){
 let addBusy = false;
 async function onSubmitAdd(e){
   e.preventDefault();
-  if (addBusy) return; // dubbelklikken voorkomen
+  if (addBusy) return;
   addBusy = true;
 
-  const form=e.currentTarget;
+  const form = e.currentTarget;
   clearErrors(form);
 
-  const fd=new FormData(form);
+  const fd = new FormData(form);
   const voornaam   = String(fd.get('voornaam')||'').trim();
   const achternaam = String(fd.get('achternaam')||'').trim();
   const email      = String(fd.get('email')||'').trim();
@@ -366,35 +360,36 @@ async function onSubmitAdd(e){
   if(email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ setFieldError(form.querySelector('[name="email"]'),'Ongeldig e-mailadres'); hasErr=true; }
   if (hasErr) { addBusy=false; return; }
 
-  const payload={ voornaam, achternaam, email, telefoon, status };
-  const msg=$('#form-msg');
+  const payload = { voornaam, achternaam, email, telefoon, status };
+
+  const msg = $('#form-msg');
   const btn = form.querySelector('button[type="submit"]') || form.querySelector('button');
-  if (btn) { btn.disabled = true; }
-  if(msg){ msg.className='muted'; msg.textContent='⏳ Opslaan…'; }
+  if (btn) btn.disabled = true;
+  if (msg) { msg.className='muted'; msg.textContent='⏳ Opslaan…'; }
 
   try{
-    const res=await saveKlant(payload);
-    const id =res?.id||'';
-    toast('✅ Klant opgeslagen','ok');
+    const res = await saveKlant(payload); // { id }
+    const id  = res?.id || '';
 
-    const nieuw=normalizeKlant({ id, ...payload, naam: `${voornaam} ${achternaam}`.trim() });
-    allRows.push(nieuw); allRows.sort((a,b)=>collator.compare(a.naam||'',b.naam||''));
+    const nieuw = normalizeKlant({ id, ...payload, naam: `${voornaam} ${achternaam}`.trim() });
+    allRows.push(nieuw);
+    allRows.sort((a,b)=>collator.compare(a.naam||'',b.naam||''));
     renderTable(applyActiveFilter());
 
-    if(msg) msg.textContent=`✅ Bewaard (id: ${id})`;
+    if (msg) msg.textContent = `✅ Bewaard (id: ${id})`;
+    toast('✅ Klant opgeslagen','ok');
     form.reset(); ensureStatusSelectDefault();
-    const first=form.querySelector('input,select,textarea'); first && first.focus();
+    (form.querySelector('input,select,textarea')||{}).focus?.();
   }catch(err){
     console.error(err);
-    if(msg){ msg.className='error'; msg.textContent=`❌ Opslaan mislukt: ${err?.message||err}`; }
+    if (msg) { msg.className='error'; msg.textContent = `❌ Opslaan mislukt: ${err?.message||err}`; }
     toast('Opslaan mislukt','error');
   } finally {
-    addBusy = false;
-    if (btn) { btn.disabled = false; }
+    addBusy=false; if (btn) btn.disabled=false;
   }
 }
 
-// ───────────────────────── Mount ─────────────────────────
+/* ───────────────────── Mount ───────────────────── */
 async function main(){
   // Topbar + terugknop
   if (window.SuperhondUI?.mount) {
@@ -402,21 +397,15 @@ async function main(){
     window.SuperhondUI.mount({ title:'Klanten', icon:'👤', back:'../dashboard/', home:false });
   }
 
-  await initFromConfig();
-
-  // status-select (voorgedrukt)
+  await initFromConfig();            // zorgt dat sheets.js de juiste GAS /exec kent
   ensureStatusSelectDefault();
 
-  // events
+  // Events
   $('#refresh')?.addEventListener('click', refresh);
   $('#search')?.addEventListener('input', doFilter);
   $('#form-add')?.addEventListener('submit', onSubmitAdd);
 
-  // Forceer submit type (fix “Opslaan” niet actief)
-  const submitBtn = $('#form-add button, #form-add [type="submit"]');
-  if (submitBtn) submitBtn.type = 'submit';
-
-  // Actieknoppen in tabel
+  // Fallback actiehandlers wanneer actions.js ontbreekt
   if (typeof Actions.wireActionHandlers === 'function') {
     Actions.wireActionHandlers('#tbl', {
       view:   (id)=> openKlantView(id),
@@ -424,12 +413,11 @@ async function main(){
       delete: (id)=> deleteKlant(id),
     });
   } else {
-    // simpele fallback event-delegation
     $('#tbl')?.addEventListener('click', (e)=>{
       const b = e.target.closest('[data-act]'); if (!b) return;
       const id = b.dataset.id;
-      if (b.dataset.act === 'view') return openKlantView(id);
-      if (b.dataset.act === 'edit') return openKlantEdit(id);
+      if (b.dataset.act === 'view')   return openKlantView(id);
+      if (b.dataset.act === 'edit')   return openKlantEdit(id);
       if (b.dataset.act === 'delete') return deleteKlant(id);
     });
   }
@@ -440,10 +428,10 @@ async function main(){
     openKlantView(b.dataset.id);
   });
 
-  // Enter → submit
+  // Enter in velden → submit
   $$('#form-add input').forEach(inp=>{
     inp.addEventListener('keydown',(e)=>{
-      if(e.key==='Enter'){ e.preventDefault(); $('#form-add')?.requestSubmit(); }
+      if (e.key === 'Enter') { e.preventDefault(); $('#form-add')?.requestSubmit(); }
     });
   });
 
