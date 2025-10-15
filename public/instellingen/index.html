@@ -5,11 +5,27 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Instellingen – Superhond</title>
 
-  <!-- Bron van waarheid -->
-  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
+  <!-- (optioneel) fallback bron-van-waarheid, wordt overschreven door lokale instelling -->
+  <!-- <meta name="superhond-exec" content="https://script.google.com/macros/s/…/exec"> -->
 
   <link rel="stylesheet" href="../css/style.css?v=0.27.3" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.3" />
+
+  <style>
+    /* Zichtbare statusbalk onderaan de pagina */
+    .statusbar {
+      position: sticky; bottom: 0; inset-inline: 0;
+      display: flex; gap: .6rem; align-items: center; justify-content: space-between;
+      padding: .55rem .9rem; border-top: 1px solid #e5e7eb;
+      background: #fff; color: #111827; font-size: .92rem; z-index: 40;
+    }
+    .statusbar .left, .statusbar .right { display:flex; gap:.6rem; align-items:center; flex-wrap:wrap; }
+    .status-dot{width:.66rem;height:.66rem;border-radius:999px;background:#9ca3af;display:inline-block}
+    .status-dot.is-online{background:#16a34a}
+    .status-dot.is-offline{background:#ef4444}
+    .kbadge{padding:.1rem .45rem;border-radius:.35rem;background:#f3f4f6;border:1px solid #e5e7eb;font-family:ui-monospace, SFMono-Regular, Menlo, monospace}
+    .mono{font-family:ui-monospace, SFMono-Regular, Menlo, monospace}
+  </style>
 </head>
 
 <body class="subpage page-instellingen">
@@ -20,16 +36,17 @@
 
     <section class="card">
       <h2>Google Apps Script koppeling</h2>
-
-      <p>Dit is de URL waarmee het Superhond-programma verbinding maakt met Google Sheets.</p>
+      <p>Voer hieronder de <strong>Exec-URL</strong> van jouw Google Apps Script in. Deze instelling
+         wordt lokaal bewaard en geldt voor het volledige Superhond-programma (dashboard, klanten, honden, klassen, …).</p>
 
       <label for="execUrl"><strong>Exec-URL</strong></label>
-      <input id="execUrl" class="input" placeholder="https://script.google.com/macros/s/…/exec" />
+      <input id="execUrl" class="input" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" />
 
       <div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap">
-        <button id="saveBtn" class="btn primary">💾 Opslaan</button>
-        <button id="pingBtn" class="btn">🔍 Test verbinding</button>
-        <button id="resetBtn" class="btn danger">🗑️ Reset lokale instellingen</button>
+        <button id="saveBtn"  class="btn">💾 Opslaan</button>
+        <button id="pingBtn"  class="btn">🔍 Test verbinding</button>
+        <button id="resetBtn" class="btn">🗑️ Reset lokale instelling</button>
+        <a class="btn" href="../dashboard/">🏠 Terug naar dashboard</a>
       </div>
 
       <div id="msg" class="muted" style="margin-top:.75rem" aria-live="polite"></div>
@@ -38,50 +55,86 @@
 
   <footer id="footer"></footer>
 
+  <!-- Scripts (let op versies) -->
   <script defer src="../js/layout.js?v=0.27.3"></script>
-  <script defer src="../js/diagnose.js?v=0.3.0"></script>
-  <script defer src="../js/sheets.js?v=0.27.4"></script>
-
   <script type="module">
-    import { getExecBase, setExecBase, pingExec } from '../js/sheets.js';
+    import { getExecBase, setExecBase, pingExec } from '../js/sheets.js?v=0.27.4';
 
-    const elUrl  = document.getElementById('execUrl');
-    const msg    = document.getElementById('msg');
-    const save   = document.getElementById('saveBtn');
-    const ping   = document.getElementById('pingBtn');
-    const reset  = document.getElementById('resetBtn');
+    const elUrl   = document.getElementById('execUrl');
+    const elMsg   = document.getElementById('msg');
 
-    // Huidige waarde tonen
-    document.addEventListener('DOMContentLoaded', () => {
-      window.SuperhondUI?.mount?.({ title:'Instellingen', icon:'⚙️', back:'../dashboard/' });
-      elUrl.value = getExecBase() || '';
-    });
+    const elBar   = document.createElement('div');
+    elBar.className = 'statusbar';
+    elBar.innerHTML = `
+      <div class="left">
+        <span class="status-dot" id="sb-dot" title="Netwerkstatus"></span>
+        <span id="sb-text">Offline</span>
+      </div>
+      <div class="right">
+        <span>Exec:</span>
+        <span id="sb-exec" class="kbadge mono">—</span>
+        <span class="muted">|</span>
+        <span id="sb-ver" class="muted">v—</span>
+      </div>`;
+    document.body.appendChild(elBar);
 
-    function show(m, cls='muted') {
-      msg.className = cls;
-      msg.textContent = m;
+    function showMsg(text, cls='muted'){ elMsg.className = cls; elMsg.textContent = text; }
+    function setStatus(ok){
+      const dot = document.getElementById('sb-dot');
+      const txt = document.getElementById('sb-text');
+      dot.classList.toggle('is-online', !!ok);
+      dot.classList.toggle('is-offline', !ok);
+      txt.textContent = ok ? 'Online' : 'Offline';
+    }
+    function updateExecLabel() {
+      const v = getExecBase() || '—';
+      document.getElementById('sb-exec').textContent = v;
+    }
+    function updateVersionLabel() {
+      const v = (window.SuperhondUI && window.SuperhondUI.APP_VERSION) ? `v${window.SuperhondUI.APP_VERSION}` : 'v—';
+      document.getElementById('sb-ver').textContent = v;
     }
 
-    save.addEventListener('click', () => {
+    async function init() {
+      // Mount topbar/footer
+      window.SuperhondUI?.mount?.({ title:'Instellingen', icon:'⚙️', back:'../dashboard/' });
+      // Form preload
+      elUrl.value = getExecBase() || '';
+      updateExecLabel();
+      updateVersionLabel();
+      // Directe ping
+      setStatus(await pingExec());
+    }
+
+    // Handlers
+    document.getElementById('saveBtn').addEventListener('click', () => {
       const val = elUrl.value.trim();
-      if (!val) return show('❌ Geen URL ingevoerd','error');
+      if (!val) return showMsg('❌ Geen URL ingevoerd', 'error');
       setExecBase(val);
-      show('✅ Exec-URL opgeslagen.');
+      updateExecLabel();
+      showMsg('✅ Exec-URL opgeslagen.');
     });
 
-    ping.addEventListener('click', async () => {
-      show('⏳ Testen…');
+    document.getElementById('pingBtn').addEventListener('click', async () => {
+      showMsg('⏳ Testen…');
       const ok = await pingExec();
-      show(ok ? '✅ Verbinding geslaagd – online' : '❌ Geen verbinding','muted');
+      setStatus(ok);
+      showMsg(ok ? '✅ Verbinding geslaagd – online' : '❌ Geen verbinding', ok ? 'muted' : 'error');
     });
 
-    reset.addEventListener('click', () => {
+    document.getElementById('resetBtn').addEventListener('click', () => {
       localStorage.removeItem('superhond:execBase');
       elUrl.value = '';
-      show('🗑️ Lokale opslag gewist.');
+      updateExecLabel();
+      setStatus(false);
+      showMsg('🗑️ Lokale Exec-URL gewist. (Er wordt nu alleen nog naar een <meta name="superhond-exec"> gekeken, als die bestaat.)');
     });
+
+    document.addEventListener('DOMContentLoaded', init, { once:true });
   </script>
 
-  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist om instellingen te gebruiken.</p></noscript>
+  <noscript>
+    <p style="padding:1rem;color:#b91c1c">JavaScript is vereist om instellingen te gebruiken.</p>
+  </noscript>
 </body>
 </html>
