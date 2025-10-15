@@ -5,40 +5,26 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Superhond — Dashboard</title>
 
-  <!-- Versie/branch + directe GAS exec (worden door layout.js gebruikt) -->
-  <meta name="superhond-version" content="0.26.7">
-  <meta name="superhond-branch"  content="Ontwikkeling">
-  <!-- Zet hier jouw eigen EXEC-URL (exact de /exec) -->
-  <meta name="superhond-exec"    content="https://script.google.com/macros/s/AKfycbysc3pCUpgIxKl2aNPBgJGZIJcNcOvaqF48NG_NgBOGec9TIFKNSHS153NIsng0kE7E4Q/exec">
-
-  <!-- Centrale UI -->
+  <!-- Globale stijl (zelfde versie overal) -->
   <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
 
-  <!-- Dashboard-specifiek: GELE topbar hard-forceren (extra veiligheid) -->
+  <!-- Branch/build + GAS exec: ZET DIT GOED vóór layout.js -->
+  <meta name="superhond-branch" content="Ontwikkeling" />
+  <script>
+    window.APP_BUILD = '0.26.7 (Ontwikkeling)';
+    // VUL jouw echte GAS/exec hier in:
+    window.SUPERHOND_SHEETS_URL = 'https://script.google.com/macros/s/____JOUW_EXEC____/exec';
+  </script>
+
+  <!-- Gele dashboard-balk forceren (veilig tegen overruling) -->
   <style>
     body.dashboard-page #topbar,
-    body.dashboard-page #topbar .topbar-inner{
-      background: var(--accent,#f4c400) !important;
-      color:#000 !important;
+    body.dashboard-page #topbar .topbar-inner {
+      background: var(--accent, #f4c400) !important;
+      color: #000 !important;
     }
-    body.dashboard-page .btn-back{border-color:#e5e7eb;background:#fff;color:#111827}
-
-    /* kleine lokale UI */
-    .tabs{display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
-    .tab{position:relative;padding:.4rem .8rem;border:1px solid #e5e7eb;border-radius:.5rem;background:#fff;cursor:pointer}
-    .tab.active{background:var(--accent,#f4c400);font-weight:600}
-    .tab .dot{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;font-size:11px;line-height:1;background:#111827;color:#fff}
-    .muted{color:#6b7280}
-    .error{color:#b91c1c}
-    .tile.badged{position:relative}
-    .tile .badge-dot{
-      position:absolute; top:8px; right:10px; min-width:22px; height:22px; padding:0 6px;
-      display:inline-flex; align-items:center; justify-content:center;
-      border-radius:999px; font-size:12px; line-height:1;
-      background:var(--accent,#f4c400); color:#000; border:1px solid rgba(0,0,0,.08);
-      box-shadow:0 1px 2px rgba(0,0,0,.08);
-    }
+    body.dashboard-page .btn-back { border-color:#e5e7eb; background:#fff; color:#111827; }
   </style>
 </head>
 <body class="dashboard-page">
@@ -47,7 +33,6 @@
   <main class="container" role="main">
     <h1 class="page-title">Hoofdmenu</h1>
 
-    <!-- TEGELS -->
     <nav class="tiles" aria-label="Hoofdmenu">
       <a class="tile" href="../klanten/"><span class="tile-icon">👤</span><div class="tile-body"><span class="tile-title">Klanten</span></div></a>
       <a class="tile" href="../honden/"><span class="tile-icon">🐶</span><div class="tile-body"><span class="tile-title">Honden</span></div></a>
@@ -96,25 +81,19 @@
       </a>
     </nav>
 
-    <!-- AGENDA -->
     <section class="card" style="margin-top:1rem">
       <h2 style="margin:0 0 .5rem">Agenda</h2>
-
       <div class="tabs" id="agenda-tabs" role="tablist" aria-label="Agendaweergave">
-        <button class="tab active" data-tab="week" role="tab" aria-selected="true">Deze week <span class="dot" id="tab-week-dot">0</span></button>
-        <button class="tab" data-tab="alles" role="tab" aria-selected="false">Alles <span class="dot" id="tab-all-dot">0</span></button>
-        <button class="tab" data-tab="mededelingen" role="tab" aria-selected="false">Mededelingen <span class="dot" id="tab-notes-dot">0</span></button>
+        <button class="tab active" data-tab="week" aria-selected="true">Deze week <span class="dot" id="tab-week-dot">0</span></button>
+        <button class="tab" data-tab="alles" aria-selected="false">Alles <span class="dot" id="tab-all-dot">0</span></button>
+        <button class="tab" data-tab="mededelingen" aria-selected="false">Mededelingen <span class="dot" id="tab-notes-dot">0</span></button>
       </div>
-
       <div id="agenda-loader" class="muted">⏳ Laden…</div>
       <div id="agenda-error" class="error" style="display:none"></div>
-
       <div class="table-wrap" id="agenda-table-wrap" style="display:none;">
         <table id="agenda-table" class="table">
-          <thead>
-            <tr><th>Naam</th><th>Datum</th><th>Locatie</th><th>Trainer(s)</th></tr>
-          </thead>
-          <tbody><!-- gevuld door ../js/agenda.js --></tbody>
+          <thead><tr><th>Naam</th><th>Datum</th><th>Locatie</th><th>Trainer(s)</th></tr></thead>
+          <tbody></tbody>
         </table>
       </div>
     </section>
@@ -122,44 +101,33 @@
 
   <footer id="footer" class="footer"></footer>
 
-  <!-- Scripts -->
-  <!-- NIEUWE layout.js (zorgt voor gele balk + versie/branch + online) -->
-  <script defer src="../js/layout.js?v=0.24.6"></script>
-
-  <!-- Agenda + admin-gate (ongewijzigd) -->
+  <!-- Scripts (let op: zelfde versies overal) -->
+  <script defer src="../js/layout.js?v=0.26.7"></script>
   <script defer src="../js/agenda.js?v=0.26.7"></script>
   <script defer src="../js/admin-gate.js?v=0.26.7"></script>
 
-  <!-- Badges (actieve klassen/reeksen) -->
   <script type="module">
-    const sheets = await import('../js/sheets.js?v=0.26.7');
-    const fetchSheet = sheets.fetchSheet;
-    const initFromConfig = sheets.initFromConfig;
-    const isActief = (s) => String(s||'').toLowerCase() === 'actief';
-
-    await initFromConfig();
-
-    async function updateBadges(){
-      try{
-        const [klassen, reeksen] = await Promise.all([fetchSheet('Klassen'), fetchSheet('Reeksen')]);
-        const actKl = (klassen||[]).filter(k => isActief(k.status)).length;
-        const actRs = (reeksen||[]).filter(r => isActief(r.status)).length;
-        document.getElementById('klassen-badge').textContent = String(actKl);
-        document.getElementById('klassen-sub').textContent   = actKl ? `${actKl} actief` : '—';
-        document.getElementById('reeksen-badge').textContent = String(actRs);
-        document.getElementById('reeksen-sub').textContent   = actRs ? `${actRs} actief` : '—';
-      } catch(e){
-        console.warn('Badges updaten faalde:', e?.message || e);
-      }
-    }
+    import * as sheets from '../js/sheets.js?v=0.26.7';
 
     document.addEventListener('DOMContentLoaded', () => {
-      // Mount als dashboard (forceert geel en verbergt back-knop)
-      window.SuperhondUI?.mount?.({ isDashboard:true, title:'Superhond', icon:'🐾' });
-      updateBadges();
+      window.SuperhondUI?.mount?.({ title:'Superhond', icon:'🐾', home:true, version: window.APP_BUILD });
     });
-  </script>
 
-  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist om het dashboard te laden.</p></noscript>
+    const { fetchSheet, initFromConfig } = sheets;
+    const norm = s => String(s||'').toLowerCase()==='actief';
+
+    (async () => {
+      try{
+        await initFromConfig();
+        const [klassen, reeksen] = await Promise.all([ fetchSheet('Klassen'), fetchSheet('Reeksen') ]);
+        const actKl = (klassen||[]).filter(k=>norm(k.status)).length;
+        const actRs = (reeksen||[]).filter(r=>norm(r.status)).length;
+        document.getElementById('klassen-badge').textContent = String(actKl);
+        document.getElementById('klassen-sub').textContent   = actKl?`${actKl} actief`:'—';
+        document.getElementById('reeksen-badge').textContent = String(actRs);
+        document.getElementById('reeksen-sub').textContent   = actRs?`${actRs} actief`:'—';
+      }catch(e){ console.warn('Badges updaten faalde:', e?.message || e); }
+    })();
+  </script>
 </body>
 </html>
