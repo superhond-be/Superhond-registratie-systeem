@@ -1,5 +1,5 @@
 /**
- * public/js/klanten.js — Lijst + zoeken + toevoegen + acties (v0.27.3)
+ * public/js/klanten.js — Lijst + zoeken + toevoegen + acties (v0.27.4)
  * - Zelfde stijl als honden.js: één exec-bron via sheets.js
  * - Robuuste parsing, timeout/abort, console-log van exec-base
  */
