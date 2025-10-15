@@ -1,173 +1,97 @@
 /**
- * public/js/agenda.js — Agenda-weergave (week/alles) op dashboard
- * - Haalt lessen via action=getLessen
- * - Vult tellers & tabel
+ * public/js/agenda.js — Dashboard badges + agenda (v0.27.3)
+ * - Zelfde init/exec-bron als andere pagina's
+ * - Telt actieve Klassen/Reeksen; (optioneel) vult agenda-tabel wanneer beschikbaar
  */
 
-import { fetchAction } from './sheets.js';
+import {
+  initFromConfig,
+  fetchSheet,
+  getBaseUrl,   // voor debug/log
+} from './sheets.js';
 
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+const $  = (s, r=document) => r.querySelector(s);
 
-const els = {
-  loader:  $('#agenda-loader'),
-  error:   $('#agenda-error'),
-  tableWrap: $('#agenda-table-wrap'),
-  tbody:   $('#agenda-table tbody'),
-  dotWeek: $('#tab-week-dot'),
-  dotAll:  $('#tab-all-dot'),
-  dotNotes:$('#tab-notes-dot'),
-  subLessen: $('#lessen-week-sub'),
-  badgeLessen: $('#lessen-week-badge')
-};
+const TIMEOUT_MS = 20000;
 
-function show(el)   { if (el) el.style.display = ''; }
-function hide(el)   { if (el) el.style.display = 'none'; }
-function setText(el, txt) { if (el) el.textContent = String(txt); }
-
-/* ===== Datum helpers (week: ma-zo in lokale tijd) ===== */
-function startOfWeek(d = new Date()) {
-  const date = new Date(d);
-  const day = (date.getDay() + 6) % 7; // 0=ma
-  date.setHours(0,0,0,0);
-  date.setDate(date.getDate() - day);
-  return date;
+function toArrayRows(x){
+  if (Array.isArray(x)) return x;
+  if (x && Array.isArray(x.data)) return x.data;
+  if (x && Array.isArray(x.rows)) return x.rows;
+  if (x && Array.isArray(x.result)) return x.result;
+  if (x && x.data && Array.isArray(x.data.rows)) return x.data.rows;
+  if (x && x.ok === true && Array.isArray(x.data)) return x.data;
+  return [];
 }
-function endOfWeek(d = new Date()) {
-  const start = startOfWeek(d);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 7);
-  return end; // exclusief
-}
-function parseISOorDate(v) {
-  if (!v) return null;
-  const d = v instanceof Date ? v : new Date(String(v));
-  return isNaN(d.valueOf()) ? null : d;
-}
-function fmtDateTime(d) {
-  try {
-    return new Intl.DateTimeFormat(undefined, {
-      weekday: 'short', day: '2-digit', month: 'short',
-      hour: '2-digit', minute: '2-digit'
-    }).format(d);
-  } catch {
-    return d.toLocaleString();
+const norm = (s) => String(s==null?'':s).trim().toLowerCase();
+
+async function updateBadges(){
+  try{
+    const [klassenRaw, reeksenRaw] = await Promise.all([
+      fetchSheet('Klassen', { timeout: TIMEOUT_MS }),
+      fetchSheet('Reeksen', { timeout: TIMEOUT_MS }).catch(()=>[])
+    ]);
+    const klassen = toArrayRows(klassenRaw);
+    const reeksen = toArrayRows(reeksenRaw);
+
+    const actKl = klassen.filter(k => norm(k.status)==='actief').length;
+    const actRs = reeksen.filter(r => norm(r.status)==='actief').length;
+
+    const kb = $('#klassen-badge'); if (kb) kb.textContent = String(actKl);
+    const ks = $('#klassen-sub');   if (ks) ks.textContent = actKl ? `${actKl} actief` : '—';
+
+    const rb = $('#reeksen-badge'); if (rb) rb.textContent = String(actRs);
+    const rs = $('#reeksen-sub');   if (rs) rs.textContent = actRs ? `${actRs} actief` : '—';
+  } catch (e){
+    console.warn('[agenda] badges updaten faalde:', e?.message || e);
   }
 }
 
-/* ===== Render ===== */
-function renderRows(items) {
-  if (!els.tbody) return;
-  els.tbody.innerHTML = '';
-  if (!items.length) {
-    const tr = document.createElement('tr');
-    const td = document.createElement('td');
-    td.colSpan = 4;
-    td.className = 'muted';
-    td.textContent = 'Geen lessen gevonden.';
-    tr.appendChild(td);
-    els.tbody.appendChild(tr);
-    return;
-  }
-  for (const l of items) {
-    const d = parseISOorDate(l.date);
-    const tr = document.createElement('tr');
+// (optioneel) agenda weergave: vul je eigen kolommen in als je die in GAS voorziet
+async function fillAgenda(){
+  const wrap = $('#agenda-table-wrap');
+  const body = $('#agenda-table tbody');
+  const loader = $('#agenda-loader');
+  const err    = $('#agenda-error');
+  if (!wrap || !body) return;
 
-    const naam = l.name || l.title || l.type || 'Les';
-    const locatie = l.location || l.locatie || '';
-    const trainer = l.trainer || l.trainers || '';
+  loader && (loader.style.display = '');
+  err && (err.style.display = 'none');
+  wrap.style.display = 'none';
 
-    const tdNaam = document.createElement('td');   tdNaam.textContent = naam;
-    const tdDate = document.createElement('td');   tdDate.textContent = d ? fmtDateTime(d) : '—';
-    const tdLoc  = document.createElement('td');   tdLoc.textContent  = locatie || '—';
-    const tdTr   = document.createElement('td');   tdTr.textContent   = trainer || '—';
+  try{
+    // Voorbeeld: haal 'Agenda' tab als die bestaat
+    const raw = await fetchSheet('Agenda', { timeout: TIMEOUT_MS });
+    const rows = toArrayRows(raw);
 
-    tr.append(tdNaam, tdDate, tdLoc, tdTr);
-    els.tbody.appendChild(tr);
-  }
-}
-
-function updateLessenBadge(n) {
-  if (els.badgeLessen) setText(els.badgeLessen, n);
-  if (els.subLessen) {
-    if (n === 0) setText(els.subLessen, 'geen deze week');
-    else if (n === 1) setText(els.subLessen, '1 deze week');
-    else setText(els.subLessen, `${n} deze week`);
-  }
-}
-
-/* ===== Data laden ===== */
-async function loadLessen() {
-  hide(els.error);
-  show(els.loader);
-  hide(els.tableWrap);
-
-  try {
-    // Haal alle lessen (actief) via moderne action
-    const data = await fetchAction('getLessen'); // main.gs → doGet?action=getLessen
-    const all = Array.isArray(data) ? data : [];
-
-    // Filter soft-deleted
-    const actieve = all.filter(l => !(String(l.archived).toLowerCase() === 'true' || l.archived === true));
-
-    // Sorteer op datum
-    actieve.sort((a, b) => {
-      const da = parseISOorDate(a.date)?.getTime() ?? 0;
-      const db = parseISOorDate(b.date)?.getTime() ?? 0;
-      return da - db;
-    });
-
-    // Split: week vs alles
-    const now = new Date();
-    const from = startOfWeek(now), to = endOfWeek(now);
-    const thisWeek = actieve.filter(l => {
-      const d = parseISOorDate(l.date);
-      return d && d >= from && d < to;
-    });
-
-    // Update tellers
-    setText(els.dotWeek, thisWeek.length);
-    setText(els.dotAll, actieve.length);
-    setText(els.dotNotes, 0); // (placeholder, geen bron nu)
-    updateLessenBadge(thisWeek.length);
-
-    // Initieel: toon week
-    renderRows(thisWeek);
-
-    // Tabs wisselen
-    initTabsSwitch({ thisWeek, all: actieve });
-
-    hide(els.loader);
-    show(els.tableWrap);
-  } catch (err) {
-    hide(els.loader);
-    setText(els.error, 'Fout bij laden van lessen: ' + (err?.message || String(err)));
-    show(els.error);
-  }
-}
-
-function initTabsSwitch(datasets) {
-  const tabs = $$('#agenda-tabs .tab');
-  function setActive(btn) {
-    tabs.forEach(t => {
-      const on = t === btn;
-      t.classList.toggle('active', on);
-      t.setAttribute('aria-selected', on ? 'true' : 'false');
-      t.setAttribute('tabindex', on ? '0' : '-1');
-    });
-  }
-  tabs.forEach(t => t.addEventListener('click', () => {
-    setActive(t);
-    const key = t.getAttribute('data-tab');
-    switch (key) {
-      case 'week':  renderRows(datasets.thisWeek); break;
-      case 'alles': renderRows(datasets.all); break;
-      case 'mededelingen': renderRows([]); break; // geen bron nu
+    body.innerHTML = '';
+    if (!rows.length){
+      body.innerHTML = `<tr><td colspan="4" class="muted">Geen items.</td></tr>`;
+    } else {
+      for (const r of rows){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${r.naam||r.title||''}</td>
+          <td>${r.datum||r.date||''}</td>
+          <td>${r.locatie||r.location||''}</td>
+          <td>${r.trainers||r.trainer||''}</td>`;
+        body.appendChild(tr);
+      }
     }
-  }));
+    wrap.style.display = '';
+  } catch (e){
+    console.error('[agenda] laden faalde:', e);
+    if (err){ err.textContent = '❌ Laden faalde: ' + (e?.message||e); err.style.display=''; }
+  } finally {
+    loader && (loader.style.display = 'none');
+  }
 }
 
-/* ===== Boot ===== */
-document.addEventListener('DOMContentLoaded', () => {
-  loadLessen();
+document.addEventListener('DOMContentLoaded', async () => {
+  // Topbar (geel) wordt al via dashboard/index.html + layout.js gezet
+  await initFromConfig();
+  try { console.info('[Dashboard] exec base =', getBaseUrl?.() || '(onbekend)'); } catch {}
+
+  updateBadges();
+  fillAgenda(); // als je (nog) geen 'Agenda' tab hebt in je sheet, mag je dit uitzetten
 });
