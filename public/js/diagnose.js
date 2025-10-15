@@ -1,181 +1,141 @@
 /**
- * public/js/diagnose.js — EXEC vastzetten + testen (v0.27.3)
- * - Slaat EXEC op in localStorage (superhond:apiBase én superhond:exec)
- * - Schrijft/actualiseert <meta name="superhond-exec">
- * - Test: ping + fetch Klanten/Honden rechtstreeks
- * - Werkt zonder /api-proxy; gebruikt alleen fetch()
+ * public/js/diagnose.js — Superhond diagnoselint (v0.3.0)
+ * - Leest <meta name="superhond-exec"> als bron van de waarheid
+ * - Synchroniseert localStorage("superhond:execBase")
+ * - Ping rechtstreeks naar GAS /exec?mode=ping
+ * - Toont onderaan een kleine statusbalk met Exec + Online/Offline
+ * - “Fix”-knop zet localStorage => meta-waarde
  */
 
 (function () {
-  const LS_API = 'superhond:apiBase';
-  const LS_EXE = 'superhond:exec';
+  const LS_KEY = 'superhond:execBase';
 
-  const $  = (s, r = document) => r.querySelector(s);
-  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  // ───────── helpers
+  const onReady = (cb) =>
+    document.readyState !== 'loading'
+      ? cb()
+      : document.addEventListener('DOMContentLoaded', cb, { once: true });
 
-  const ui = {
-    input:  $('#exec-input') || $('input[name="exec"]') || $('input[type="url"]'),
-    btnSave: $('#btn-save') || $('[data-diag="save"]'),
-    btnClear: $('#btn-clear') || $('[data-diag="clear"]'),
-    btnTest: $('#btn-test') || $('[data-diag="test"]'),
-    tbl:     $('#diag-table') || document,
-    state:   $('#state') || null,
-    footerExec: document.querySelector('footer code')
+  const getMetaExec = () =>
+    document.querySelector('meta[name="superhond-exec"]')?.content?.trim() || '';
+
+  const getStoredExec = () => {
+    try { return localStorage.getItem(LS_KEY) || ''; }
+    catch { return ''; }
   };
 
-  function sanitizeExecUrl(url = '') {
+  const setStoredExec = (val) => {
     try {
-      const u = new URL(String(url).trim());
-      if (u.hostname === 'script.google.com' && u.pathname.startsWith('/macros/s/')) {
-        // forceer eindigend op /exec
-        let p = u.pathname;
-        if (!p.endsWith('/exec'))
-          p = p.replace(/\/userexec$/, '/exec')
-               .replace(/\/deploy$/, '/exec')
-               + (p.endsWith('/exec') ? '' : '/exec');
-        return `${u.origin}${p}`;
-      }
+      if (val) localStorage.setItem(LS_KEY, val);
+      else localStorage.removeItem(LS_KEY);
     } catch {}
-    return '';
-  }
+  };
 
-  function setMetaExec(execUrl) {
-    let m = document.querySelector('meta[name="superhond-exec"]');
-    if (!m) {
-      m = document.createElement('meta');
-      m.setAttribute('name', 'superhond-exec');
-      document.head.appendChild(m);
-    }
-    m.setAttribute('content', execUrl);
-  }
+  const same = (a,b) => String(a||'').trim() === String(b||'').trim();
 
-  function saveExec(execUrl) {
-    const safe = sanitizeExecUrl(execUrl);
-    if (!safe) throw new Error('Geen geldige Google Apps Script /exec URL.');
-    localStorage.setItem(LS_API, safe);
-    localStorage.setItem(LS_EXE, safe);
-    setMetaExec(safe);
-    if (ui.footerExec)
-      ui.footerExec.textContent = 'exec: ' + safe.replace(/^https?:\/\/(www\.)?/, '');
-    return safe;
-  }
-
-  function getExec() {
-    return (
-      localStorage.getItem(LS_API) ||
-      localStorage.getItem(LS_EXE) ||
-      document.querySelector('meta[name="superhond-exec"]')?.content ||
-      ''
-    );
-  }
-
-  async function ping(execBase) {
-    const sep = execBase.includes('?') ? '&' : '?';
-    const url = `${execBase}${sep}mode=ping&t=${Date.now()}`;
-    const r = await fetch(url, { cache: 'no-store' });
-    const txt = await r.text();
-    let ok = r.ok;
+  async function pingExec(url) {
+    if (!url) return false;
+    const sep = url.includes('?') ? '&' : '?';
+    const test = `${url}${sep}mode=ping&t=${Date.now()}`;
     try {
-      const j = JSON.parse(txt);
-      ok = ok && (j?.ok === true || j?.data?.ok === true || j?.data?.ping === 'OK');
-    } catch {}
-    return { ok, status: r.status, body: txt.slice(0, 300) };
-  }
-
-  async function fetchTab(execBase, mode) {
-    const sep = execBase.includes('?') ? '&' : '?';
-    const url = `${execBase}${sep}mode=${encodeURIComponent(mode)}&t=${Date.now()}`;
-    const r = await fetch(url, { cache: 'no-store' });
-    const txt = await r.text();
-    if (!r.ok) throw new Error(`${mode}: HTTP ${r.status}`);
-    let rows = [];
-    try {
-      const j = JSON.parse(txt);
-      rows = j?.data || j?.rows || j?.result || [];
-    } catch (e) {
-      throw new Error(`${mode}: Ongeldige JSON`);
-    }
-    return { ok: true, rows, status: r.status };
-  }
-
-  function setRow(id, status, note = '') {
-    const row = document.getElementById(id) || ui.tbl;
-    const elS = row?.querySelector?.('[data-col="status"]');
-    const elN = row?.querySelector?.('[data-col="note"]');
-    const klass = status === 'OK' ? 'ok' : (status === 'Err' ? 'err' : 'muted');
-    if (elS) { elS.textContent = status; elS.className = klass; }
-    if (elN) { elN.textContent = note || ''; }
-  }
-
-  async function runTests() {
-    const execBase = sanitizeExecUrl(getExec());
-    if (!execBase) { setRow('row-base', 'Err', 'Geen EXEC ingesteld'); return; }
-
-    setRow('row-base', 'OK', execBase.replace(/^https?:\/\/(www\.)?/, ''));
-
-    try {
-      const pr = await ping(execBase);
-      setRow('row-ping', pr.ok ? 'OK' : 'Err', `HTTP ${pr.status}`);
-      window.SuperhondUI?.setOnline?.(!!pr.ok);
-      if (!pr.ok) return;
-    } catch (e) {
-      setRow('row-ping', 'Err', String(e.message || e));
-      window.SuperhondUI?.setOnline?.(false);
-      return;
-    }
-
-    try {
-      const k = await fetchTab(execBase, 'klanten');
-      setRow('row-klanten', 'OK', `Rijen: ${k.rows?.length ?? 0}`);
-    } catch (e) {
-      setRow('row-klanten', 'Err', String(e.message || e));
-    }
-
-    try {
-      const h = await fetchTab(execBase, 'honden');
-      setRow('row-honden', 'OK', `Rijen: ${h.rows?.length ?? 0}`);
-    } catch (e) {
-      setRow('row-honden', 'Err', String(e.message || e));
+      const r = await fetch(test, { cache: 'no-store' });
+      return r.ok;
+    } catch {
+      return false;
     }
   }
 
-  // ─── Init UI ──────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', () => {
-    const cur = getExec();
-    if (ui.input && cur) ui.input.value = cur;
+  // ───────── UI lint
+  function ensureBar() {
+    let bar = document.getElementById('sh-diag-bar');
+    if (bar) return bar;
 
-    ui.btnSave?.addEventListener('click', (e) => {
-      e.preventDefault();
-      try {
-        const val = ui.input?.value || '';
-        const safe = saveExec(val);
-        setRow('row-base', 'OK', safe.replace(/^https?:\/\/(www\.)?/, ''));
-        window.alert('EXEC opgeslagen. Herlaad de pagina (Cmd/Ctrl + Shift + R) om overal Online te zien.');
-      } catch (err) {
-        window.alert('Opslaan mislukt: ' + (err?.message || err));
-      }
+    const styleId = 'sh-diag-style';
+    if (!document.getElementById(styleId)) {
+      const s = document.createElement('style');
+      s.id = styleId;
+      s.textContent = `
+        #sh-diag-bar{
+          position:fixed;left:12px;bottom:12px;z-index:9999;
+          display:flex;gap:.5rem;align-items:center;
+          background:#111827;color:#fff;border-radius:10px;
+          padding:.5rem .7rem;box-shadow:0 6px 18px rgba(0,0,0,.25);
+          font:13px/1.2 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+          opacity:.92
+        }
+        #sh-diag-bar .dot{width:.55rem;height:.55rem;border-radius:999px;background:#9ca3af;display:inline-block}
+        #sh-diag-bar .dot.ok{background:#16a34a}
+        #sh-diag-bar .dot.bad{background:#ef4444}
+        #sh-diag-bar code{background:rgba(255,255,255,.12);padding:.1rem .35rem;border-radius:6px}
+        #sh-diag-bar button{
+          appearance:none;border:1px solid rgba(255,255,255,.25);
+          background:transparent;color:#fff;border-radius:8px;
+          padding:.25rem .5rem;cursor:pointer
+        }
+        #sh-diag-bar button:hover{background:rgba(255,255,255,.08)}
+      `;
+      document.head.appendChild(s);
+    }
+
+    bar = document.createElement('div');
+    bar.id = 'sh-diag-bar';
+    bar.innerHTML = `
+      <span class="dot" aria-hidden="true"></span>
+      <span id="sh-diag-text">Diagnose…</span>
+      <button id="sh-diag-fix" type="button" title="Zet localStorage = meta">Fix</button>
+      <button id="sh-diag-retry" type="button" title="Opnieuw testen">Test</button>
+    `;
+    document.body.appendChild(bar);
+    return bar;
+  }
+
+  function setBar(state) {
+    const bar = ensureBar();
+    const dot = bar.querySelector('.dot');
+    const txt = bar.querySelector('#sh-diag-text');
+    dot?.classList.remove('ok','bad');
+    if (state.online === true) dot?.classList.add('ok');
+    else if (state.online === false) dot?.classList.add('bad');
+    if (txt) {
+      const short = (u) => String(u||'').replace(/^https?:\/\/(www\.)?/, '');
+      txt.innerHTML = `Exec: <code>${short(state.exec || 'n.v.t.')}</code> — ${state.online ? 'Online' : 'Offline'}`;
+    }
+  }
+
+  // ───────── main
+  async function run() {
+    // Sync: meta → localStorage (als ls leeg of verschilt)
+    const meta = getMetaExec();
+    const stored = getStoredExec();
+    if (meta && !same(meta, stored)) {
+      setStoredExec(meta);
+    }
+
+    // Ping gebaseerd op (meta of stored)
+    const execBase = meta || stored || '';
+    const ok = await pingExec(execBase);
+
+    // UI
+    setBar({ exec: execBase, online: ok });
+    // Update topbar-dot indien aanwezig
+    if (window.SuperhondUI?.setOnline) window.SuperhondUI.setOnline(ok);
+  }
+
+  onReady(async () => {
+    ensureBar();
+    // Knoppen
+    const bar = ensureBar();
+    bar.querySelector('#sh-diag-fix')?.addEventListener('click', async () => {
+      const meta = getMetaExec();
+      if (!meta) { alert('Geen <meta name="superhond-exec"> gevonden.'); return; }
+      setStoredExec(meta);
+      await run();
     });
+    bar.querySelector('#sh-diag-retry')?.addEventListener('click', run);
 
-    ui.btnClear?.addEventListener('click', (e) => {
-      e.preventDefault();
-      localStorage.removeItem(LS_API);
-      localStorage.removeItem(LS_EXE);
-      setMetaExec('');
-      if (ui.input) ui.input.value = '';
-      setRow('row-base', '–', 'leeg');
-      setRow('row-ping', '–', '');
-      setRow('row-klanten', '–', '');
-      setRow('row-honden', '–', '');
-      window.alert('Cache gewist. Stel opnieuw een EXEC in en herlaad.');
-    });
-
-    ui.btnTest?.addEventListener('click', (e) => {
-      e.preventDefault();
-      runTests();
-    });
-
-    runTests();
+    await run();
   });
 
-  window.SHDiag = { getExec, saveExec, runTests };
+  // export voor handmatig aanroepen
+  window.SuperhondDiag = { rerun: () => onReady(run) };
 })();
