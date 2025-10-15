@@ -3,41 +3,83 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Instellingen – Superhond</title>
-  <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
-</head>
+  <title>Instellingen & Diagnose – Superhond</title>
 
-<body class="subpage">
+  <!-- Centrale stijlen -->
+  <link rel="stylesheet" href="../css/style.css?v=0.27.4" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.4" />
+
+  <style>
+    .grid { display:grid; gap:12px; grid-template-columns: 1fr; }
+    .row  { display:grid; grid-template-columns: 180px 1fr; gap:.5rem .75rem; align-items:center; }
+    .row label { color:#6b7280; }
+    @media (max-width:640px){ .row { grid-template-columns: 1fr; } }
+    .monoinput { font-family: ui-monospace, Menlo, Consolas, monospace; }
+    .ok { color:#16a34a; }
+    .bad{ color:#b91c1c; }
+    .muted { color:#6b7280; }
+    .diag-pre { white-space:pre-wrap; background:#f9fafb; border:1px solid #e5e7eb; padding:.75rem; border-radius:8px; }
+  </style>
+</head>
+<body class="subpage page-instellingen">
   <header id="topbar"></header>
 
   <main class="container">
-    <h1 class="page-title">Instellingen</h1>
+    <h1 class="page-title">Instellingen & Diagnose</h1>
 
-    <!-- Centrale verbinding -->
     <section class="card">
-      <label class="muted" for="exec-url">Google Apps Script /exec URL</label>
-      <input id="exec-url" class="input input-mono" type="url"
-             placeholder="https://script.google.com/macros/s/…/exec"
-             style="width:100%" />
+      <h2 style="margin-top:0">Centrale Apps Script EXEC-URL</h2>
+      <p class="muted">Vul hieronder je volledige Google Apps Script <code>/exec</code> URL in. Deze wordt centraal opgeslagen en gebruikt door alle pagina’s (Dashboard, Klanten, Honden, Klassen, …).</p>
 
-      <div class="toolbar" style="margin-top:.5rem">
-        <button id="btn-save"  class="btn">💾 Gebruik & opslaan</button>
-        <button id="btn-clear" class="btn">🧹 Cache wissen</button>
-        <button id="btn-test"  class="btn">🔍 Test opnieuw</button>
+      <div class="grid" style="margin-top:.5rem">
+        <div class="row">
+          <label for="execUrl">EXEC-URL</label>
+          <input id="execUrl" class="input monoinput" placeholder="https://script.google.com/macros/s/…/exec" />
+        </div>
+
+        <div class="row">
+          <label for="branch">Branch</label>
+          <select id="branch" class="input">
+            <option value="production">Production</option>
+            <option value="staging">Staging</option>
+            <option value="development">Development</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label>Acties</label>
+          <div style="display:flex; gap:.5rem; flex-wrap:wrap">
+            <button id="btnApply" class="btn primary">✅ Gebruik & Opslaan</button>
+            <button id="btnTest"  class="btn">🔎 Test verbinding</button>
+            <button id="btnClear" class="btn">🧹 Leeg lokale cache</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>Huidig</label>
+          <div id="currentInfo" class="muted">–</div>
+        </div>
       </div>
     </section>
 
-    <!-- Diagnose -->
     <section class="card" style="margin-top:1rem">
-      <h3>Diagnose</h3>
-      <div id="diag" class="muted">—</div>
+      <h2 style="margin-top:0">Diagnose</h2>
+      <div id="diagState" class="muted">Nog geen test uitgevoerd.</div>
+      <div id="diagOut" class="diag-pre" style="margin-top:.5rem"></div>
     </section>
   </main>
 
-  <footer id="footer" class="footer"></footer>
+  <footer id="footer"></footer>
 
-  <script defer src="../js/layout.js?v=0.24.5"></script>
-  <script type="module" src="../js/instellingen.js?v=0.26.7"></script>
+  <!-- Layout + Instellingen JS -->
+  <script defer src="../js/layout.js?v=0.27.3"></script>
+  <script type="module" src="../js/instellingen.js?v=0.27.4"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Geforceerde subpage (blauwe topbar) met terugknop
+      window.SuperhondUI?.mount?.({ title:'Instellingen', icon:'⚙️', back:'../dashboard/' });
+    });
+  </script>
 </body>
 </html>
