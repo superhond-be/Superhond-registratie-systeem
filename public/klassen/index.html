@@ -1,16 +1,17 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Klassen – Superhond</title>
 
-  <meta name="superhond-exec" content="https://script.google.com/macros/s/____JOUW_EXEC____/exec"/>
-  <meta name="superhond-branch" content="Ontwikkeling"/>
+  <!-- ✅ Bron van waarheid voor je GAS /exec -->
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
 
-  <link rel="stylesheet" href="../css/style.css?v=0.27.2"/>
-  <link rel="stylesheet" href="../css/superhond.css?v=0.27.2"/>
+  <link rel="stylesheet" href="../css/style.css?v=0.27.3" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.3" />
 </head>
+
 <body class="subpage page-klassen">
   <header id="topbar"></header>
 
@@ -18,18 +19,25 @@
     <h1 class="page-title">Klassen</h1>
 
     <section class="card">
-      <div style="display:flex;gap:.5rem;align-items:center">
-        <input id="search" class="input" placeholder="Zoek op naam, niveau, trainer of status…"/>
-        <button id="refresh" class="btn">🔄 Ververs</button>
+      <div class="toolbar">
+        <input id="search" class="input" placeholder="Zoek op naam, niveau, trainer of status…" />
+        <button id="refresh" class="btn" type="button">🔄 Verversen</button>
       </div>
+
       <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
 
       <div class="table-wrap" style="margin-top:.5rem">
         <table class="table" id="tbl">
           <thead>
-            <tr><th>Naam</th><th>Niveau</th><th>Trainer</th><th>Status</th><th>Max</th><th style="width:1%">Acties</th></tr>
+            <tr>
+              <th>Naam</th>
+              <th>Niveau</th>
+              <th>Trainer</th>
+              <th>Status</th>
+              <th style="width:1%">Acties</th>
+            </tr>
           </thead>
-          <tbody></tbody>
+          <tbody><!-- rijen via JS --></tbody>
         </table>
       </div>
     </section>
@@ -37,29 +45,38 @@
     <section class="card" style="margin-top:1rem">
       <h2>Nieuwe klas toevoegen</h2>
       <form id="form-add" class="form-grid" autocomplete="off">
-        <input name="naam" class="input" placeholder="Naam" required/>
-        <input name="niveau" class="input" placeholder="Niveau (bv. Puppy, Gevorderd…)"/>
-        <input name="trainer" class="input" placeholder="Trainer"/>
-        <select name="status" class="input"><option value="actief" selected>actief</option><option value="inactief">inactief</option></select>
-        <input name="max_deelnemers" class="input" type="number" min="0" step="1" placeholder="Max"/>
-        <input name="geldigheid_weken" class="input" type="number" min="0" step="1" placeholder="Weken"/>
+        <input name="naam" class="input" placeholder="Naam" required />
+        <input name="niveau" class="input" placeholder="Niveau (bv. Puppy, Gevorderd…)" />
+        <input name="trainer" class="input" placeholder="Trainer" />
+        <select name="status" class="input" aria-label="Status">
+          <option value="actief" selected>actief</option>
+          <option value="inactief">inactief</option>
+        </select>
         <button class="btn" type="submit">💾 Opslaan</button>
       </form>
-      <div id="form-msg" class="muted" style="margin-top:.35rem"></div>
+      <div id="form-msg" class="muted" role="status" aria-live="polite"></div>
     </section>
   </main>
 
-  <footer id="footer" class="footer"></footer>
+  <footer id="footer"></footer>
 
-  <script defer src="../js/layout.js?v=0.27.2"></script>
-  <script type="module" src="../js/actions.js?v=0.27.2"></script>
-  <script type="module" src="../js/sheets.js?v=0.27.2"></script>
-  <script type="module" src="../js/klassen.js?v=0.27.2"></script>
+  <!-- Scripts (volgorde) -->
+  <script defer src="../js/layout.js?v=0.27.3"></script>
+  <script defer src="../js/diagnose.js?v=0.3.0"></script>
+  <script defer src="../js/sheets.js?v=0.27.4"></script>
+  <script type="module" src="../js/klassen.js?v=0.27.3"></script>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      window.SuperhondUI?.mount?.({ title:'Klassen', icon:'📚', back:'../dashboard/' });
+      window.SuperhondUI?.mount?.({
+        title: 'Klassen',
+        icon: '📚',
+        back: '../dashboard/',
+        home: false
+      });
     });
   </script>
+
+  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p></noscript>
 </body>
 </html>
