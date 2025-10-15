@@ -1,21 +1,16 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Honden – Superhond</title>
 
-  <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/____JOUW_EXEC____/exec"/>
+  <meta name="superhond-branch" content="Ontwikkeling"/>
 
-  <!-- Branch/build + GAS exec vóór layout.js -->
-  <meta name="superhond-branch" content="Ontwikkeling" />
-  <script>
-    window.APP_BUILD = '0.26.7 (Ontwikkeling)';
-    window.SUPERHOND_SHEETS_URL = 'https://script.google.com/macros/s/____JOUW_EXEC____/exec';
-  </script>
+  <link rel="stylesheet" href="../css/style.css?v=0.27.2"/>
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.2"/>
 </head>
-
 <body class="subpage page-honden">
   <header id="topbar"></header>
 
@@ -23,24 +18,15 @@
     <h1 class="page-title">Honden</h1>
 
     <section class="card">
-      <div class="row" style="display:flex;gap:.5rem;align-items:center">
-        <input id="search" class="input" placeholder="Zoek op naam, ras of eigenaar…" aria-label="Zoeken" />
-        <button id="refresh" class="btn" type="button">🔄 Verversen</button>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <input id="search" class="input" placeholder="Zoek op naam of chip…"/>
+        <button id="refresh" class="btn">🔄 Verversen</button>
       </div>
-
       <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
 
       <div class="table-wrap" style="margin-top:.5rem">
         <table class="table" id="tbl">
-          <thead>
-            <tr>
-              <th>Naam</th>
-              <th>Ras</th>
-              <th>Geboorte</th>
-              <th>Eigenaar (ID)</th>
-              <th style="width:1%">Acties</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Naam</th><th>Ras</th><th>Geboortedatum</th><th>Eigenaar (id)</th><th style="width:1%">Acties</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -48,42 +34,31 @@
 
     <section class="card" style="margin-top:1rem">
       <h2>Nieuwe hond toevoegen</h2>
-      <form id="form-add" class="form-grid" autocomplete="off">
-        <input class="input" name="name"      placeholder="Naam" required />
-        <input class="input" name="breed"     placeholder="Ras" />
-        <input class="input" name="birthdate" placeholder="Geboortedatum" type="date" />
-        <input class="input" name="ownerId"   placeholder="Eigenaar (ID) – type om te zoeken" autocomplete="off" />
-        <input class="input" name="chip"      placeholder="Chipnummer" />
-        <textarea class="input" name="notes" rows="2" placeholder="Notities"></textarea>
-        <select class="input" name="status" aria-label="Status">
-          <option value="actief" selected>actief</option>
-          <option value="inactief">inactief</option>
-        </select>
+      <form id="form-add" autocomplete="off">
+        <input name="name" class="input" placeholder="Naam" required/>
+        <input name="breed" class="input" placeholder="Ras"/>
+        <input name="birthdate" class="input" type="date" placeholder="YYYY-MM-DD"/>
+        <input name="ownerId" class="input" placeholder="Eigenaar (id)"/>
+        <input name="chip" class="input" placeholder="Chipnummer"/>
+        <input name="notes" class="input" placeholder="Notities"/>
+        <select name="status" class="input"><option value="actief" selected>actief</option><option value="inactief">inactief</option></select>
         <button class="btn primary" type="submit">💾 Opslaan</button>
       </form>
-      <div id="form-msg" class="muted" role="status" aria-live="polite"></div>
+      <div id="form-msg" class="muted"></div>
     </section>
   </main>
 
-  <footer id="footer"></footer>
+  <footer id="footer" class="footer"></footer>
 
-  <!-- Zelfde layout-versie overal -->
-  <script defer src="../js/layout.js?v=0.26.7"></script>
+  <script defer src="../js/layout.js?v=0.27.2"></script>
+  <script type="module" src="../js/actions.js?v=0.27.2"></script>
+  <script type="module" src="../js/sheets.js?v=0.27.2"></script>
+  <script type="module" src="../js/honden.js?v=0.27.2"></script>
 
-  <!-- Mount met versie/back-knop -->
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      window.SuperhondUI?.mount?.({
-        title: 'Honden',
-        icon: '🐶',
-        back: '../dashboard/',
-        home: false,
-        version: window.APP_BUILD
-      });
+      window.SuperhondUI?.mount?.({ title:'Honden', icon:'🐶', back:'../dashboard/' });
     });
   </script>
-
-  <!-- Functionele JS (zelfde versie) -->
-  <script type="module" src="../js/honden.js?v=0.26.7"></script>
 </body>
 </html>
