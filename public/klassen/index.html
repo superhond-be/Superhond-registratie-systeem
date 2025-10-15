@@ -6,8 +6,11 @@
   <title>Klassen – Superhond</title>
 
   <!-- Centrale stijlen -->
-  <link rel="stylesheet" href="../css/style.css?v=0.20.2" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.2" />
+  <link rel="stylesheet" href="../css/style.css?v=0.27.2" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.2" />
+
+  <!-- Meta fallback (mag blijven, wordt genegeerd bij lokale URL) -->
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/____JOUW_EXEC____/exec">
 </head>
 
 <body class="subpage page-klassen">
@@ -33,10 +36,11 @@
               <th>Niveau</th>
               <th>Trainer</th>
               <th>Status</th>
+              <th>Max</th>
               <th style="width:1%"></th>
             </tr>
           </thead>
-          <tbody><!-- rijen worden via JS ingevuld --></tbody>
+          <tbody><!-- Rijen via JS --></tbody>
         </table>
       </div>
     </section>
@@ -49,27 +53,16 @@
         <input name="niveau" class="input" placeholder="Niveau (bv. Puppy, Gevorderd…)" />
         <input name="trainer" class="input" placeholder="Trainer" />
         <input name="status" class="input" placeholder="Status (actief/inactief)" value="actief" />
-        <button class="btn" type="submit">💾 Opslaan</button>
+        <button class="btn primary" type="submit">💾 Opslaan</button>
       </form>
-      <div id="form-msg" class="field-error" style="display:none;"></div>
+      <div id="form-msg" class="muted" style="margin-top:.5rem"></div>
     </section>
   </main>
 
   <footer id="footer"></footer>
 
-  <!-- Scripts -->
-  <script src="../js/layout.js?v=0.20.2" defer></script>
-  <script type="module" src="../js/klassen.js?v=0.20.2"></script>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // Mount topbar & footer met terugknop naar dashboard
-      SuperhondUI.mount({
-        title: 'Klassen',
-        icon: '📚',
-        back: '../dashboard/'
-      });
-    });
-  </script>
+  <!-- ✅ NIEUWE scripts -->
+  <script defer src="../js/layout.js?v=0.27.2"></script>
+  <script type="module" src="../js/klassen.js?v=0.27.2"></script>
 </body>
 </html>
