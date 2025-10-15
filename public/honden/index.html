@@ -5,16 +5,15 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Honden – Superhond</title>
 
-  <!-- Branch & versie info -->
-  <meta name="superhond-branch" content="Ontwikkeling">
-  <meta name="superhond-version" content="0.26.7">
+  <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
 
-  <!-- Google Apps Script exec -->
-  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbysc3pCUpgIxKl2aNPBgJGZIJcNcOvaqF48NG_NgBOGec9TIFKNSHS153NIsng0kE7E4Q/exec">
-
-  <!-- Centrale stijlen -->
-  <link rel="stylesheet" href="../css/style.css?v=0.26.7">
-  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7">
+  <!-- Branch/build + GAS exec vóór layout.js -->
+  <meta name="superhond-branch" content="Ontwikkeling" />
+  <script>
+    window.APP_BUILD = '0.26.7 (Ontwikkeling)';
+    window.SUPERHOND_SHEETS_URL = 'https://script.google.com/macros/s/____JOUW_EXEC____/exec';
+  </script>
 </head>
 
 <body class="subpage page-honden">
@@ -25,7 +24,7 @@
 
     <section class="card">
       <div class="row" style="display:flex;gap:.5rem;align-items:center">
-        <input id="search" class="input" placeholder="Zoek op naam of chipnummer…" aria-label="Zoeken">
+        <input id="search" class="input" placeholder="Zoek op naam, ras of eigenaar…" aria-label="Zoeken" />
         <button id="refresh" class="btn" type="button">🔄 Verversen</button>
       </div>
 
@@ -37,24 +36,29 @@
             <tr>
               <th>Naam</th>
               <th>Ras</th>
-              <th>Chipnummer</th>
-              <th>Geboortedatum</th>
+              <th>Geboorte</th>
+              <th>Eigenaar (ID)</th>
               <th style="width:1%">Acties</th>
             </tr>
           </thead>
-          <tbody><!-- dynamische rijen --></tbody>
+          <tbody></tbody>
         </table>
       </div>
     </section>
 
-    <!-- Toevoegen -->
     <section class="card" style="margin-top:1rem">
       <h2>Nieuwe hond toevoegen</h2>
       <form id="form-add" class="form-grid" autocomplete="off">
-        <input name="naam" class="input" placeholder="Naam" required>
-        <input name="ras" class="input" placeholder="Ras">
-        <input name="chipnummer" class="input" placeholder="Chipnummer">
-        <input name="geboortedatum" class="input" type="date" placeholder="Geboortedatum">
+        <input class="input" name="name"      placeholder="Naam" required />
+        <input class="input" name="breed"     placeholder="Ras" />
+        <input class="input" name="birthdate" placeholder="Geboortedatum" type="date" />
+        <input class="input" name="ownerId"   placeholder="Eigenaar (ID) – type om te zoeken" autocomplete="off" />
+        <input class="input" name="chip"      placeholder="Chipnummer" />
+        <textarea class="input" name="notes" rows="2" placeholder="Notities"></textarea>
+        <select class="input" name="status" aria-label="Status">
+          <option value="actief" selected>actief</option>
+          <option value="inactief">inactief</option>
+        </select>
         <button class="btn primary" type="submit">💾 Opslaan</button>
       </form>
       <div id="form-msg" class="muted" role="status" aria-live="polite"></div>
@@ -63,24 +67,23 @@
 
   <footer id="footer"></footer>
 
-  <!-- Scripts -->
-  <script defer src="../js/layout.js?v=0.24.4-branch"></script>
+  <!-- Zelfde layout-versie overal -->
+  <script defer src="../js/layout.js?v=0.26.7"></script>
 
+  <!-- Mount met versie/back-knop -->
   <script>
-    window.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {
       window.SuperhondUI?.mount?.({
         title: 'Honden',
         icon: '🐶',
         back: '../dashboard/',
-        home: false
+        home: false,
+        version: window.APP_BUILD
       });
     });
   </script>
 
-  <script type="module" src="../js/honden.js?v=0.18.9"></script>
-
-  <noscript>
-    <p style="padding:1rem;color:#b91c1c">JavaScript is vereist om deze pagina te gebruiken.</p>
-  </noscript>
+  <!-- Functionele JS (zelfde versie) -->
+  <script type="module" src="../js/honden.js?v=0.26.7"></script>
 </body>
 </html>
