@@ -3,83 +3,85 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Instellingen & Diagnose – Superhond</title>
+  <title>Instellingen – Superhond</title>
 
-  <!-- Centrale stijlen -->
-  <link rel="stylesheet" href="../css/style.css?v=0.27.4" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.27.4" />
+  <!-- Bron van waarheid -->
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
 
-  <style>
-    .grid { display:grid; gap:12px; grid-template-columns: 1fr; }
-    .row  { display:grid; grid-template-columns: 180px 1fr; gap:.5rem .75rem; align-items:center; }
-    .row label { color:#6b7280; }
-    @media (max-width:640px){ .row { grid-template-columns: 1fr; } }
-    .monoinput { font-family: ui-monospace, Menlo, Consolas, monospace; }
-    .ok { color:#16a34a; }
-    .bad{ color:#b91c1c; }
-    .muted { color:#6b7280; }
-    .diag-pre { white-space:pre-wrap; background:#f9fafb; border:1px solid #e5e7eb; padding:.75rem; border-radius:8px; }
-  </style>
+  <link rel="stylesheet" href="../css/style.css?v=0.27.3" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.3" />
 </head>
+
 <body class="subpage page-instellingen">
   <header id="topbar"></header>
 
   <main class="container">
-    <h1 class="page-title">Instellingen & Diagnose</h1>
+    <h1 class="page-title">Instellingen</h1>
 
     <section class="card">
-      <h2 style="margin-top:0">Centrale Apps Script EXEC-URL</h2>
-      <p class="muted">Vul hieronder je volledige Google Apps Script <code>/exec</code> URL in. Deze wordt centraal opgeslagen en gebruikt door alle pagina’s (Dashboard, Klanten, Honden, Klassen, …).</p>
+      <h2>Google Apps Script koppeling</h2>
 
-      <div class="grid" style="margin-top:.5rem">
-        <div class="row">
-          <label for="execUrl">EXEC-URL</label>
-          <input id="execUrl" class="input monoinput" placeholder="https://script.google.com/macros/s/…/exec" />
-        </div>
+      <p>Dit is de URL waarmee het Superhond-programma verbinding maakt met Google Sheets.</p>
 
-        <div class="row">
-          <label for="branch">Branch</label>
-          <select id="branch" class="input">
-            <option value="production">Production</option>
-            <option value="staging">Staging</option>
-            <option value="development">Development</option>
-          </select>
-        </div>
+      <label for="execUrl"><strong>Exec-URL</strong></label>
+      <input id="execUrl" class="input" placeholder="https://script.google.com/macros/s/…/exec" />
 
-        <div class="row">
-          <label>Acties</label>
-          <div style="display:flex; gap:.5rem; flex-wrap:wrap">
-            <button id="btnApply" class="btn primary">✅ Gebruik & Opslaan</button>
-            <button id="btnTest"  class="btn">🔎 Test verbinding</button>
-            <button id="btnClear" class="btn">🧹 Leeg lokale cache</button>
-          </div>
-        </div>
-
-        <div class="row">
-          <label>Huidig</label>
-          <div id="currentInfo" class="muted">–</div>
-        </div>
+      <div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap">
+        <button id="saveBtn" class="btn primary">💾 Opslaan</button>
+        <button id="pingBtn" class="btn">🔍 Test verbinding</button>
+        <button id="resetBtn" class="btn danger">🗑️ Reset lokale instellingen</button>
       </div>
-    </section>
 
-    <section class="card" style="margin-top:1rem">
-      <h2 style="margin-top:0">Diagnose</h2>
-      <div id="diagState" class="muted">Nog geen test uitgevoerd.</div>
-      <div id="diagOut" class="diag-pre" style="margin-top:.5rem"></div>
+      <div id="msg" class="muted" style="margin-top:.75rem" aria-live="polite"></div>
     </section>
   </main>
 
   <footer id="footer"></footer>
 
-  <!-- Layout + Instellingen JS -->
   <script defer src="../js/layout.js?v=0.27.3"></script>
-  <script type="module" src="../js/instellingen.js?v=0.27.4"></script>
+  <script defer src="../js/diagnose.js?v=0.3.0"></script>
+  <script defer src="../js/sheets.js?v=0.27.4"></script>
 
-  <script>
+  <script type="module">
+    import { getExecBase, setExecBase, pingExec } from '../js/sheets.js';
+
+    const elUrl  = document.getElementById('execUrl');
+    const msg    = document.getElementById('msg');
+    const save   = document.getElementById('saveBtn');
+    const ping   = document.getElementById('pingBtn');
+    const reset  = document.getElementById('resetBtn');
+
+    // Huidige waarde tonen
     document.addEventListener('DOMContentLoaded', () => {
-      // Geforceerde subpage (blauwe topbar) met terugknop
       window.SuperhondUI?.mount?.({ title:'Instellingen', icon:'⚙️', back:'../dashboard/' });
+      elUrl.value = getExecBase() || '';
+    });
+
+    function show(m, cls='muted') {
+      msg.className = cls;
+      msg.textContent = m;
+    }
+
+    save.addEventListener('click', () => {
+      const val = elUrl.value.trim();
+      if (!val) return show('❌ Geen URL ingevoerd','error');
+      setExecBase(val);
+      show('✅ Exec-URL opgeslagen.');
+    });
+
+    ping.addEventListener('click', async () => {
+      show('⏳ Testen…');
+      const ok = await pingExec();
+      show(ok ? '✅ Verbinding geslaagd – online' : '❌ Geen verbinding','muted');
+    });
+
+    reset.addEventListener('click', () => {
+      localStorage.removeItem('superhond:execBase');
+      elUrl.value = '';
+      show('🗑️ Lokale opslag gewist.');
     });
   </script>
+
+  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist om instellingen te gebruiken.</p></noscript>
 </body>
 </html>
