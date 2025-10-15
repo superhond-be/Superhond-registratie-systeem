@@ -1,225 +1,75 @@
 /**
- * public/js/layout.js — Topbar & Footer mount (v0.24.3)
- * - Geen /api-config meer nodig
- * - Versie uit APP_VERSION (of via opts.version)
- * - Ping rechtstreeks naar GAS /exec (uit localStorage, window-var of <meta>)
- * - Dashboard = geel, subpagina’s = blauw (hard geforceerd)
- * - Optionele terugknop, status-dot, periodieke ping (45s)
- * - Adminmodus (Shift+Ctrl+A) en density (html[data-density])
+ * public/js/layout.js — Topbar & Footer mount (v0.27.0)
+ * - Toon gele balk op dashboard, blauwe balk elders
+ * - Online/offline via directe ping naar GAS exec
+ * - Ping haalt exec uit: window.SUPERHOND_SHEETS_URL → meta[name="superhond-exec"] → localStorage(superhond:apiBase)
+ * - Toont versie uit window.APP_BUILD of interne APP_VERSION
  */
 
-(function () {
-  const APP_VERSION = '0.24.3';
-  const LS_ADMIN    = 'superhond:admin:enabled';
-  const LS_DENSITY  = 'superhond:density';
+(function(){
+  const APP_VERSION = '0.27.0';
+  const LS_API = 'superhond:apiBase';
 
-  /* ───────── Helpers ───────── */
-  const onReady = (cb) =>
-    document.readyState !== 'loading'
-      ? cb()
-      : document.addEventListener('DOMContentLoaded', cb, { once: true });
+  // Hulpfuncties
+  const onReady = (cb)=>document.readyState!=='loading'?cb():document.addEventListener('DOMContentLoaded',cb,{once:true});
+  const el = (t,a={},...c)=>{const n=document.createElement(t);for(const[k,v]of Object.entries(a))if(v!=null){if(k==='class')n.className=v;else n.setAttribute(k,v);}for(const x of c)n.append(x.nodeType?x:document.createTextNode(x));return n;};
 
-  const onceStyle = (id, css) => {
-    let t = document.getElementById(id);
-    if (!t) {
-      t = document.createElement('style');
-      t.id = id;
-      t.textContent = css;
-      document.head.appendChild(t);
-    }
-    return t;
-  };
-
-  const el = (tag, attrs = {}, ...kids) => {
-    const n = document.createElement(tag);
-    Object.entries(attrs || {}).forEach(([k, v]) => {
-      if (v == null) return;
-      if (k === 'class') n.className = v;
-      else if (k === 'html') n.innerHTML = v;
-      else n.setAttribute(k, v);
-    });
-    for (const c of kids)
-      if (c != null) n.append(typeof c === 'string' ? document.createTextNode(c) : c);
-    return n;
-  };
-
-  /* ───────── Exec-bron bepalen (zonder /api) ───────── */
-  function resolveExecBase() {
-    // 1) window-var
-    if (typeof window.SUPERHOND_SHEETS_URL === 'string' && window.SUPERHOND_SHEETS_URL) {
-      return window.SUPERHOND_SHEETS_URL;
-    }
-    // 2) meta-tag
-    const meta = document.querySelector('meta[name="superhond-exec"]');
-    if (meta?.content) return meta.content.trim();
-
-    // 3) localStorage (actuele + oude sleutel)
-    try {
-      const ls1 = localStorage.getItem('superhond:apiBase'); // current
-      const ls2 = localStorage.getItem('superhond:exec');    // legacy
-      const re  = /^https?:\/\/script\.google\.com\/macros\/s\/.+\/exec$/i;
-      if (ls1 && re.test(ls1)) return ls1;
-      if (ls2 && re.test(ls2)) return ls2;
-    } catch {}
+  // Exec resolver
+  function resolveExecBase(){
+    if(window.SUPERHOND_SHEETS_URL) return window.SUPERHOND_SHEETS_URL;
+    const meta=document.querySelector('meta[name="superhond-exec"]');
+    if(meta?.content) return meta.content.trim();
+    try{const ls=localStorage.getItem(LS_API);if(ls)return ls.trim();}catch{}
     return '';
   }
 
-  async function pingDirect() {
-    const base = resolveExecBase();
-    if (!base) return false;
-    const sep = base.includes('?') ? '&' : '?';
-    const url = `${base}${sep}mode=ping&t=${Date.now()}`;
-    try { const r = await fetch(url, { cache: 'no-store' }); return r.ok; }
-    catch { return false; }
+  // Ping rechtstreeks naar GAS
+  async function pingDirect(){
+    const base=resolveExecBase(); if(!base) return false;
+    const url=base+(base.includes('?')?'&':'?')+'mode=ping&t='+Date.now();
+    try{const r=await fetch(url,{cache:'no-store'});return r.ok;}catch{return false;}
   }
 
-  /* ───────── Admin & density ───────── */
-  const isAdmin   = () => localStorage.getItem(LS_ADMIN) === '1';
-  const setAdmin  = (on) => { localStorage.setItem(LS_ADMIN, on ? '1' : '0'); document.body.classList.toggle('admin-page', !!on); };
-  const applyDensity = (mode) => {
-    const m = mode || localStorage.getItem(LS_DENSITY) || 'normal';
-    localStorage.setItem(LS_DENSITY, m);
-    document.documentElement.setAttribute('data-density', m);
-  };
-
-  /* ───────── UI helpers ───────── */
-  const statusClass = (ok) => (ok ? 'is-online' : 'is-offline');
-
-  function forceTopbarColors(container, { isDashboard }) {
-    const bg = isDashboard ? '#f4c400' : '#2563eb';
-    const fg = isDashboard ? '#000'    : '#fff';
-    container.style.setProperty('background', bg, 'important');
-    container.style.setProperty('color', fg, 'important');
-  }
-
-  function renderTopbar(container, opts, online) {
-    if (!container) return;
-    container.innerHTML = '';
-
-    const {
-      title = 'Superhond',
-      icon  = '🐾',
-      home  = null,        // true = dashboard link, false = span, null = auto
-      back  = null,        // string (url) of true (history.back)
-      version = null,      // override versie
-      isDashboard = null,  // optioneel forceren
-    } = opts || {};
-
-    // Dashboard/subpage bepalen
-    const path = location.pathname.replace(/\/+$/, '');
-    const autoDash = /\/dashboard$/.test(path) || /\/dashboard\/index\.html$/.test(path);
-    const dash = (isDashboard != null) ? !!isDashboard : (home === true ? true : autoDash);
-
-    // Terugknop
-    let backEl = null;
-    if (back) {
-      if (typeof back === 'string') backEl = el('a', { class: 'btn-back', href: back }, '← Terug');
-      else { backEl = el('button', { class: 'btn-back', type: 'button' }, '← Terug'); backEl.addEventListener('click', () => history.back()); }
-    }
-
-    const inner = el('div', { class: 'topbar-inner container' });
-
-    const left = el('div', { class: 'tb-left' },
-      backEl,
-      dash
-        ? el('a', { class: 'brand', href: '../dashboard/' }, `${icon} ${title}`)
-        : el('span', { class: 'brand' }, `${icon} ${title}`)
+  // Topbar
+  function renderTopbar(elm,opts,online){
+    const build=window.APP_BUILD||('v'+APP_VERSION);
+    const isDash=document.body.classList.contains('dashboard-page');
+    const left=el('div',{class:'tb-left'}, opts.back?el('a',{href:opts.back,class:'btn-back'},'← Terug'):'', el('span',{class:'brand'},opts.icon+' '+opts.title));
+    const right=el('div',{class:'tb-right'},
+      el('span',{class:'status-dot '+(online?'is-online':'is-offline')}),
+      el('span',{class:'status-text'},online?'Online':'Offline'),
+      el('span',{class:'build muted'},build)
     );
-
-    const right = el('div', { class: 'tb-right' },
-      el('span', { class: `status-dot ${statusClass(online)}`, title: online ? 'Online' : 'Offline' }),
-      el('span', { class: 'status-text' }, online ? 'Online' : 'Offline'),
-      el('span', { class: 'muted' }, `v${version || APP_VERSION}`)
-    );
-
-    onceStyle('sh-topbar-style', `
-      #topbar{position:sticky;top:0;z-index:50}
-      #topbar .topbar-inner{display:flex;align-items:center;gap:.75rem;min-height:56px;border-bottom:1px solid #e5e7eb;background:inherit;color:inherit}
-      .tb-left{display:flex;align-items:center;gap:.5rem}
-      .tb-right{margin-left:auto;display:flex;align-items:center;gap:.6rem;font-size:.95rem}
-      .brand{font-weight:800;font-size:20px;text-decoration:none;color:inherit}
-      .btn-back{appearance:none;border:1px solid rgba(0,0,0,.15);background:#fff;color:#111827;border-radius:8px;padding:6px 10px;cursor:pointer}
-      .status-dot{width:.6rem;height:.6rem;border-radius:999px;display:inline-block;background:#9ca3af}
-      .status-dot.is-online{background:#16a34a}
-      .status-dot.is-offline{background:#ef4444}
-      .status-text{font-weight:600}
-      .muted{opacity:.85}
-    `);
-
-    forceTopbarColors(container, { isDashboard: dash });
-    inner.append(left, right);
-    container.append(inner);
+    elm.innerHTML=''; const inner=el('div',{class:'topbar-inner'},left,right);
+    elm.append(inner);
+    elm.style.background=isDash?'#f4c400':'#2563eb';
+    elm.style.color=isDash?'#000':'#fff';
   }
 
-  function renderFooter(container) {
-    if (!container) return;
-    container.innerHTML = '';
-    onceStyle('sh-footer-style', `
-      .footer{margin-top:2rem;padding:1rem;border-top:1px solid #e5e7eb;color:#6b7280;font-size:.9rem}
-      .footer .row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;justify-content:space-between}
-      .footer code{background:rgba(0,0,0,.05);padding:.1rem .35rem;border-radius:.25rem}
-    `);
-    const exec = (resolveExecBase() || '').replace(/^https?:\/\/(www\.)?/, '') || 'n.v.t.';
-    const row = el('div', { class: 'row' },
-      el('div', {}, `© ${new Date().getFullYear()} Superhond`),
-      el('div', {}, el('code', {}, 'exec: ' + exec)),
-      el('div', {}, `versie ${APP_VERSION}`)
-    );
-    container.classList.add('footer');
-    container.append(row);
+  function renderFooter(elm){
+    const exec=resolveExecBase()||'n.v.t.';
+    const build=window.APP_BUILD||('v'+APP_VERSION);
+    elm.innerHTML=`<div class="row"><div>© ${new Date().getFullYear()} Superhond</div><div><code>${exec}</code></div><div>${build}</div></div>`;
+    elm.className='footer';
   }
 
-  /* ───────── Net status ───────── */
-  function applyNetStatus(ok) {
-    const dot = document.querySelector('#topbar .status-dot');
-    const txt = document.querySelector('#topbar .status-text');
-    if (dot) { dot.classList.toggle('is-online', !!ok); dot.classList.toggle('is-offline', !ok); }
-    if (txt) txt.textContent = ok ? 'Online' : 'Offline';
+  async function mount(opts={}){
+    await new Promise(r=>onReady(r));
+    const path=location.pathname.replace(/\/+$/,'');
+    const dash=/dashboard/.test(path)||opts.home===true;
+    document.body.classList.toggle('dashboard-page',dash);
+    document.body.classList.toggle('subpage',!dash);
+    const ok=await pingDirect();
+    renderTopbar(document.getElementById('topbar'),opts,ok);
+    renderFooter(document.getElementById('footer'));
   }
 
-  /* ───────── Public API ───────── */
-  async function mount(opts = {}) {
-    await new Promise((res) => onReady(res));
-    applyDensity();
-
-    // body-classes voor globale CSS
-    const path = location.pathname.replace(/\/+$/, '');
-    const isDash = /\/dashboard$/.test(path) || /\/dashboard\/index\.html$/.test(path) || opts.home === true;
-    document.body.classList.toggle('dashboard-page', isDash);
-    document.body.classList.toggle('subpage', !isDash);
-
-    // admin thema
-    document.body.classList.toggle('admin-page', isAdmin());
-
-    const finalOpts = Object.assign({ back: !isDash }, opts);
-
-    const topbarEl = document.getElementById('topbar');
-    const footerEl = document.getElementById('footer');
-
-    const online = await pingDirect();
-    if (topbarEl) renderTopbar(topbarEl, finalOpts, online);
-    if (footerEl) renderFooter(footerEl);
-
-    // periodiek ping
-    setInterval(async () => applyNetStatus(await pingDirect()), 45_000);
+  function setOnline(ok){
+    const d=document.querySelector('.status-dot');
+    const t=document.querySelector('.status-text');
+    if(d)d.className='status-dot '+(ok?'is-online':'is-offline');
+    if(t)t.textContent=ok?'Online':'Offline';
   }
 
-  const setOnline   = (ok) => applyNetStatus(!!ok);
-  const noteSuccess = ()   => applyNetStatus(true);
-  const noteFailure = ()   => applyNetStatus(false);
-
-  // Admin sneltoets: Shift + Ctrl + A
-  window.addEventListener('keydown', (e) => {
-    if (e.shiftKey && e.ctrlKey && e.key.toLowerCase() === 'a') {
-      const next = !isAdmin();
-      setAdmin(next);
-      applyNetStatus(true);
-      setTimeout(() => location.reload(), 350);
-    }
-  });
-
-  window.SuperhondUI = Object.assign(window.SuperhondUI || {}, {
-    mount, setOnline, noteSuccess, noteFailure, setAdmin, applyDensity,
-    APP_VERSION
-  });
+  window.SuperhondUI=Object.assign(window.SuperhondUI||{},{mount,setOnline});
 })();
