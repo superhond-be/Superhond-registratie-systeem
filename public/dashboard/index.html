@@ -1,30 +1,23 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Superhond — Dashboard</title>
 
-  <!-- Globale stijl (zelfde versie overal) -->
-  <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
+  <!-- 👉 jouw GAS /exec + optioneel branch -->
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/____JOUW_EXEC____/exec"/>
+  <meta name="superhond-branch" content="Ontwikkeling"/>
 
-  <!-- Branch/build + GAS exec: ZET DIT GOED vóór layout.js -->
-  <meta name="superhond-branch" content="Ontwikkeling" />
-  <script>
-    window.APP_BUILD = '0.26.7 (Ontwikkeling)';
-    // VUL jouw echte GAS/exec hier in:
-    window.SUPERHOND_SHEETS_URL = 'https://script.google.com/macros/s/____JOUW_EXEC____/exec';
-  </script>
-
-  <!-- Gele dashboard-balk forceren (veilig tegen overruling) -->
+  <link rel="stylesheet" href="../css/style.css?v=0.27.2"/>
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.2"/>
   <style>
-    body.dashboard-page #topbar,
-    body.dashboard-page #topbar .topbar-inner {
-      background: var(--accent, #f4c400) !important;
-      color: #000 !important;
+    /* Dashboard: geel hard forceren (voor het geval CSS later laadt) */
+    body.dashboard-page #topbar, body.dashboard-page #topbar .topbar-inner {
+      background: var(--accent,#f4c400) !important; color:#000 !important;
     }
-    body.dashboard-page .btn-back { border-color:#e5e7eb; background:#fff; color:#111827; }
+    .tile.badged{position:relative}
+    .tile .badge-dot{position:absolute;top:8px;right:10px;min-width:22px;height:22px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;font-size:12px;line-height:1;background:var(--accent,#f4c400);color:#000;border:1px solid rgba(0,0,0,.08)}
   </style>
 </head>
 <body class="dashboard-page">
@@ -37,59 +30,20 @@
       <a class="tile" href="../klanten/"><span class="tile-icon">👤</span><div class="tile-body"><span class="tile-title">Klanten</span></div></a>
       <a class="tile" href="../honden/"><span class="tile-icon">🐶</span><div class="tile-body"><span class="tile-title">Honden</span></div></a>
       <a class="tile" href="../strippenkaarten/"><span class="tile-icon">🎫</span><div class="tile-body"><span class="tile-title">Strippenkaarten</span></div></a>
-
-      <a class="tile badged" href="../lessen/">
-        <span class="tile-icon">📅</span>
-        <div class="tile-body">
-          <span class="tile-title">Lessen</span>
-          <span class="tile-sub" id="lessen-week-sub">—</span>
-        </div>
-        <span class="badge-dot" id="lessen-week-badge" aria-label="Aantal lessen">0</span>
-      </a>
-
-      <a class="tile badged" href="../klassen/">
-        <span class="tile-icon">📚</span>
-        <div class="tile-body">
-          <span class="tile-title">Klassen</span>
-          <span class="tile-sub" id="klassen-sub">—</span>
-        </div>
-        <span class="badge-dot" id="klassen-badge" aria-label="Aantal actieve klassen">0</span>
-      </a>
-
-      <a class="tile badged" href="../lessenreeks/">
-        <span class="tile-icon">📦</span>
-        <div class="tile-body">
-          <span class="tile-title">Lessenreeksen</span>
-          <span class="tile-sub" id="reeksen-sub">—</span>
-        </div>
-        <span class="badge-dot" id="reeksen-badge" aria-label="Aantal actieve reeksen">0</span>
-      </a>
-
+      <a class="tile badged" href="../lessen/"><span class="tile-icon">📅</span><div class="tile-body"><span class="tile-title">Lessen</span><span class="tile-sub" id="lessen-week-sub">—</span></div><span class="badge-dot" id="lessen-week-badge">0</span></a>
+      <a class="tile badged" href="../klassen/"><span class="tile-icon">📚</span><div class="tile-body"><span class="tile-title">Klassen</span><span class="tile-sub" id="klassen-sub">—</span></div><span class="badge-dot" id="klassen-badge">0</span></a>
+      <a class="tile badged" href="../lessenreeks/"><span class="tile-icon">📦</span><div class="tile-body"><span class="tile-title">Lessenreeksen</span><span class="tile-sub" id="reeksen-sub">—</span></div><span class="badge-dot" id="reeksen-badge">0</span></a>
       <a class="tile" href="../mededeling/"><span class="tile-icon">📢</span><div class="tile-body"><span class="tile-title">Mededelingen</span></div></a>
       <a class="tile" href="../trainers/"><span class="tile-icon">🧑‍🏫</span><div class="tile-body"><span class="tile-title">Trainers</span></div></a>
       <a class="tile" href="../rapporten/"><span class="tile-icon">📈</span><div class="tile-body"><span class="tile-title">Rapporten</span></div></a>
       <a class="tile" href="../instellingen/"><span class="tile-icon">⚙️</span><div class="tile-body"><span class="tile-title">Instellingen</span></div></a>
       <a class="tile" href="../over/"><span class="tile-icon">ℹ️</span><div class="tile-body"><span class="tile-title">Over</span></div></a>
-      <a class="tile" href="../lessen/beheer.html"><span class="tile-icon">⚙️</span><div class="tile-body"><span class="tile-title">Lessenbeheer</span></div></a>
-
-      <a class="tile" href="../admin/" data-admin-only style="display:none">
-        <span class="tile-icon">🛡️</span>
-        <div class="tile-body">
-          <span class="tile-title">Admin</span>
-          <span class="tile-sub">Config & Schema</span>
-        </div>
-      </a>
+      <a class="tile" href="../lessen/beheer.html"><span class="tile-icon">🗂️</span><div class="tile-body"><span class="tile-title">Lessenbeheer</span></div></a>
     </nav>
 
     <section class="card" style="margin-top:1rem">
       <h2 style="margin:0 0 .5rem">Agenda</h2>
-      <div class="tabs" id="agenda-tabs" role="tablist" aria-label="Agendaweergave">
-        <button class="tab active" data-tab="week" aria-selected="true">Deze week <span class="dot" id="tab-week-dot">0</span></button>
-        <button class="tab" data-tab="alles" aria-selected="false">Alles <span class="dot" id="tab-all-dot">0</span></button>
-        <button class="tab" data-tab="mededelingen" aria-selected="false">Mededelingen <span class="dot" id="tab-notes-dot">0</span></button>
-      </div>
       <div id="agenda-loader" class="muted">⏳ Laden…</div>
-      <div id="agenda-error" class="error" style="display:none"></div>
       <div class="table-wrap" id="agenda-table-wrap" style="display:none;">
         <table id="agenda-table" class="table">
           <thead><tr><th>Naam</th><th>Datum</th><th>Locatie</th><th>Trainer(s)</th></tr></thead>
@@ -101,33 +55,14 @@
 
   <footer id="footer" class="footer"></footer>
 
-  <!-- Scripts (let op: zelfde versies overal) -->
-  <script defer src="../js/layout.js?v=0.26.7"></script>
-  <script defer src="../js/agenda.js?v=0.26.7"></script>
-  <script defer src="../js/admin-gate.js?v=0.26.7"></script>
+  <script defer src="../js/layout.js?v=0.27.2"></script>
+  <!-- agenda.js optioneel -->
+  <!-- <script defer src="../js/agenda.js?v=0.27.2"></script> -->
 
-  <script type="module">
-    import * as sheets from '../js/sheets.js?v=0.26.7';
-
+  <script>
     document.addEventListener('DOMContentLoaded', () => {
-      window.SuperhondUI?.mount?.({ title:'Superhond', icon:'🐾', home:true, version: window.APP_BUILD });
+      window.SuperhondUI?.mount?.({ title:'Superhond', icon:'🐾', home:true });
     });
-
-    const { fetchSheet, initFromConfig } = sheets;
-    const norm = s => String(s||'').toLowerCase()==='actief';
-
-    (async () => {
-      try{
-        await initFromConfig();
-        const [klassen, reeksen] = await Promise.all([ fetchSheet('Klassen'), fetchSheet('Reeksen') ]);
-        const actKl = (klassen||[]).filter(k=>norm(k.status)).length;
-        const actRs = (reeksen||[]).filter(r=>norm(r.status)).length;
-        document.getElementById('klassen-badge').textContent = String(actKl);
-        document.getElementById('klassen-sub').textContent   = actKl?`${actKl} actief`:'—';
-        document.getElementById('reeksen-badge').textContent = String(actRs);
-        document.getElementById('reeksen-sub').textContent   = actRs?`${actRs} actief`:'—';
-      }catch(e){ console.warn('Badges updaten faalde:', e?.message || e); }
-    })();
   </script>
 </body>
 </html>
