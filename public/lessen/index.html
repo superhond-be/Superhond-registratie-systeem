@@ -6,8 +6,8 @@
   <title>Lessen – Superhond</title>
 
   <!-- Centrale stijlen -->
-  <link rel="stylesheet" href="../css/style.css?v=0.20.2" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.2" />
+  <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
 </head>
 
 <body class="subpage page-lessen">
@@ -73,7 +73,17 @@
   <footer id="footer"></footer>
 
   <!-- Scripts -->
-  <script src="../js/layout.js?v=0.20.2" defer></script>
-  <script type="module" src="../js/lessen.js?v=0.20.2"></script>
+  <script src="../js/layout.js?v=0.27.6" defer></script>
+  <script type="module" src="../js/lessen.js?v=0.27.6"></script>
+
+  <!-- Mount layout.js (versie/status/topbar/footer) -->
+  <script type="module">
+    import { SuperhondUI } from '../js/layout.js';
+    SuperhondUI.mount({
+      title: 'Lessen',
+      icon: '📅',
+      back: '../dashboard/'
+    });
+  </script>
 </body>
 </html>
