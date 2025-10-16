@@ -4,13 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Superhond — Dashboard</title>
-
-  <!-- Meta -->
   <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
   <meta name="superhond-branch" content="Ontwikkeling">
-  <meta name="superhond-version" content="0.27.5">
+  <meta name="superhond-version" content="0.27.6-debug">
 
-  <!-- CSS -->
   <link rel="stylesheet" href="../css/style.css?v=0.27.5" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.5" />
 
@@ -22,18 +19,15 @@
     }
   </style>
 </head>
-
 <body class="dashboard-page">
   <header id="topbar"></header>
 
   <main class="container" role="main">
     <h1 class="page-title">Hoofdmenu</h1>
-
     <nav class="tiles" aria-label="Hoofdmenu">
       <a class="tile" href="../klanten/"><span>👤</span> Klanten</a>
       <a class="tile" href="../honden/"><span>🐶</span> Honden</a>
       <a class="tile" href="../lessen/"><span>📅</span> Lessen</a>
-      <a class="tile" href="../agenda/"><span>🗓️</span> Agenda</a>
       <a class="tile" href="../mededeling/"><span>📢</span> Mededelingen</a>
       <a class="tile" href="../trainers/"><span>🧑‍🏫</span> Trainers</a>
       <a class="tile" href="../rapporten/"><span>📈</span> Rapporten</a>
@@ -45,9 +39,10 @@
   <footer id="footer" class="footer"></footer>
 
   <script type="module">
-    import { SuperhondUI } from '../js/layout.js';
+    import { SuperhondUI } from '../js/layout-debug.js';
     import '../js/dashboard.js?v=0.27.5';
 
+    console.log('[dashboard debug] calling mount');
     SuperhondUI.mount({ title: 'Superhond', icon: '🐾', home: true });
   </script>
 </body>
