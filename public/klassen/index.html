@@ -5,14 +5,18 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Klassen – Superhond</title>
 
-  <!-- ✅ Exec-URL en versie-informatie -->
   <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
   <meta name="superhond-branch" content="Ontwikkeling">
   <meta name="superhond-version" content="0.27.6">
 
-  <!-- Stijlen -->
   <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
+
+  <style>
+    footer#footer:empty {
+      display: none;
+    }
+  </style>
 </head>
 
 <body class="subpage page-klassen">
@@ -21,7 +25,6 @@
   <main class="container">
     <h1 class="page-title">Klassen</h1>
 
-    <!-- Overzicht -->
     <section class="card">
       <div class="toolbar">
         <input id="search" class="input" placeholder="Zoek op naam, niveau, trainer of status…" />
@@ -46,7 +49,6 @@
       </div>
     </section>
 
-    <!-- Toevoegen -->
     <section class="card" style="margin-top:1rem">
       <h2>Nieuwe klas toevoegen</h2>
       <form id="form-add" class="form-grid" autocomplete="off">
@@ -71,16 +73,9 @@
   <script defer src="../js/sheets.js?v=0.27.6"></script>
   <script type="module" src="../js/klassen.js?v=0.27.6"></script>
 
-  <!-- Topbar + versie/status -->
   <script type="module">
     import { SuperhondUI } from '../js/layout.js';
-    SuperhondUI.mount({
-      title: 'Klassen',
-      icon: '📚',
-      back: '../dashboard/'
-    });
+    SuperhondUI.mount({ title: 'Klassen', icon: '📚', back: '../dashboard/' });
   </script>
-
-  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p></noscript>
 </body>
 </html>
