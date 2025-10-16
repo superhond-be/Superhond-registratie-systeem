@@ -61,18 +61,16 @@
 
   <footer id="footer"></footer>
 
-  <!-- Alleen de layout en jouw pagina-entrypoint -->
-  <script defer src="../js/layout.js?v=0.27.3"></script>
-  <script type="module" src="../js/klanten.js?v=0.27.4"></script>
+  <!-- JavaScript modules -->
+  <script type="module">
+    import { SuperhondUI } from '../js/layout.js';
+    import '../js/klanten.js?v=0.27.4';
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      window.SuperhondUI?.mount?.({
-        title: 'Klanten',
-        icon: '👤',
-        back: '../dashboard/',
-        home: false
-      });
+    SuperhondUI.mount({
+      title: 'Klanten',
+      icon: '👤',
+      back: '../dashboard/',
+      home: false
     });
   </script>
 
