@@ -98,7 +98,7 @@ function renderAgenda(lesData, medData) {
         </div>
         <div class="info">📍 ${escapeHtml(l.locatie || 'Onbekende locatie')}</div>
         ${meds.length ? `
-          <div class="mededelingen-onder ${meds.some(m=>m.prioriteit==='Hoog') ? 'urgent' : ''}">
+          <div class="mededelingen-onder ${meds.some(m => m.prioriteit === 'Hoog') ? 'urgent' : ''}">
             ${meds.map(m => {
               const tijd = m.datum + (m.tijd ? ` ${m.tijd}` : '');
               return `
@@ -106,7 +106,8 @@ function renderAgenda(lesData, medData) {
                 ${escapeHtml(m.inhoud)}
                 ${m.link ? ` <a href="${escapeHtml(m.link)}">[Meer]</a>` : ''}`;
             }).join('<br>')}
-          </div>` : ''}
+          </div>
+        ` : ''}
       </div>
     `;
   }).join('');
