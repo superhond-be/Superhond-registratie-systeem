@@ -8,12 +8,12 @@
 import {
   initFromConfig,
   fetchSheet,
-  saveHond,
-  getBaseUrl,
+  saveHond
 } from './sheets.js';
+import { SuperhondUI } from './layout.js';
 
-const $  = (s, r=document) => r.querySelector(s);
-const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
 const TIMEOUT_MS = 20000;
 const collator = new Intl.Collator('nl', { sensitivity: 'base', numeric: true });
@@ -29,15 +29,18 @@ function escapeHtml(s) {
 }
 
 function setState(t, k = 'muted') {
-  const el = $('#state'); if (!el) return;
-  el.className = k; el.textContent = t;
+  const el = $('#state');
+  if (!el) return;
+  el.className = k;
+  el.textContent = t;
   el.setAttribute('role', k === 'error' ? 'alert' : 'status');
 }
 
 function fmtDate(iso) {
   const s = String(iso || '');
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const [y, m, d] = s.split('-'); return `${d}/${m}/${y}`;
+  const [y, m, d] = s.split('-');
+  return `${d}/${m}/${y}`;
 }
 
 function toArrayRows(x) {
@@ -52,7 +55,9 @@ function toArrayRows(x) {
 
 function normalize(row) {
   const o = {};
-  for (const [k, v] of Object.entries(row || {})) o[String(k || '').toLowerCase()] = v;
+  for (const [k, v] of Object.entries(row || {})) {
+    o[String(k || '').toLowerCase()] = v;
+  }
   return {
     id:        (o.id ?? o.hondid ?? o['hond id'] ?? o['id.'] ?? o.col1 ?? '').toString(),
     name:      (o.name ?? o.naam ?? '').toString(),
@@ -74,13 +79,13 @@ function rowMatches(r, q) {
 }
 
 function render(rows) {
-  const tb = $('#tbl tbody'); if (!tb) return;
+  const tb = $('#tbl tbody');
+  if (!tb) return;
   tb.innerHTML = '';
   if (!rows.length) {
     tb.innerHTML = `<tr><td colspan="5" class="muted">Geen resultaten.</td></tr>`;
     return;
   }
-
   const frag = document.createDocumentFragment();
   for (const r of rows) {
     const tr = document.createElement('tr');
@@ -98,15 +103,16 @@ function render(rows) {
   tb.appendChild(frag);
 }
 
-function doFilter() {
+const doFilter = () => {
   const q = String($('#search')?.value || '').trim().toLowerCase();
   viewRows = allRows.filter(r => rowMatches(r, q));
   render(viewRows);
-}
+};
 
 async function refresh() {
   if (lastAbort) lastAbort.abort();
-  const ac = new AbortController(); lastAbort = ac;
+  const ac = new AbortController();
+  lastAbort = ac;
   const t = setTimeout(() => ac.abort(new Error('timeout')), TIMEOUT_MS);
 
   try {
@@ -119,12 +125,14 @@ async function refresh() {
     doFilter();
 
     setState(`✅ ${viewRows.length} hond${viewRows.length === 1 ? '' : 'en'} geladen`);
-    window.SuperhondUI?.setOnline?.(true);
+    SuperhondUI.setOnline(true);
   } catch (e) {
-    if (e?.name === 'AbortError') return;
+    if (e?.name === 'AbortError') {
+      return;
+    }
     console.error('[honden] laden mislukt:', e);
     setState('❌ Laden mislukt: ' + (e?.message || e), 'error');
-    window.SuperhondUI?.setOnline?.(false);
+    SuperhondUI.setOnline(false);
   } finally {
     clearTimeout(t);
   }
@@ -147,17 +155,21 @@ async function onSubmit(e) {
 
   const msg = $('#form-msg');
   if (!payload.name || !payload.ownerId) {
-    if (msg) { msg.className = 'error'; msg.textContent = 'Naam en eigenaar zijn verplicht'; }
+    if (msg) {
+      msg.className = 'error';
+      msg.textContent = 'Naam en eigenaar zijn verplicht';
+    }
     return;
   }
 
   msg && (msg.className = 'muted', msg.textContent = '⏳ Opslaan…');
 
   try {
-    const r = await saveHond(payload); // verwacht { id }
+    const r = await saveHond(payload);
     const id = r?.id || '';
     allRows.push(normalize({ id, ...payload }));
     allRows.sort((a, b) => collator.compare(a.name || '', b.name || ''));
+
     doFilter();
 
     f.reset();
@@ -169,10 +181,9 @@ async function onSubmit(e) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  window.SuperhondUI?.mount?.({ title: 'Honden', icon: '🐶', back: '../dashboard/' });
+  SuperhondUI.mount({ title: 'Honden', icon: '🐶', back: '../dashboard/' });
 
   await initFromConfig();
-  try { console.info('[Honden] exec base =', getBaseUrl?.() || '(onbekend)'); } catch {}
 
   $('#search')?.addEventListener('input', doFilter);
   $('#refresh')?.addEventListener('click', refresh);
