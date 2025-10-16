@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
 
   <style>
+    /* Verberg lege footer zodat geen zwarte balk onderin */
     footer#footer:empty {
       display: none;
     }
@@ -41,6 +42,8 @@
               <th>Niveau</th>
               <th>Trainer</th>
               <th>Status</th>
+              <th>Max</th>
+              <th>Weken</th>
               <th style="width:1%">Acties</th>
             </tr>
           </thead>
@@ -59,6 +62,10 @@
           <option value="actief" selected>actief</option>
           <option value="inactief">inactief</option>
         </select>
+        <!-- Nieuwe velden -->
+        <input name="max_deelnemers" class="input" type="number" min="0" step="1" placeholder="Max deelnemers" />
+        <input name="geldigheid_weken" class="input" type="number" min="0" step="1" placeholder="Geldigheid (weken)" />
+
         <button class="btn" type="submit">💾 Opslaan</button>
       </form>
       <div id="form-msg" class="muted" role="status" aria-live="polite"></div>
@@ -75,7 +82,13 @@
 
   <script type="module">
     import { SuperhondUI } from '../js/layout.js';
-    SuperhondUI.mount({ title: 'Klassen', icon: '📚', back: '../dashboard/' });
+    SuperhondUI.mount({
+      title: 'Klassen',
+      icon: '📚',
+      back: '../dashboard/'
+    });
   </script>
+
+  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p></noscript>
 </body>
 </html>
