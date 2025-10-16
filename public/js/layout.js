@@ -1,7 +1,8 @@
 /**
- * layout.js v0.27.6 — Topbar, Footer en versie/status
- * Dashboard: gele balk + alleen versie
- * Subpagina’s: blauwe balk + versie + status
+ * layout.js v0.27.6+ — Topbar, Footer en versie/status
+ * — Dashboard: gele balk + versie
+ * — Subpagina’s: blauwe balk + versie + status
+ * Robust fallback: als body has class 'dashboard-page', treat as dashboard
  */
 
 import { getExecBase, pingExec } from './sheets.js';
@@ -30,7 +31,8 @@ const el = (tag, attrs = {}, ...kids) => {
 function renderTopbar(container, opts, online) {
   if (!container) return;
   const { title = 'Superhond', icon = '🐾', home = null, back = null } = opts;
-  const isDash = home === true || document.body.classList.contains('dashboard-page');
+  // If body has class 'dashboard-page', override isDash = true
+  const isDash = (home === true) || document.body.classList.contains('dashboard-page');
 
   const left = el(
     'div',
@@ -51,7 +53,6 @@ function renderTopbar(container, opts, online) {
   const ver = window.APP_BUILD || ('v' + APP_VERSION);
   const right = el('div', { class: 'tb-right' });
 
-  // In subpagina’s: status + versie
   if (!isDash) {
     right.append(
       el('span', { class: 'status-dot ' + (online ? 'is-online' : 'is-offline') }),
@@ -59,7 +60,6 @@ function renderTopbar(container, opts, online) {
     );
   }
 
-  // Altijd versie
   right.append(el('span', { class: 'muted' }, ver));
 
   container.innerHTML = '';
@@ -70,7 +70,7 @@ function renderTopbar(container, opts, online) {
   container.style.color = isDash ? '#000' : '#fff';
 
   if (!document.getElementById('sh-topbar-style')) {
-    const s = el(
+    const styleEl = el(
       'style',
       { id: 'sh-topbar-style' },
       `
@@ -86,7 +86,7 @@ function renderTopbar(container, opts, online) {
       .status-text { font-weight: 600; }
       `
     );
-    document.head.appendChild(s);
+    document.head.appendChild(styleEl);
   }
 }
 
@@ -117,10 +117,15 @@ function setOnline(ok) {
 async function mount(opts = {}) {
   await new Promise((r) => onReady(r));
   const path = location.pathname.replace(/\/+$/, '');
-  let isDash =
+  let isDash = 
     /\/dashboard$/.test(path) ||
     /\/dashboard\/index\.html$/.test(path) ||
     opts.home === true;
+
+  // fallback: if body class says dashboard, force isDash
+  if (!isDash && document.body.classList.contains('dashboard-page')) {
+    isDash = true;
+  }
 
   if (!isDash && (path === '/index.html' || path === '/')) {
     isDash = true;
@@ -129,7 +134,6 @@ async function mount(opts = {}) {
   document.body.classList.toggle('dashboard-page', isDash);
   document.body.classList.toggle('subpage', !isDash);
 
-  // Ping uitwerken
   const online = await pingExec();
   renderTopbar(document.getElementById('topbar'), { ...opts, home: isDash }, online);
   renderFooter(document.getElementById('footer'));
