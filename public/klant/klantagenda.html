@@ -3,50 +3,77 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mijn Agenda & Mededelingen – Superhond</title>
+  <title>Agenda & Mededelingen – Superhond</title>
 
-  <meta name="superhond-version" content="0.27.6" />
-  <meta name="superhond-exec" content="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec" />
-
-  <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
+  <!-- Centrale UI -->
+  <link rel="stylesheet" href="../css/style.css?v=0.1.0" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.1.0" />
 
   <style>
-    .agenda-card { margin-bottom: 1.5rem; }
-    .ag-punt { border-bottom: 1px solid #e5e7eb; padding: .75rem 0; }
-    .ag-punt:last-child { border: none; }
-    .ag-punt .info { font-size: .9rem; color: #6b7280; }
-    .mededelingen-onder { margin-top: .5rem; padding-left: 1rem; border-left: 3px solid var(--accent); color: #374151; font-size: .9rem; }
-    .mededelingen-onder small { display: block; color: #9ca3af; font-size: .8rem; margin-bottom: .25rem; }
-    .mededelingen-panel { /* optioneel panel voor algemene mededelingen */ display: none; }
+    .ag-punt {
+      border-bottom: 1px solid #e5e7eb;
+      padding: .75rem 0;
+    }
+    .ag-punt .info {
+      color: #6b7280;
+      font-size: 0.9rem;
+    }
+    .mededelingen-onder {
+      margin-top: .5rem;
+      padding-left: 1rem;
+      border-left: 3px solid var(--accent);
+      color: #374151;
+      font-size: .9rem;
+    }
+    .mededelingen-onder.urgent {
+      border-left-color: #dc2626;
+      background: #fef2f2;
+    }
+    .mededelingen-onder small {
+      display: block;
+      color: #9ca3af;
+      font-size: .8rem;
+      margin-bottom: .25rem;
+    }
+    .toolbar {
+      margin: 1rem 0;
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+    }
+    select.select {
+      padding: .5rem;
+      font-size: 1rem;
+    }
   </style>
 </head>
 
-<body class="subpage page-klant-agenda">
+<body class="subpage page-klantagenda">
   <header id="topbar"></header>
 
   <main class="container">
-    <h1 class="page-title">Mijn Agenda & Mededelingen</h1>
+    <h1 class="page-title">Agenda & Mededelingen</h1>
 
-    <section class="card agenda-card" id="agenda-list">
-      <!-- hier komt je agenda + mededelingen -->
+    <div class="toolbar">
+      <select id="filter-categorie" class="select" aria-label="Filter categorie">
+        <option value="">Alle categorieën</option>
+      </select>
+      <select id="filter-prioriteit" class="select" aria-label="Filter prioriteit">
+        <option value="">Alle prioriteiten</option>
+      </select>
+    </div>
+
+    <section id="agenda-list" class="card">
+      <p class="muted">⏳ Agenda wordt geladen…</p>
     </section>
-
-    <aside id="mededelingen-widget" class="mededelingen-panel"></aside>
   </main>
 
   <footer id="footer"></footer>
 
-  <script type="module">
-    import { SuperhondUI } from '../js/layout.js';
-    import '../js/klantAgenda.js?v=0.1.0';
+  <!-- Eerst layout.js voor de topbar -->
+  <script defer src="../js/layout.js?v=0.1.0"></script>
 
-    SuperhondUI.mount({
-      title: 'Agenda & Mededelingen',
-      icon: '📅',
-      back: '../dashboard/',
-      home: false
-    });
-  </script>
+  <!-- Je JS-module voor de agenda -->
+  <script type="module" src="../js/klantAgenda.js?v=0.1.0"></script>
 </body>
 </html>
