@@ -1,14 +1,15 @@
 /**
- * public/js/layout.js — Topbar & Footer (v0.27.1)
- * - Dashboard = gele balk, subpagina's = blauwe balk
- * - Versie uit window.APP_BUILD of interne versie
- * - Online/offline via directe ping naar GAS /exec (uit meta of localStorage)
- * - SuperhondUI.mount({ title, icon, home, back }) + setOnline(ok)
+ * layout.js v0.27.4 — Topbar & Footer
+ * - UI: gele balk (dashboard) / blauwe balk (subpagina)
+ * - Online/offline-status via sheets.js ping
+ * - Footer toont versie + actuele exec-URL
+ * - Exporteert: SuperhondUI.mount({ title, icon, home, back }), setOnline
  */
 
+import { getExecBase, pingExec } from './sheets.js';
+
 (function () {
-  const APP_VERSION = '0.27.1';
-  const LS_API = 'superhond:apiBase';
+  const APP_VERSION = '0.27.4';
 
   const onReady = (cb) =>
     document.readyState !== 'loading'
@@ -26,31 +27,6 @@
     for (const c of kids) n.append(c?.nodeType ? c : document.createTextNode(String(c)));
     return n;
   };
-
-  function resolveExecBase() {
-    if (typeof window.SUPERHOND_SHEETS_URL === 'string' && window.SUPERHOND_SHEETS_URL) {
-      return window.SUPERHOND_SHEETS_URL;
-    }
-    const meta = document.querySelector('meta[name="superhond-exec"]');
-    if (meta?.content) return meta.content.trim();
-    try {
-      const ls = localStorage.getItem(LS_API);
-      if (ls) return ls.trim();
-    } catch {}
-    return '';
-  }
-
-  async function pingDirect() {
-    const base = resolveExecBase();
-    if (!base) return false;
-    const url = base + (base.includes('?') ? '&' : '?') + 'mode=ping&t=' + Date.now();
-    try {
-      const r = await fetch(url, { cache: 'no-store' });
-      return r.ok;
-    } catch {
-      return false;
-    }
-  }
 
   function renderTopbar(container, opts, online) {
     if (!container) return;
@@ -86,11 +62,9 @@
     const inner = el('div', { class: 'topbar-inner container' }, left, right);
     container.append(inner);
 
-    // kleur hard forceren
     container.style.background = isDash ? '#f4c400' : '#2563eb';
     container.style.color = isDash ? '#000' : '#fff';
 
-    // basis css (eenmalig)
     if (!document.getElementById('sh-topbar-style')) {
       const s = el(
         'style',
@@ -114,14 +88,15 @@
 
   function renderFooter(container) {
     if (!container) return;
-    const exec = resolveExecBase() || 'n.v.t.';
+    const exec = getExecBase();
     const ver = window.APP_BUILD || ('v' + APP_VERSION);
     container.innerHTML = `
       <div class="row" style="display:flex;gap:.75rem;justify-content:space-between;align-items:center;padding:1rem 0;border-top:1px solid #e5e7eb;color:#6b7280">
         <div>© ${new Date().getFullYear()} Superhond</div>
-        <div><code>exec: ${exec.replace(/^https?:\/\/(www\.)?/, '')}</code></div>
+        <div><code>exec: ${exec ? exec.replace(/^https?:\/\/(www\.)?/, '') : 'n.v.t.'}</code></div>
         <div>${ver}</div>
       </div>`;
+    if (!exec) console.warn('[layout] Geen exec-URL beschikbaar via getExecBase()');
   }
 
   function setOnline(ok) {
@@ -142,12 +117,14 @@
     document.body.classList.toggle('dashboard-page', isDash);
     document.body.classList.toggle('subpage', !isDash);
 
-    const online = await pingDirect();
+    const online = await pingExec();
     renderTopbar(document.getElementById('topbar'), { ...opts, home: isDash }, online);
     renderFooter(document.getElementById('footer'));
 
-    // periodiek ping
-    setInterval(async () => setOnline(await pingDirect()), 45000);
+    setInterval(async () => {
+      const ok = await pingExec();
+      setOnline(ok);
+    }, 45000);
   }
 
   window.SuperhondUI = Object.assign(window.SuperhondUI || {}, {
