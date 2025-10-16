@@ -5,36 +5,30 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Superhond — Dashboard</title>
 
-  <!-- ✅ Centrale Google Apps Script URL -->
-  <meta name="superhond-exec"
-    content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
+  <!-- ✅ Bron van waarheid voor je GAS /exec -->
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
 
   <!-- Centrale UI -->
   <link rel="stylesheet" href="../css/style.css?v=0.27.3" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.3" />
 
-  <!-- Dashboard: gele topbalk forceren -->
+  <!-- Dashboard: geel forceren -->
   <style>
     body.dashboard-page #topbar,
-    body.dashboard-page #topbar .topbar-inner {
-      background: var(--accent, #f4c400) !important;
-      color: #000 !important;
+    body.dashboard-page #topbar .topbar-inner{
+      background: var(--accent,#f4c400) !important;
+      color:#000 !important;
     }
-    body.dashboard-page .btn-back {
-      border-color: #e5e7eb;
-      background: #fff;
-      color: #111827;
-    }
+    body.dashboard-page .btn-back{border-color:#e5e7eb;background:#fff;color:#111827;}
   </style>
 </head>
-
 <body class="dashboard-page">
   <header id="topbar"></header>
 
   <main class="container" role="main">
     <h1 class="page-title">Hoofdmenu</h1>
 
-    <!-- Tegels -->
+    <!-- Tiles -->
     <nav class="tiles" aria-label="Hoofdmenu">
       <a class="tile" href="../klanten/"><span class="tile-icon">👤</span><div class="tile-body"><span class="tile-title">Klanten</span></div></a>
       <a class="tile" href="../honden/"><span class="tile-icon">🐶</span><div class="tile-body"><span class="tile-title">Honden</span></div></a>
@@ -44,7 +38,7 @@
       <a class="tile" href="../over/"><span class="tile-icon">ℹ️</span><div class="tile-body"><span class="tile-title">Over</span></div></a>
     </nav>
 
-    <!-- Agenda -->
+    <!-- Agenda (optioneel) -->
     <section class="card" style="margin-top:1rem">
       <h2 style="margin:0 0 .5rem">Agenda</h2>
       <div id="agenda-loader" class="muted">⏳ Laden…</div>
@@ -68,26 +62,14 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
-      // Mount topbar
       window.SuperhondUI?.mount?.({ title: 'Superhond', icon: '🐾', home: true });
-
-      // Controleer verbinding met GAS (laat status in topbar zien)
-      try {
-        const res = await fetch(window.SUPERHOND_EXEC_URL || '', { method: 'HEAD', mode: 'no-cors' });
-        window.SuperhondUI?.setOnline?.(true);
-      } catch {
-        window.SuperhondUI?.setOnline?.(false);
-      }
-
-      // Agenda laden (optioneel)
+      // optioneel: agenda init (als agenda.js aanwezig is)
       if (window.SuperhondAgenda?.init) {
         try { await window.SuperhondAgenda.init(); } catch {}
       }
     });
   </script>
 
-  <noscript>
-    <p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p>
-  </noscript>
+  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p></noscript>
 </body>
 </html>
