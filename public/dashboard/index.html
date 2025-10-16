@@ -5,16 +5,17 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Superhond — Dashboard</title>
 
-  <!-- ✅ Correcte meta-tags -->
+  <!-- Meta -->
   <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
   <meta name="superhond-branch" content="Ontwikkeling">
   <meta name="superhond-version" content="0.27.5">
 
+  <!-- CSS -->
   <link rel="stylesheet" href="../css/style.css?v=0.27.5" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.5" />
 
   <style>
-    /* ✅ Gele topbar voor dashboard forceren */
+    /* ✅ Gele topbar forceren */
     body.dashboard-page #topbar,
     body.dashboard-page #topbar .topbar-inner {
       background: var(--accent, #f4c400) !important;
@@ -30,22 +31,14 @@
     <h1 class="page-title">Hoofdmenu</h1>
 
     <nav class="tiles" aria-label="Hoofdmenu">
-      <!-- Jouw bestaande tegels (klanten, honden, etc.) -->
-      <!-- ... -->
+      <!-- Hier komen je tegels -->
+      <!-- <a class="tile" href="../klanten/">👤 Klanten</a> -->
     </nav>
-
-    <!-- Eventuele secties zoals agenda kunnen hier staan -->
   </main>
 
   <footer id="footer" class="footer"></footer>
 
-  <script defer src="../js/layout.js?v=0.27.5"></script>
-  <script defer src="../js/dashboard.js?v=0.27.5"></script>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      window.SuperhondUI?.mount?.({ title: 'Superhond', icon: '🐾', home: true });
-    });
-  </script>
+  <!-- ✅ Alles via module -->
+  <script type="module" src="../js/dashboard.js?v=0.27.5"></script>
 </body>
 </html>
