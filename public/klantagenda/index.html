@@ -5,11 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Agenda & Mededelingen – Superhond</title>
 
-  <!-- Meta (mag blijven staan; de lokale variant gebruikt het niet) -->
   <meta name="superhond-version" content="0.27.6" />
   <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec" />
 
-  <!-- CSS -->
   <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
 
@@ -19,18 +17,11 @@
       padding:.4rem .75rem; font-size:.9rem; border:1px solid var(--border-color,#d1d5db);
       border-radius:.375rem; background:var(--bg-input,#fff);
     }
-    select.select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(251,191,36,.3); }
-
-    .ag-punt { padding:.75rem; border-bottom:1px solid #e5e7eb; transition:background .2s; }
-    .ag-punt:hover { background:#f9fafb; cursor:pointer; }
-    .ag-punt:last-child { border-bottom:none; }
+    .ag-punt { padding:.75rem; border-bottom:1px solid #e5e7eb; }
     .ag-punt .info { color:#6b7280; font-size:.9rem; }
-
-    .mededelingen-onder { margin-top:.5rem; padding-left:1rem; border-left:3px solid var(--accent); color:#374151; font-size:.9rem; }
+    .mededelingen-onder { margin-top:.5rem; padding-left:1rem; border-left:3px solid var(--accent); }
     .mededelingen-onder.urgent { border-left-color:#dc2626; background:#fef2f2; }
     .mededelingen-onder small { display:block; color:#9ca3af; font-size:.8rem; margin-bottom:.25rem; }
-
-    .tabs .tab { padding:.4rem .8rem; font-size:.9rem; }
   </style>
 </head>
 
@@ -40,23 +31,19 @@
   <main class="container">
     <h1 class="page-title">Agenda & Mededelingen</h1>
 
-    <!-- Filters -->
     <div class="toolbar">
       <select id="filter-categorie" class="select" aria-label="Filter categorie">
-        <option value="">Alle categorieën</option>
+        <option value="">Boekingen</option>
         <option value="Weer">Weer</option>
         <option value="Info">Info</option>
-        <option value="Boekingen">Boekingen</option>
       </select>
       <select id="filter-prioriteit" class="select" aria-label="Filter prioriteit">
-        <option value="">Alle prioriteiten</option>
+        <option value="">Normaal</option>
         <option value="Laag">Laag</option>
-        <option value="Normaal">Normaal</option>
         <option value="Hoog">Hoog</option>
       </select>
     </div>
 
-    <!-- Agenda container -->
     <section id="agenda-list" class="card">
       <p class="muted" id="agenda-loader">⏳ Agenda wordt geladen…</p>
     </section>
@@ -64,22 +51,23 @@
 
   <footer id="footer"></footer>
 
-  <!-- Layout (blauwe balk / versie / back) -->
+  <!-- layout eerst -->
+  <script type="module" src="../js/layout.js?v=0.27.6"></script>
+
+  <!-- Slimme bootstrap: kies lokaal of productie op basis van ?local=1 -->
   <script type="module">
     import { SuperhondUI } from '../js/layout.js?v=0.27.6';
+    SuperhondUI.mount({ title:'Agenda & Mededelingen', icon:'📅', back:'../dashboard/' });
 
-    // Kies automatisch lokaal of productie-script
-    (async () => {
-      // Blauwe balk meteen mounten
-      SuperhondUI.mount({ title: 'Agenda & Mededelingen', icon: '📅', back: '../dashboard/' });
+    const qs = new URLSearchParams(location.search);
+    const isLocalHost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    const forceLocal  = qs.has('local') || qs.get('mode') === 'local';
 
-      const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-      if (isLocal) {
-        await import('../js/klantagenda.local.js?v=0.1.0');     // ➜ Optie A of B (zie hieronder)
-      } else {
-        await import('../js/klantagenda.js?v=0.1.0');            // je “echte” (Sheets) versie
-      }
-    })();
+    if (isLocalHost || forceLocal) {
+      await import('../js/klantagenda.local.js?v=0.1.0');
+    } else {
+      await import('../js/klantagenda.js?v=0.1.0');
+    }
   </script>
 </body>
 </html>
