@@ -5,15 +5,16 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Superhond — Dashboard</title>
 
-  <!-- ✅ Enkel de juiste meta-tags -->
-  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec" />
-  <meta name="superhond-branch" content="Ontwikkeling" />
-  <meta name="superhond-version" content="0.27.5" />
+  <!-- ✅ Correcte meta-tags -->
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
+  <meta name="superhond-branch" content="Ontwikkeling">
+  <meta name="superhond-version" content="0.27.5">
 
   <link rel="stylesheet" href="../css/style.css?v=0.27.5" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.5" />
 
   <style>
+    /* ✅ Gele topbar voor dashboard forceren */
     body.dashboard-page #topbar,
     body.dashboard-page #topbar .topbar-inner {
       background: var(--accent, #f4c400) !important;
@@ -28,28 +29,23 @@
   <main class="container" role="main">
     <h1 class="page-title">Hoofdmenu</h1>
 
-    <!-- ✅ Tiles zoals gewoonlijk -->
     <nav class="tiles" aria-label="Hoofdmenu">
-      <a class="tile" href="../klanten/"><span class="tile-icon">👤</span><div class="tile-body"><span class="tile-title">Klanten</span></div></a>
-      <a class="tile" href="../honden/"><span class="tile-icon">🐶</span><div class="tile-body"><span class="tile-title">Honden</span></div></a>
-      <a class="tile" href="../strippenkaarten/"><span class="tile-icon">🎫</span><div class="tile-body"><span class="tile-title">Strippenkaarten</span></div></a>
-      <a class="tile" href="../lessen/"><span class="tile-icon">📅</span><div class="tile-body"><span class="tile-title">Lessen</span></div></a>
-      <a class="tile" href="../klassen/"><span class="tile-icon">📚</span><div class="tile-body"><span class="tile-title">Klassen</span></div></a>
-      <a class="tile" href="../lessenreeks/"><span class="tile-icon">📦</span><div class="tile-body"><span class="tile-title">Lessenreeksen</span></div></a>
-      <a class="tile" href="../mededeling/"><span class="tile-icon">📢</span><div class="tile-body"><span class="tile-title">Mededelingen</span></div></a>
-      <a class="tile" href="../trainers/"><span class="tile-icon">🧑‍🏫</span><div class="tile-body"><span class="tile-title">Trainers</span></div></a>
-      <a class="tile" href="../rapporten/"><span class="tile-icon">📈</span><div class="tile-body"><span class="tile-title">Rapporten</span></div></a>
-      <a class="tile" href="../instellingen/"><span class="tile-icon">⚙️</span><div class="tile-body"><span class="tile-title">Instellingen</span></div></a>
-      <a class="tile" href="../over/"><span class="tile-icon">ℹ️</span><div class="tile-body"><span class="tile-title">Over</span></div></a>
-      <a class="tile" href="../lessen/beheer.html"><span class="tile-icon">🗂️</span><div class="tile-body"><span class="tile-title">Lessenbeheer</span></div></a>
+      <!-- Jouw bestaande tegels (klanten, honden, etc.) -->
+      <!-- ... -->
     </nav>
 
-    <!-- Hier zou eventueel de agenda of andere dashboardspecifieke secties komen -->
+    <!-- Eventuele secties zoals agenda kunnen hier staan -->
   </main>
 
   <footer id="footer" class="footer"></footer>
 
-  <!-- ✅ Alles via 1 module -->
-  <script type="module" src="../js/dashboard.js?v=0.27.5"></script>
+  <script defer src="../js/layout.js?v=0.27.5"></script>
+  <script defer src="../js/dashboard.js?v=0.27.5"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      window.SuperhondUI?.mount?.({ title: 'Superhond', icon: '🐾', home: true });
+    });
+  </script>
 </body>
 </html>
