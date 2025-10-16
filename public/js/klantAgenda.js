@@ -1,156 +1,85 @@
-// public/js/klantagenda.js
-// LOKALE TESTVERSIE — toont agenda + mededelingen met filters (zonder Google Sheets)
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agenda & Mededelingen – Superhond</title>
 
-import { SuperhondUI } from './layout.js';
+  <!-- Meta (mag blijven staan; de lokale variant gebruikt het niet) -->
+  <meta name="superhond-version" content="0.27.6" />
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec" />
 
-const $ = (sel, root = document) => root.querySelector(sel);
+  <!-- CSS -->
+  <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
 
-function escapeHtml(s) {
-  return String(s ?? '').replace(/[&<>"']/g, c =>
-    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])
-  );
-}
-
-/* ---------- filterlogica ---------- */
-function filterMededelingen(meds, opties) {
-  const now = new Date();
-  return (meds || []).filter(m => {
-    if (!m?.zichtbaar) return false;
-    if (opties.lesId && m.targetLes && m.targetLes !== opties.lesId) return false;
-    if (opties.dag && m.datum && m.datum !== opties.dag) return false;
-    if (opties.categorie && m.categorie && m.categorie !== opties.categorie) return false;
-    if (opties.prioriteit && m.prioriteit && m.prioriteit !== opties.prioriteit) return false;
-    if (m.datum) {
-      const dt = new Date(`${m.datum}T${m.tijd || '00:00'}`);
-      if (isFinite(dt) && dt < now) return false;
+  <style>
+    .toolbar { margin:1rem 0; display:flex; gap:.5rem; flex-wrap:wrap; }
+    select.select {
+      padding:.4rem .75rem; font-size:.9rem; border:1px solid var(--border-color,#d1d5db);
+      border-radius:.375rem; background:var(--bg-input,#fff);
     }
-    return true;
-  });
-}
+    select.select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(251,191,36,.3); }
 
-/* ---------- render ---------- */
-function renderAgenda(lesData, medData, currentFilters) {
-  const wrap = $('#agenda-list');
-  const loader = $('#agenda-loader');
-  if (!wrap) return;
+    .ag-punt { padding:.75rem; border-bottom:1px solid #e5e7eb; transition:background .2s; }
+    .ag-punt:hover { background:#f9fafb; cursor:pointer; }
+    .ag-punt:last-child { border-bottom:none; }
+    .ag-punt .info { color:#6b7280; font-size:.9rem; }
 
-  if (loader) loader.remove();
+    .mededelingen-onder { margin-top:.5rem; padding-left:1rem; border-left:3px solid var(--accent); color:#374151; font-size:.9rem; }
+    .mededelingen-onder.urgent { border-left-color:#dc2626; background:#fef2f2; }
+    .mededelingen-onder small { display:block; color:#9ca3af; font-size:.8rem; margin-bottom:.25rem; }
 
-  if (!Array.isArray(lesData) || lesData.length === 0) {
-    wrap.innerHTML = `<p class="muted">Geen komende lessen.</p>`;
-    return;
-  }
+    .tabs .tab { padding:.4rem .8rem; font-size:.9rem; }
+  </style>
+</head>
 
-  const html = lesData.map(l => {
-    const meds = filterMededelingen(medData, {
-      lesId: l.id,
-      dag: l.datum,
-      categorie: currentFilters.categorie,
-      prioriteit: currentFilters.prioriteit
-    });
+<body class="subpage page-klantagenda">
+  <header id="topbar"></header>
 
-    const medsHtml = meds.length
-      ? `
-        <div class="mededelingen-onder ${meds.some(m => m.prioriteit === 'Hoog') ? 'urgent' : ''}">
-          ${meds.map(m => {
-            const tijd = `${m.datum}${m.tijd ? ` ${m.tijd}` : ''}`;
-            return `
-              <small>${escapeHtml(tijd)}${m.categorie ? ` • ${escapeHtml(m.categorie)}` : ''}</small>
-              ${escapeHtml(m.inhoud)}${m.link ? ` <a href="${escapeHtml(m.link)}">[Meer]</a>` : ''}`;
-          }).join('<br>')}
-        </div>`
-      : '';
+  <main class="container">
+    <h1 class="page-title">Agenda & Mededelingen</h1>
 
-    return `
-      <div class="ag-punt">
-        <div class="ag-header">
-          <strong>${escapeHtml(l.lesnaam)}</strong> — ${escapeHtml(l.datum)} ${escapeHtml(l.tijd)}
-        </div>
-        <div class="info">📍 ${escapeHtml(l.locatie || 'Onbekende locatie')}</div>
-        ${medsHtml}
-      </div>`;
-  }).join('');
+    <!-- Filters -->
+    <div class="toolbar">
+      <select id="filter-categorie" class="select" aria-label="Filter categorie">
+        <option value="">Alle categorieën</option>
+        <option value="Weer">Weer</option>
+        <option value="Info">Info</option>
+        <option value="Boekingen">Boekingen</option>
+      </select>
+      <select id="filter-prioriteit" class="select" aria-label="Filter prioriteit">
+        <option value="">Alle prioriteiten</option>
+        <option value="Laag">Laag</option>
+        <option value="Normaal">Normaal</option>
+        <option value="Hoog">Hoog</option>
+      </select>
+    </div>
 
-  wrap.innerHTML = html;
-}
+    <!-- Agenda container -->
+    <section id="agenda-list" class="card">
+      <p class="muted" id="agenda-loader">⏳ Agenda wordt geladen…</p>
+    </section>
+  </main>
 
-/* ---------- hulpfuncties ---------- */
-function uniqueSorted(values) {
-  return [...new Set(values.filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b), 'nl'));
-}
+  <footer id="footer"></footer>
 
-function populateFilters(medData) {
-  const selCat = $('#filter-categorie');
-  const selPri = $('#filter-prioriteit');
-  if (!selCat && !selPri) return;
+  <!-- Layout (blauwe balk / versie / back) -->
+  <script type="module">
+    import { SuperhondUI } from '../js/layout.js?v=0.27.6';
 
-  const cats = uniqueSorted((medData || []).map(m => m.categorie));
-  const pris = uniqueSorted((medData || []).map(m => m.prioriteit));
+    // Kies automatisch lokaal of productie-script
+    (async () => {
+      // Blauwe balk meteen mounten
+      SuperhondUI.mount({ title: 'Agenda & Mededelingen', icon: '📅', back: '../dashboard/' });
 
-  if (selCat) {
-    const cur = selCat.value;
-    selCat.innerHTML = `<option value="">Alle categorieën</option>` +
-      cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
-    // behoud huidige selectie indien van toepassing
-    if ([...selCat.options].some(o => o.value === cur)) selCat.value = cur;
-  }
-
-  if (selPri) {
-    const cur = selPri.value;
-    selPri.innerHTML = `<option value="">Alle prioriteiten</option>` +
-      pris.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
-    if ([...selPri.options].some(o => o.value === cur)) selPri.value = cur;
-  }
-}
-
-/* ---------- LOKALE TESTDATA ---------- */
-const lesDataLocal = [
-  { id: 'T1', lesnaam: 'Puppy Groep', datum: '2025-10-20', tijd: '09:00', locatie: 'Hal 1', groep: 'Puppy' },
-  { id: 'T2', lesnaam: 'Gevorderd',   datum: '2025-10-21', tijd: '14:00', locatie: 'Hal 2', groep: 'Gevorderd' }
-];
-
-const medDataLocal = [
-  { id: 'M1', inhoud: 'Breng regenjas mee',      datum: '2025-10-20', tijd: '08:00', targetLes: 'T1', doelgroep: 'klant', categorie: 'Weer', prioriteit: 'Laag',    link: '', zichtbaar: true },
-  { id: 'M2', inhoud: 'Let op: les verlaat uur', datum: '2025-10-21', tijd: '13:30', targetLes: 'T2', doelgroep: 'klant', categorie: 'Info', prioriteit: 'Normaal', link: '', zichtbaar: true },
-  { id: 'M3', inhoud: 'Trainer ziek, mogelijk wijziging', datum: '2025-10-21', tijd: '08:00', targetLes: 'T2', doelgroep: 'klant', categorie: 'Belangrijk', prioriteit: 'Hoog', link: '', zichtbaar: true }
-];
-
-/* ---------- boot ---------- */
-document.addEventListener('DOMContentLoaded', () => {
-  // Topbar/blauwe balk
-  try {
-    SuperhondUI?.mount?.({
-      title: 'Agenda & Mededelingen',
-      icon: '📅',
-      back: '../dashboard/'
-    });
-  } catch (e) {
-    console.warn('[klantagenda] mount warning:', e);
-  }
-
-  // filters opbouwen
-  populateFilters(medDataLocal);
-
-  // filter state
-  const currentFilters = { categorie: '', prioriteit: '' };
-
-  // listeners
-  $('#filter-categorie')?.addEventListener('change', e => {
-    currentFilters.categorie = e.target.value;
-    renderAgenda(lesDataLocal, medDataLocal, currentFilters);
-  });
-  $('#filter-prioriteit')?.addEventListener('change', e => {
-    currentFilters.prioriteit = e.target.value;
-    renderAgenda(lesDataLocal, medDataLocal, currentFilters);
-  });
-
-  // sorteer lessen op datum+tijd
-  const lesData = [...lesDataLocal].sort((a, b) => {
-    const da = `${a.datum} ${a.tijd || ''}`;
-    const db = `${b.datum} ${b.tijd || ''}`;
-    return da.localeCompare(db);
-  });
-
-  // eerste render
-  renderAgenda(lesData, medDataLocal, currentFilters);
-});
+      const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      if (isLocal) {
+        await import('../js/klantagenda.local.js?v=0.1.0');     // ➜ Optie A of B (zie hieronder)
+      } else {
+        await import('../js/klantagenda.js?v=0.1.0');            // je “echte” (Sheets) versie
+      }
+    })();
+  </script>
+</body>
+</html>
