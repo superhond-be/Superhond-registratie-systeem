@@ -1,7 +1,5 @@
 /**
- * public/js/klassen.js — Lijst + zoeken + toevoegen (v0.27.3)
- * - Zelfde stijl als honden/klanten: één exec-bron via sheets.js
- * - Robuuste parsing, timeout/abort, console-log van exec-base
+ * public/js/klassen.js — Lijst + zoeken + toevoegen (v0.27.4)
  */
 
 import {
@@ -9,7 +7,7 @@ import {
   fetchSheet,
   saveKlas,
   postAction,
-  getBaseUrl,   // enkel voor debug/log
+  getBaseUrl,
 } from './sheets.js';
 
 const $  = (s, r=document) => r.querySelector(s);
@@ -22,7 +20,6 @@ let allRows = [];
 let viewRows = [];
 let lastAbort = null;
 
-/* ---------- helpers ---------- */
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
@@ -61,12 +58,11 @@ function rowMatches(r,q){
   return hay.includes(q);
 }
 
-/* ---------- render ---------- */
 function render(rows){
   const tb = $('#tbl tbody'); if (!tb) return;
   tb.innerHTML = '';
   if (!rows.length){
-    tb.innerHTML = `<tr><td colspan="6" class="muted">Geen resultaten.</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="7" class="muted">Geen resultaten.</td></tr>`;
     return;
   }
   const frag = document.createDocumentFragment();
@@ -78,6 +74,7 @@ function render(rows){
       <td>${escapeHtml(r.trainer||'')}</td>
       <td>${escapeHtml(r.status||'')}</td>
       <td class="nowrap">${escapeHtml(r.max||'')}</td>
+      <td class="nowrap">${escapeHtml(r.weeks||'')}</td>
       <td class="nowrap">
         <button class="btn btn-xs act-edit" data-id="${escapeHtml(r.id)}" title="Wijzigen">✏️</button>
         <button class="btn btn-xs danger act-del" data-id="${escapeHtml(r.id)}" title="Verwijderen">🗑️</button>
@@ -93,7 +90,6 @@ const doFilter = () => {
   render(viewRows);
 };
 
-/* ---------- data ---------- */
 async function refresh(){
   if (lastAbort) lastAbort.abort();
   const ac = new AbortController(); lastAbort = ac;
@@ -139,7 +135,6 @@ async function onSubmit(e){
 
   const msg = $('#form-msg');
 
-  // simpele validatie
   if (!payload.naam){
     if (msg){ msg.className='error'; msg.textContent='Naam is verplicht'; }
     return;
@@ -156,7 +151,7 @@ async function onSubmit(e){
   if (msg){ msg.className='muted'; msg.textContent='⏳ Opslaan…'; }
 
   try{
-    const r  = await saveKlas(payload);  // verwacht { id }
+    const r  = await saveKlas(payload);
     const id = r?.id || '';
     allRows.push(normalize({ id, ...payload }));
     allRows.sort((a,b)=>{
@@ -174,7 +169,6 @@ async function onSubmit(e){
   }
 }
 
-/* ---------- boot ---------- */
 document.addEventListener('DOMContentLoaded', async () => {
   window.SuperhondUI?.mount?.({ title:'Klassen', icon:'📚', back:'../dashboard/' });
 
@@ -185,7 +179,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('#refresh')?.addEventListener('click', refresh);
   $('#form-add')?.addEventListener('submit', onSubmit);
 
-  // forceer echte submit-knop (soms is button zonder type geen submit)
   const submitBtn = $('#form-add button, #form-add [type="submit"]');
   if (submitBtn) submitBtn.type = 'submit';
 
