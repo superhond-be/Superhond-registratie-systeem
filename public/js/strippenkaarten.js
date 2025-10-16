@@ -1,5 +1,5 @@
 /**
- * public/js/strippenkaarten.js — met modal acties & validatie
+ * public/js/strippenkaarten.js — module-versie met SuperhondUI
  */
 
 import {
@@ -8,17 +8,18 @@ import {
   postAction
 } from './sheets.js';
 
-const $ = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+import { SuperhondUI } from './layout.js';
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const collator = new Intl.Collator('nl', { sensitivity: 'base', numeric: true });
 
 let alleKaarten = [];
+let viewRows = [];
 
-// ─── Helpers ───
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c =>
-    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])
-  );
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]) );
 }
 
 function toArrayRows(x) {
@@ -35,17 +36,16 @@ function normalize(row) {
     o[String(k || '').toLowerCase()] = v;
   }
   return {
-    id:        (o.id ?? '').toString(),
-    klant:     (o.klant ?? '').toString(),
-    type:      (o.type ?? '').toString(),
-    credits:   (o.credits ?? '').toString(),
-    gebruikt:  (o.gebruikt ?? '').toString(),
-    geldig:    (o.geldig_tot ?? o.geldig ?? '').toString(),
-    status:    (o.status ?? '').toString()
+    id:     (o.id ?? '').toString(),
+    klant:  (o.klant ?? '').toString(),
+    type:   (o.type ?? '').toString(),
+    credits:(o.credits ?? '').toString(),
+    gebruikt: (o.gebruikt ?? '').toString(),
+    geldig: (o.geldig_tot ?? o.geldig ?? '').toString(),
+    status: (o.status ?? '').toString()
   };
 }
 
-// ─── Rendering ───
 function renderKaarten(statusVal = 'ALL') {
   const tb = $('#s-tbody');
   const countEl = $('#s-count');
@@ -82,44 +82,6 @@ function renderKaarten(statusVal = 'ALL') {
   countEl.textContent = `${rows.length} kaart${rows.length === 1 ? '' : 'en'}`;
 }
 
-// ─── Modals ───
-function ensureModalRoot() {
-  let root = document.getElementById('modal-root');
-  if (!root) {
-    root = document.createElement('div');
-    root.id = 'modal-root';
-    document.body.appendChild(root);
-  }
-  return root;
-}
-
-function closeModal() {
-  const root = document.getElementById('modal-root');
-  if (root) root.innerHTML = '';
-}
-
-function modal(contentHTML, { title = '' } = {}) {
-  ensureModalRoot();
-  const root = document.getElementById('modal-root');
-  root.innerHTML = `
-    <div class="sh-overlay" data-close="1" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
-      <div class="sh-modal">
-        <div class="sh-head">
-          <span>${escapeHtml(title)}</span>
-          <button class="sh-close" type="button" data-close="1">✕</button>
-        </div>
-        <div class="sh-body">${contentHTML}</div>
-      </div>
-    </div>`;
-  root.querySelector('.sh-overlay').addEventListener('click', (e) => {
-    if (e.target?.dataset?.close === '1') closeModal();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
-  }, { once: true });
-}
-
-// ─── Actiehandlers ───
 function wireActions() {
   const tb = $('#s-tbody');
   if (!tb) return;
@@ -133,7 +95,6 @@ function wireActions() {
   });
 }
 
-// Bekijken
 function openView(id) {
   const k = alleKaarten.find(x => x.id === id);
   if (!k) {
@@ -151,7 +112,6 @@ function openView(id) {
   modal(html, { title: 'Strippenkaart bekijken' });
 }
 
-// Bewerken
 function openEdit(id) {
   const k = alleKaarten.find(x => x.id === id);
   if (!k) {
@@ -194,7 +154,6 @@ function openEdit(id) {
       status:   String(fd.get('status') || '').trim(),
     };
 
-    // eenvoudige validatie
     if (!payload.klant) {
       alert('Klant is verplicht');
       return;
@@ -202,7 +161,6 @@ function openEdit(id) {
 
     try {
       await postAction('strippenkaart', 'update', payload);
-      // update lokaal object
       Object.assign(k, normalize(payload));
       renderKaarten($('#status')?.value || 'ALL');
       closeModal();
@@ -212,7 +170,6 @@ function openEdit(id) {
   });
 }
 
-// Verwijderen
 function confirmDelete(id) {
   if (!confirm('Weet je zeker dat je deze kaart wilt verwijderen?')) return;
   deleteKaart(id);
@@ -229,10 +186,18 @@ async function deleteKaart(id) {
   }
 }
 
-// ─── Boot / init ───
+// Boot
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[Strippenkaarten] Initialiseren');
+  // Mount moet vroeg gebeuren
+  SuperhondUI.mount({
+    title: 'Strippenkaarten',
+    icon: '🎫',
+    back: '../dashboard/',
+    home: false
+  });
+
   await initFromConfig();
+
   $('#status')?.addEventListener('change', e => renderKaarten(e.target.value));
 
   wireActions();
@@ -242,7 +207,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const raw = await fetchSheet('Strippenkaarten');
     const rows = toArrayRows(raw);
     alleKaarten = rows.map(normalize);
-    console.log('[Strippenkaarten] geladen kaarten:', alleKaarten.length);
     renderKaarten($('#status')?.value || 'ALL');
   } catch (err) {
     const errEl = $('#s-error');
@@ -250,6 +214,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       errEl.hidden = false;
       errEl.textContent = '❌ Fout laden: ' + (err?.message || err);
     }
-    console.error('[Strippenkaarten] fout bij laden:', err);
+    console.error('[Strippenkaarten] laden fout:', err);
+    // Zorg dat topbar offline status zichtbaar wordt
+    SuperhondUI.setOnline(false);
   }
 });
