@@ -1,25 +1,28 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Superhond — Dashboard</title>
 
-  <!-- ✅ Bron van waarheid voor je GAS /exec -->
+  <!-- 👉 jouw GAS /exec + optioneel branch -->
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/____JOUW_EXEC____/exec"/>
+  <meta name="superhond-branch" content="Ontwikkeling"/>
+
   <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
+<meta name="superhond-version" content="0.27.3">
+<meta name="superhond-branch"  content="Ontwikkeling">
 
-  <!-- Centrale UI -->
-  <link rel="stylesheet" href="../css/style.css?v=0.27.3" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.27.3" />
-
-  <!-- Dashboard: geel forceren -->
+  
+  <link rel="stylesheet" href="../css/style.css?v=0.27.2"/>
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.2"/>
   <style>
-    body.dashboard-page #topbar,
-    body.dashboard-page #topbar .topbar-inner{
-      background: var(--accent,#f4c400) !important;
-      color:#000 !important;
+    /* Dashboard: geel hard forceren (voor het geval CSS later laadt) */
+    body.dashboard-page #topbar, body.dashboard-page #topbar .topbar-inner {
+      background: var(--accent,#f4c400) !important; color:#000 !important;
     }
-    body.dashboard-page .btn-back{border-color:#e5e7eb;background:#fff;color:#111827;}
+    .tile.badged{position:relative}
+    .tile .badge-dot{position:absolute;top:8px;right:10px;min-width:22px;height:22px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;font-size:12px;line-height:1;background:var(--accent,#f4c400);color:#000;border:1px solid rgba(0,0,0,.08)}
   </style>
 </head>
 <body class="dashboard-page">
@@ -28,25 +31,28 @@
   <main class="container" role="main">
     <h1 class="page-title">Hoofdmenu</h1>
 
-    <!-- Tiles -->
     <nav class="tiles" aria-label="Hoofdmenu">
       <a class="tile" href="../klanten/"><span class="tile-icon">👤</span><div class="tile-body"><span class="tile-title">Klanten</span></div></a>
       <a class="tile" href="../honden/"><span class="tile-icon">🐶</span><div class="tile-body"><span class="tile-title">Honden</span></div></a>
-      <a class="tile" href="../klassen/"><span class="tile-icon">📚</span><div class="tile-body"><span class="tile-title">Klassen</span></div></a>
-      <a class="tile" href="../lessen/"><span class="tile-icon">📅</span><div class="tile-body"><span class="tile-title">Lessen</span></div></a>
       <a class="tile" href="../strippenkaarten/"><span class="tile-icon">🎫</span><div class="tile-body"><span class="tile-title">Strippenkaarten</span></div></a>
+      <a class="tile badged" href="../lessen/"><span class="tile-icon">📅</span><div class="tile-body"><span class="tile-title">Lessen</span><span class="tile-sub" id="lessen-week-sub">—</span></div><span class="badge-dot" id="lessen-week-badge">0</span></a>
+      <a class="tile badged" href="../klassen/"><span class="tile-icon">📚</span><div class="tile-body"><span class="tile-title">Klassen</span><span class="tile-sub" id="klassen-sub">—</span></div><span class="badge-dot" id="klassen-badge">0</span></a>
+      <a class="tile badged" href="../lessenreeks/"><span class="tile-icon">📦</span><div class="tile-body"><span class="tile-title">Lessenreeksen</span><span class="tile-sub" id="reeksen-sub">—</span></div><span class="badge-dot" id="reeksen-badge">0</span></a>
+      <a class="tile" href="../mededeling/"><span class="tile-icon">📢</span><div class="tile-body"><span class="tile-title">Mededelingen</span></div></a>
+      <a class="tile" href="../trainers/"><span class="tile-icon">🧑‍🏫</span><div class="tile-body"><span class="tile-title">Trainers</span></div></a>
+      <a class="tile" href="../rapporten/"><span class="tile-icon">📈</span><div class="tile-body"><span class="tile-title">Rapporten</span></div></a>
+      <a class="tile" href="../instellingen/"><span class="tile-icon">⚙️</span><div class="tile-body"><span class="tile-title">Instellingen</span></div></a>
       <a class="tile" href="../over/"><span class="tile-icon">ℹ️</span><div class="tile-body"><span class="tile-title">Over</span></div></a>
+      <a class="tile" href="../lessen/beheer.html"><span class="tile-icon">🗂️</span><div class="tile-body"><span class="tile-title">Lessenbeheer</span></div></a>
     </nav>
 
-    <!-- Agenda (optioneel) -->
     <section class="card" style="margin-top:1rem">
       <h2 style="margin:0 0 .5rem">Agenda</h2>
       <div id="agenda-loader" class="muted">⏳ Laden…</div>
-      <div id="agenda-error" class="error" style="display:none"></div>
       <div class="table-wrap" id="agenda-table-wrap" style="display:none;">
         <table id="agenda-table" class="table">
           <thead><tr><th>Naam</th><th>Datum</th><th>Locatie</th><th>Trainer(s)</th></tr></thead>
-          <tbody><!-- gevuld door agenda.js --></tbody>
+          <tbody></tbody>
         </table>
       </div>
     </section>
@@ -54,22 +60,14 @@
 
   <footer id="footer" class="footer"></footer>
 
-  <!-- Scripts -->
-  <script defer src="../js/layout.js?v=0.27.3"></script>
-  <script defer src="../js/diagnose.js?v=0.3.0"></script>
-  <script defer src="../js/sheets.js?v=0.27.4"></script>
-  <script defer src="../js/agenda.js?v=0.27.3"></script>
+  <script defer src="../js/layout.js?v=0.27.2"></script>
+  <!-- agenda.js optioneel -->
+  <!-- <script defer src="../js/agenda.js?v=0.27.2"></script> -->
 
   <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-      window.SuperhondUI?.mount?.({ title: 'Superhond', icon: '🐾', home: true });
-      // optioneel: agenda init (als agenda.js aanwezig is)
-      if (window.SuperhondAgenda?.init) {
-        try { await window.SuperhondAgenda.init(); } catch {}
-      }
+    document.addEventListener('DOMContentLoaded', () => {
+      window.SuperhondUI?.mount?.({ title:'Superhond', icon:'🐾', home:true });
     });
   </script>
-
-  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p></noscript>
 </body>
 </html>
