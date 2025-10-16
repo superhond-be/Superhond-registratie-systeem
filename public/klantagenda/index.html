@@ -7,71 +7,30 @@
 
   <!-- Meta info -->
   <meta name="superhond-version" content="0.27.6" />
-   <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec" /> 
-  
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec" />
+
   <!-- CSS -->
   <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
 
   <style>
-    .toolbar {
-      margin: 1rem 0;
-      display: flex;
-      gap: .5rem;
-      flex-wrap: wrap;
-    }
+    .toolbar { margin:1rem 0; display:flex; gap:.5rem; flex-wrap:wrap; }
     select.select {
-      padding: .4rem .75rem;
-      font-size: .9rem;
-      border: 1px solid var(--border-color, #d1d5db);
-      border-radius: .375rem;
-      background: var(--bg-input, #fff);
+      padding:.4rem .75rem; font-size:.9rem; border:1px solid var(--border-color,#d1d5db);
+      border-radius:.375rem; background:var(--bg-input,#fff);
     }
-    select.select:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 2px rgba(251,191,36, 0.3);
-    }
+    select.select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(251,191,36,.3); }
 
-    .ag-punt {
-      padding: .75rem;
-      border-bottom: 1px solid #e5e7eb;
-      transition: background 0.2s;
-    }
-    .ag-punt:hover {
-      background: #f9fafb;
-      cursor: pointer;
-    }
-    .ag-punt:last-child {
-      border-bottom: none;
-    }
-    .ag-punt .info {
-      color: #6b7280;
-      font-size: .9rem;
-    }
+    .ag-punt { padding:.75rem; border-bottom:1px solid #e5e7eb; transition:background .2s; }
+    .ag-punt:hover { background:#f9fafb; cursor:pointer; }
+    .ag-punt:last-child { border-bottom:none; }
+    .ag-punt .info { color:#6b7280; font-size:.9rem; }
 
-    .mededelingen-onder {
-      margin-top: .5rem;
-      padding-left: 1rem;
-      border-left: 3px solid var(--accent);
-      color: #374151;
-      font-size: .9rem;
-    }
-    .mededelingen-onder.urgent {
-      border-left-color: #dc2626;
-      background: #fef2f2;
-    }
-    .mededelingen-onder small {
-      display: block;
-      color: #9ca3af;
-      font-size: .8rem;
-      margin-bottom: .25rem;
-    }
+    .mededelingen-onder { margin-top:.5rem; padding-left:1rem; border-left:3px solid var(--accent); color:#374151; font-size:.9rem; }
+    .mededelingen-onder.urgent { border-left-color:#dc2626; background:#fef2f2; }
+    .mededelingen-onder small { display:block; color:#9ca3af; font-size:.8rem; margin-bottom:.25rem; }
 
-    .tabs .tab {
-      padding: .4rem .8rem;
-      font-size: .9rem;
-    }
+    .tabs .tab { padding:.4rem .8rem; font-size:.9rem; }
   </style>
 </head>
 
@@ -99,8 +58,12 @@
 
   <footer id="footer"></footer>
 
-  <!-- Scripts -->
-  <script defer src="../js/layout.js?v=0.27.6"></script>
-  <script type="module" src="../js/klantagenda.js?v=0.1.0"></script>
+  <!-- ✅ Één module bootstrap. GEEN losse <script defer src="../js/layout.js"> meer -->
+  <script type="module">
+    import { SuperhondUI } from '../js/layout.js?v=0.27.6';
+    import '../js/klantagenda.js?v=0.1.0'; // dit script importeert niets extra’s voor layout
+    // Als jouw klantagenda.js zélf SuperhondUI.mount() NIET aanroept, dan kun je dat hier doen:
+    // SuperhondUI.mount({ title:'Agenda & Mededelingen', icon:'📅', back:'../dashboard/' });
+  </script>
 </body>
 </html>
