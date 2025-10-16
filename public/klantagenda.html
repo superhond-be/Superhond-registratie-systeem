@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mijn Agenda & Mededelingen – Superhond</title>
+
+  <meta name="superhond-version" content="0.27.6" />
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec" />
+
+  <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
+
+  <style>
+    .agenda-card { margin-bottom: 1.5rem; }
+    .ag-punt { border-bottom: 1px solid #e5e7eb; padding: .75rem 0; }
+    .ag-punt:last-child { border: none; }
+    .ag-punt .info { font-size: .9rem; color: #6b7280; }
+    .mededelingen-onder { margin-top: .5rem; padding-left: 1rem; border-left: 3px solid var(--accent); color: #374151; font-size: .9rem; }
+    .mededelingen-onder small { display: block; color: #9ca3af; font-size: .8rem; margin-bottom: .25rem; }
+    .mededelingen-panel { /* optioneel panel voor algemene mededelingen */ display: none; }
+  </style>
+</head>
+
+<body class="subpage page-klant-agenda">
+  <header id="topbar"></header>
+
+  <main class="container">
+    <h1 class="page-title">Mijn Agenda & Mededelingen</h1>
+
+    <section class="card agenda-card" id="agenda-list">
+      <!-- hier komt je agenda + mededelingen -->
+    </section>
+
+    <aside id="mededelingen-widget" class="mededelingen-panel"></aside>
+  </main>
+
+  <footer id="footer"></footer>
+
+  <script type="module">
+    import { SuperhondUI } from '../js/layout.js';
+    import '../js/klantAgenda.js?v=0.1.0';
+
+    SuperhondUI.mount({
+      title: 'Agenda & Mededelingen',
+      icon: '📅',
+      back: '../dashboard/',
+      home: false
+    });
+  </script>
+</body>
+</html>
