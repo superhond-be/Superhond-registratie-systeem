@@ -1,0 +1,49 @@
+{
+  "lessen": [
+    {
+      "id": "les1",
+      "naam": "Puppyles",
+      "datum": "2025-10-20",
+      "tijd": "09:00",
+      "locatie": "Zaal A",
+      "groep": "Puppy"
+    },
+    {
+      "id": "les2",
+      "naam": "Gevorderde les",
+      "datum": "2025-10-21",
+      "tijd": "17:30",
+      "locatie": "Zaal B",
+      "groep": "Gevorderd"
+    }
+  ],
+  "mededelingen": [
+    {
+      "id": "m1",
+      "datum": "2025-10-20",
+      "tijd": "07:00",
+      "targetLes": "les1",
+      "doelgroep": "Puppy",
+      "inhoud": "Breng regenjas mee – kans op regen.",
+      "zichtbaar": "ja"
+    },
+    {
+      "id": "m2",
+      "datum": "2025-10-21",
+      "tijd": "12:00",
+      "targetLes": "les2",
+      "doelgroep": "Gevorderd",
+      "inhoud": "Trainer is verhinderd op deze dag — les mogelijk aangepast.",
+      "zichtbaar": "ja"
+    },
+    {
+      "id": "m3",
+      "datum": "2025-10-22",
+      "tijd": "10:00",
+      "targetLes": "les1",
+      "doelgroep": "Puppy",
+      "inhoud": "Nieuwe starttijd: 10:00 ipv 09:00",
+      "zichtbaar": "ja"
+    }
+  ]
+}
