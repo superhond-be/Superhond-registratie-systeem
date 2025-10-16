@@ -5,27 +5,37 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Superhond — Dashboard</title>
 
-  <!-- ✅ Meta-tags (versie en exec) -->
-  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
-  <meta name="superhond-branch" content="Ontwikkeling">
-  <meta name="superhond-version" content="0.27.5">
+  <!-- ✅ Enkel de juiste meta-tags -->
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec" />
+  <meta name="superhond-branch" content="Ontwikkeling" />
+  <meta name="superhond-version" content="0.27.5" />
 
   <link rel="stylesheet" href="../css/style.css?v=0.27.5" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.5" />
+
+  <style>
+    body.dashboard-page #topbar,
+    body.dashboard-page #topbar .topbar-inner {
+      background: var(--accent, #f4c400) !important;
+      color: #000 !important;
+    }
+  </style>
 </head>
+
 <body class="dashboard-page">
   <header id="topbar"></header>
 
   <main class="container" role="main">
     <h1 class="page-title">Hoofdmenu</h1>
 
+    <!-- ✅ Tiles zoals gewoonlijk -->
     <nav class="tiles" aria-label="Hoofdmenu">
       <a class="tile" href="../klanten/"><span class="tile-icon">👤</span><div class="tile-body"><span class="tile-title">Klanten</span></div></a>
       <a class="tile" href="../honden/"><span class="tile-icon">🐶</span><div class="tile-body"><span class="tile-title">Honden</span></div></a>
       <a class="tile" href="../strippenkaarten/"><span class="tile-icon">🎫</span><div class="tile-body"><span class="tile-title">Strippenkaarten</span></div></a>
-      <a class="tile badged" href="../lessen/"><span class="tile-icon">📅</span><div class="tile-body"><span class="tile-title">Lessen</span><span class="tile-sub" id="lessen-week-sub">—</span></div><span class="badge-dot" id="lessen-week-badge">0</span></a>
-      <a class="tile badged" href="../klassen/"><span class="tile-icon">📚</span><div class="tile-body"><span class="tile-title">Klassen</span><span class="tile-sub" id="klassen-sub">—</span></div><span class="badge-dot" id="klassen-badge">0</span></a>
-      <a class="tile badged" href="../lessenreeks/"><span class="tile-icon">📦</span><div class="tile-body"><span class="tile-title">Lessenreeksen</span><span class="tile-sub" id="reeksen-sub">—</span></div><span class="badge-dot" id="reeksen-badge">0</span></a>
+      <a class="tile" href="../lessen/"><span class="tile-icon">📅</span><div class="tile-body"><span class="tile-title">Lessen</span></div></a>
+      <a class="tile" href="../klassen/"><span class="tile-icon">📚</span><div class="tile-body"><span class="tile-title">Klassen</span></div></a>
+      <a class="tile" href="../lessenreeks/"><span class="tile-icon">📦</span><div class="tile-body"><span class="tile-title">Lessenreeksen</span></div></a>
       <a class="tile" href="../mededeling/"><span class="tile-icon">📢</span><div class="tile-body"><span class="tile-title">Mededelingen</span></div></a>
       <a class="tile" href="../trainers/"><span class="tile-icon">🧑‍🏫</span><div class="tile-body"><span class="tile-title">Trainers</span></div></a>
       <a class="tile" href="../rapporten/"><span class="tile-icon">📈</span><div class="tile-body"><span class="tile-title">Rapporten</span></div></a>
@@ -34,33 +44,12 @@
       <a class="tile" href="../lessen/beheer.html"><span class="tile-icon">🗂️</span><div class="tile-body"><span class="tile-title">Lessenbeheer</span></div></a>
     </nav>
 
-    <section class="card" style="margin-top:1rem">
-      <h2>Agenda</h2>
-      <div id="agenda-loader" class="muted">⏳ Laden…</div>
-      <div class="table-wrap" id="agenda-table-wrap" style="display:none;">
-        <table id="agenda-table" class="table">
-          <thead><tr><th>Naam</th><th>Datum</th><th>Locatie</th><th>Trainer(s)</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-      <div id="agenda-error" class="error" style="display:none;"></div>
-    </section>
+    <!-- Hier zou eventueel de agenda of andere dashboardspecifieke secties komen -->
   </main>
 
   <footer id="footer" class="footer"></footer>
 
-  <script type="module">
-    import { SuperhondUI } from '../js/layout.js';
-    import '../js/sheets.js?v=0.27.5';
-    import '../js/agenda.js?v=0.27.5';
-
-    SuperhondUI.mount({
-      title: 'Superhond',
-      icon: '🐾',
-      home: true
-    });
-  </script>
-
-  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p></noscript>
+  <!-- ✅ Alles via 1 module -->
+  <script type="module" src="../js/dashboard.js?v=0.27.5"></script>
 </body>
 </html>
