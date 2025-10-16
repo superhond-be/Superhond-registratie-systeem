@@ -33,7 +33,7 @@
               <th>Datum</th>
               <th>Locatie</th>
               <th>Trainer</th>
-              <th>Cap.</th>
+              <th>Status</th>
               <th style="width:1%"></th>
             </tr>
           </thead>
@@ -58,6 +58,10 @@
         </div>
 
         <input name="notes" class="input" placeholder="Notities" />
+        <select name="status" class="input">
+          <option value="actief">actief</option>
+          <option value="inactief">inactief</option>
+        </select>
 
         <button class="btn" type="submit">💾 Opslaan</button>
       </form>
@@ -71,15 +75,5 @@
   <!-- Scripts -->
   <script src="../js/layout.js?v=0.20.2" defer></script>
   <script type="module" src="../js/lessen.js?v=0.20.2"></script>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      SuperhondUI.mount({
-        title: 'Lessen',
-        icon: '📅',
-        back: '../dashboard/'
-      });
-    });
-  </script>
 </body>
 </html>
