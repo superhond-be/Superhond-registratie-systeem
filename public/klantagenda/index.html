@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Agenda & Mededelingen – Superhond</title>
 
+  <!-- Meta info -->
   <meta name="superhond-version" content="0.27.6" />
   <meta name="superhond-exec" content="https://script.google.com/macros/s/YOUR_EXEC_URL/exec" />
 
+  <!-- CSS -->
   <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
 
@@ -66,7 +68,6 @@
       margin-bottom: .25rem;
     }
 
-    /* Tab-stijl correcties als de tabs nog te groot zijn */
     .tabs .tab {
       padding: .4rem .8rem;
       font-size: .9rem;
@@ -80,6 +81,7 @@
   <main class="container">
     <h1 class="page-title">Agenda & Mededelingen</h1>
 
+    <!-- Filters -->
     <div class="toolbar">
       <select id="filter-categorie" class="select" aria-label="Filter categorie">
         <option value="">Alle categorieën</option>
@@ -89,13 +91,15 @@
       </select>
     </div>
 
+    <!-- Agenda container -->
     <section id="agenda-list" class="card">
-      <p class="muted">⏳ Agenda wordt geladen…</p>
+      <p class="muted" id="agenda-loader">⏳ Agenda wordt geladen…</p>
     </section>
   </main>
 
   <footer id="footer"></footer>
 
+  <!-- Scripts -->
   <script defer src="../js/layout.js?v=0.27.6"></script>
   <script type="module" src="../js/klantagenda.js?v=0.1.0"></script>
 </body>
