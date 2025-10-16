@@ -8,57 +8,47 @@ import { SuperhondUI } from './layout.js';
 import { loadEmailTemplates } from './emailTemplates.js';
 
 const $ = (s, r = document) => r.querySelector(s);
-const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c =>
-    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])
+const escapeHtml = s =>
+  String(s).replace(/[&<>"']/g, c =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
   );
-}
 
-function toArrayRows(x) {
-  if (Array.isArray(x)) return x;
-  if (x && Array.isArray(x.data)) return x.data;
-  if (x && Array.isArray(x.rows)) return x.rows;
-  if (x && Array.isArray(x.result)) return x.result;
-  return [];
-}
+const toArrayRows = x =>
+  Array.isArray(x) ? x :
+  Array.isArray(x?.data) ? x.data :
+  Array.isArray(x?.rows) ? x.rows :
+  Array.isArray(x?.result) ? x.result : [];
 
-function normalizeLes(row) {
-  const o = {};
-  for (const [k, v] of Object.entries(row || {})) {
-    o[String(k || '').toLowerCase()] = v;
-  }
+const normalizeLes = row => {
+  const o = Object.fromEntries(Object.entries(row || {}).map(([k, v]) => [k.toLowerCase(), v]));
   return {
-    id:       (o.id ?? '').toString(),
-    lesnaam:  (o.naam ?? '').toString(),
-    datum:    (o.datum ?? '').toString(),
-    tijd:     (o.tijd ?? '').toString(),
-    locatie:  (o.locatie ?? '').toString(),
-    groep:    (o.groep ?? '').toString()
+    id:       String(o.id ?? ''),
+    lesnaam:  String(o.naam ?? ''),
+    datum:    String(o.datum ?? ''),
+    tijd:     String(o.tijd ?? ''),
+    locatie:  String(o.locatie ?? ''),
+    groep:    String(o.groep ?? '')
   };
-}
+};
 
-function normalizeMed(row) {
-  const o = {};
-  for (const [k, v] of Object.entries(row || {})) {
-    o[String(k || '').toLowerCase()] = v;
-  }
+const normalizeMed = row => {
+  const o = Object.fromEntries(Object.entries(row || {}).map(([k, v]) => [k.toLowerCase(), v]));
   return {
-    id:        (o.id ?? '').toString(),
-    inhoud:    (o.inhoud ?? '').toString(),
-    datum:     (o.datum ?? '').toString(),
-    tijd:      (o.tijd ?? '').toString(),
-    targetLes: (o.targetles ?? '').toString(),
-    doelgroep: (o.doelgroep ?? '').toString(),
-    categorie: (o.categorie ?? '').toString(),
-    prioriteit:(o.prioriteit ?? '').toString(),
-    link:      (o.link ?? '').toString(),
-    zichtbaar: (String(o.zichtbaar ?? '').toLowerCase() !== 'nee')
+    id:         String(o.id ?? ''),
+    inhoud:     String(o.inhoud ?? ''),
+    datum:      String(o.datum ?? ''),
+    tijd:       String(o.tijd ?? ''),
+    targetLes:  String(o.targetles ?? ''),
+    doelgroep:  String(o.doelgroep ?? ''),
+    categorie:  String(o.categorie ?? ''),
+    prioriteit: String(o.prioriteit ?? ''),
+    link:       String(o.link ?? ''),
+    zichtbaar:  String(o.zichtbaar ?? '').toLowerCase() !== 'nee'
   };
-}
+};
 
-function filterMededelingen(meds, opties) {
+const filterMededelingen = (meds, opties) => {
   const now = new Date();
   return meds.filter(m => {
     if (!m.zichtbaar) return false;
@@ -66,15 +56,17 @@ function filterMededelingen(meds, opties) {
     if (opties.dag && m.datum && m.datum !== opties.dag) return false;
     if (opties.categorie && m.categorie && m.categorie !== opties.categorie) return false;
     if (opties.prioriteit && m.prioriteit && m.prioriteit !== opties.prioriteit) return false;
+
     if (m.datum) {
-      const dt = new Date(m.datum + (m.tijd ? `T${m.tijd}` : `T00:00`));
+      const dt = new Date(`${m.datum}T${m.tijd || '00:00'}`);
       if (dt < now) return false;
     }
+
     return true;
   });
-}
+};
 
-function renderAgenda(lesData, medData) {
+const renderAgenda = (lesData, medData) => {
   const el = $('#agenda-list');
   if (!el) return;
 
@@ -100,7 +92,7 @@ function renderAgenda(lesData, medData) {
         ${meds.length ? `
           <div class="mededelingen-onder ${meds.some(m => m.prioriteit === 'Hoog') ? 'urgent' : ''}">
             ${meds.map(m => {
-              const tijd = m.datum + (m.tijd ? ` ${m.tijd}` : '');
+              const tijd = `${m.datum}${m.tijd ? ` ${m.tijd}` : ''}`;
               return `
                 <small>${escapeHtml(tijd)} • ${escapeHtml(m.categorie)}</small>
                 ${escapeHtml(m.inhoud)}
@@ -113,7 +105,7 @@ function renderAgenda(lesData, medData) {
   }).join('');
 
   el.innerHTML = html;
-}
+};
 
 const currentFilters = {
   categorie: '',
@@ -129,6 +121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await initFromConfig();
 
+  // Voor testen: lokaal of via Google Sheets
   const useLocalTemplates = true;
   const templates = await loadEmailTemplates(useLocalTemplates);
   console.log('Loaded email templates:', templates);
@@ -159,11 +152,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('Fout bij laden mededelingen:', e);
   }
 
-  lesData.sort((a, b) => {
-    const da = a.datum + ' ' + (a.tijd || '');
-    const db = b.datum + ' ' + (b.tijd || '');
-    return da.localeCompare(db);
-  });
-
+  lesData.sort((a, b) => `${a.datum} ${a.tijd}`.localeCompare(`${b.datum} ${b.tijd}`));
   renderAgenda(lesData, medData);
 });
