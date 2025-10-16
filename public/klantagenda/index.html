@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Agenda & Mededelingen – Superhond</title>
 
-  <!-- Centrale UI -->
-  <link rel="stylesheet" href="../css/style.css?v=0.1.0" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.1.0" />
+  <meta name="superhond-version" content="0.27.6" />
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/YOUR_EXEC_URL/exec" />
+
+  <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
 
   <style>
     .ag-punt {
@@ -23,7 +25,7 @@
       padding-left: 1rem;
       border-left: 3px solid var(--accent);
       color: #374151;
-      font-size: .9rem;
+      font-size: 0.9rem;
     }
     .mededelingen-onder.urgent {
       border-left-color: #dc2626;
@@ -70,10 +72,8 @@
 
   <footer id="footer"></footer>
 
-  <!-- Eerst layout.js voor de topbar -->
-  <script defer src="../js/layout.js?v=0.1.0"></script>
-
-  <!-- Je JS-module voor de agenda -->
+  <!-- layout.js zorgt dat SuperhondUI bestaat + topbar / versie / back -->
+  <script defer src="../js/layout.js?v=0.27.6"></script>
   <script type="module" src="../js/klantAgenda.js?v=0.1.0"></script>
 </body>
 </html>
