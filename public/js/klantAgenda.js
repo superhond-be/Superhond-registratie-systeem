@@ -1,56 +1,11 @@
-// public/js/klantagenda.js
-
-import {
-  initFromConfig,
-  fetchSheet
-} from './sheets.js';
 import { SuperhondUI } from './layout.js';
-import { loadEmailTemplates } from './emailTemplates.js';
-
-alert('✅ klantagenda.js geladen');
 
 const $ = (s, r = document) => r.querySelector(s);
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c =>
-    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
   );
-}
-
-function toArrayRows(x) {
-  if (Array.isArray(x)) return x;
-  if (x?.data && Array.isArray(x.data)) return x.data;
-  if (x?.rows && Array.isArray(x.rows)) return x.rows;
-  if (x?.result && Array.isArray(x.result)) return x.result;
-  return [];
-}
-
-function normalizeLes(row) {
-  const o = Object.fromEntries(Object.entries(row || {}).map(([k, v]) => [String(k || '').toLowerCase(), v]));
-  return {
-    id: (o.id ?? '').toString(),
-    lesnaam: (o.naam ?? '').toString(),
-    datum: (o.datum ?? '').toString(),
-    tijd: (o.tijd ?? '').toString(),
-    locatie: (o.locatie ?? '').toString(),
-    groep: (o.groep ?? '').toString()
-  };
-}
-
-function normalizeMed(row) {
-  const o = Object.fromEntries(Object.entries(row || {}).map(([k, v]) => [String(k || '').toLowerCase(), v]));
-  return {
-    id: (o.id ?? '').toString(),
-    inhoud: (o.inhoud ?? '').toString(),
-    datum: (o.datum ?? '').toString(),
-    tijd: (o.tijd ?? '').toString(),
-    targetLes: (o.targetles ?? '').toString(),
-    doelgroep: (o.doelgroep ?? '').toString(),
-    categorie: (o.categorie ?? '').toString(),
-    prioriteit: (o.prioriteit ?? '').toString(),
-    link: (o.link ?? '').toString(),
-    zichtbaar: String(o.zichtbaar ?? '').toLowerCase() !== 'nee'
-  };
 }
 
 function filterMededelingen(meds, opties) {
@@ -71,15 +26,9 @@ function filterMededelingen(meds, opties) {
 
 function renderAgenda(lesData, medData) {
   const el = $('#agenda-list');
-  if (!el) {
-    console.warn('[Agenda] Element #agenda-list niet gevonden');
-    return;
-  }
-  if (!lesData || !Array.isArray(lesData)) {
-    el.innerHTML = `<p class="error">Interne fout: lesData is niet geldig.</p>`;
-    return;
-  }
-  if (lesData.length === 0) {
+  if (!el) return;
+
+  if (!lesData.length) {
     el.innerHTML = `<p class="muted">Geen komende lessen.</p>`;
     return;
   }
@@ -121,24 +70,61 @@ const currentFilters = {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[Fallback] DOM loaded');
-
   SuperhondUI.mount({
-    title: 'Agenda & Mededelingen (test modus)',
+    title: 'Agenda & Mededelingen (Testmodus)',
     icon: '📅',
     back: '../dashboard/'
   });
 
-  // je kunt hier testdata opzetten:
-  let lesData = [
+  // LOKALE TESTDATA
+  const lesData = [
     { id: 'T1', lesnaam: 'Puppy Groep', datum: '2025-10-20', tijd: '09:00', locatie: 'Hal 1', groep: 'Puppy' },
     { id: 'T2', lesnaam: 'Gevorderd', datum: '2025-10-21', tijd: '14:00', locatie: 'Hal 2', groep: 'Gevorderd' }
   ];
-  let medData = [
+
+  const medData = [
     { id: 'M1', inhoud: 'Breng regenjas mee', datum: '2025-10-20', tijd: '08:00', targetLes: 'T1', doelgroep: 'klant', categorie: 'Weer', prioriteit: 'Laag', link: '', zichtbaar: true },
     { id: 'M2', inhoud: 'Let op: les verlaat uur', datum: '2025-10-21', tijd: '13:30', targetLes: 'T2', doelgroep: 'klant', categorie: 'Info', prioriteit: 'Normaal', link: '', zichtbaar: true }
   ];
 
-  // Render meteen met testdata
+  // E-mailtemplates (kan later verder geïntegreerd worden)
+  const emailTemplates = [
+    {
+      templateId: 'concept_herinnering',
+      naam: 'Herinnering: boeking in concept',
+      trigger: 'status_concept',
+      onderwerp: '{{voornaam}}, je boeking wacht op bevestiging',
+      body: 'Beste {{voornaam}}, je boeking voor {{lesNaam}} op {{lesDatum}} staat nog in concept. Gelieve te bevestigen.',
+      zichtbaar: 'ja',
+      automatisch: 'nee',
+      categorie: 'Boekingen',
+      doelgroep: 'klant'
+    },
+    {
+      templateId: 'bevestiging_boeking',
+      naam: 'Bevestiging boeking',
+      trigger: 'status_bevestigd',
+      onderwerp: 'Je boeking is bevestigd, {{voornaam}}!',
+      body: 'Hallo {{voornaam}}, je boeking voor {{lesNaam}} op {{lesDatum}} is goedgekeurd. Tot dan!',
+      zichtbaar: 'ja',
+      automatisch: 'ja',
+      categorie: 'Boekingen',
+      doelgroep: 'klant'
+    }
+  ];
+
+  console.log('[Testdata geladen]', { lesData, medData, emailTemplates });
+
+  // Eventlisteners op dropdowns (optioneel)
+  $('#filter-categorie')?.addEventListener('change', e => {
+    currentFilters.categorie = e.target.value;
+    renderAgenda(lesData, medData);
+  });
+
+  $('#filter-prioriteit')?.addEventListener('change', e => {
+    currentFilters.prioriteit = e.target.value;
+    renderAgenda(lesData, medData);
+  });
+
   renderAgenda(lesData, medData);
 });
