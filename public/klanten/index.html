@@ -3,58 +3,57 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Klanten – Superhond</title>
+  <title>Strippenkaarten – Superhond</title>
 
-  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
+  <meta name="superhond-version" content="0.27.6" />
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec" />
 
-  <link rel="stylesheet" href="../css/style.css?v=0.27.3" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.27.3" />
+  <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
+
+  <style>
+    footer#footer:empty {
+      display: none;
+    }
+  </style>
 </head>
 
-<body class="subpage page-klanten">
+<body class="subpage page-strippenkaarten">
   <header id="topbar"></header>
 
   <main class="container">
-    <h1 class="page-title">Klanten</h1>
+    <h1 class="page-title">Strippenkaarten</h1>
 
     <section class="card">
       <div class="toolbar">
-        <input id="search" class="input" placeholder="Zoek op naam of e-mail…" aria-label="Zoeken" />
-        <button id="refresh" class="btn" type="button">🔄 Verversen</button>
+        <select id="status" class="select">
+          <option value="ALL">Alle statussen</option>
+          <option value="actief">Actief</option>
+          <option value="vol">Vol</option>
+          <option value="verlopen">Verlopen</option>
+        </select>
+        <span class="badge" id="s-count">0 kaarten</span>
       </div>
 
-      <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
-
       <div class="table-wrap" style="margin-top:.5rem">
-        <table class="table" id="tbl">
+        <table class="table">
           <thead>
             <tr>
-              <th>Naam</th>
-              <th>E-mail</th>
-              <th>Telefoon</th>
+              <th>Klant</th>
+              <th>Type</th>
+              <th>Credits</th>
+              <th>Gebruikt</th>
+              <th>Geldig tot</th>
               <th>Status</th>
               <th style="width:1%">Acties</th>
             </tr>
           </thead>
-          <tbody><!-- dynamische rijen --></tbody>
+          <tbody id="s-tbody"></tbody>
         </table>
       </div>
-    </section>
 
-    <section class="card" style="margin-top:1rem">
-      <h2>Nieuwe klant toevoegen</h2>
-      <form id="form-add" class="form-grid" autocomplete="off">
-        <input name="voornaam"   class="input" placeholder="Voornaam"   required />
-        <input name="achternaam" class="input" placeholder="Achternaam" required />
-        <input name="email"      class="input" type="email" placeholder="E-mail" />
-        <input name="telefoon"   class="input" placeholder="Telefoon" />
-        <select name="status" class="input" aria-label="Status">
-          <option value="actief" selected>actief</option>
-          <option value="inactief">inactief</option>
-        </select>
-        <button class="btn primary" type="submit">💾 Opslaan</button>
-      </form>
-      <div id="form-msg" class="muted" role="status" aria-live="polite"></div>
+      <div id="s-loader" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
+      <p id="s-error" class="error" hidden></p>
     </section>
   </main>
 
@@ -62,16 +61,14 @@
 
   <script type="module">
     import { SuperhondUI } from '../js/layout.js';
-    import '../js/klanten.js?v=0.27.5';
+    import '../js/strippenkaarten.js?v=0.1.0';
 
     SuperhondUI.mount({
-      title: 'Klanten',
-      icon: '👤',
+      title: 'Strippenkaarten',
+      icon: '🎫',
       back: '../dashboard/',
       home: false
     });
   </script>
-
-  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p></noscript>
 </body>
 </html>
