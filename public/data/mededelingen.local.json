@@ -1,0 +1,5 @@
+// public/data/mededelingen.local.json
+[
+  { "id":"M1","inhoud":"Breng regenjas mee","datum":"2025-10-20","tijd":"08:00","targetLes":"T1","doelgroep":"klant","categorie":"Weer","prioriteit":"Laag","link":"","zichtbaar":true },
+  { "id":"M2","inhoud":"Let op: les verlaat uur","datum":"2025-10-21","tijd":"13:30","targetLes":"T2","doelgroep":"klant","categorie":"Info","prioriteit":"Normaal","link":"","zichtbaar":true }
+]
