@@ -1,216 +1,134 @@
-/**
- * sheets.js v0.27.5 — Centrale API-laag voor Superhond
- * - Leest exec-URL uit meta-tag of localStorage
- * - Spreekt direct met GAS /exec
- * - Exporteert: getExecBase, setExecBase, pingExec, initFromConfig
- *              fetchSheet, fetchAction, postAction
- *              saveKlant, saveHond, saveKlas, saveLes
- */
+import { getExecBase, pingExec } from './sheets.js';
 
-const DEFAULT_TIMEOUT = 12_000;
-const DEFAULT_RETRIES = 2;
-const LS_KEY_EXEC = 'superhond:execBase';
+(function () {
+  const APP_VERSION = '0.27.5';
 
-let EXEC_BASE = '';
+  const onReady = (cb) =>
+    document.readyState !== 'loading'
+      ? cb()
+      : document.addEventListener('DOMContentLoaded', cb, { once: true });
 
-/* ────────────────────────────── Base URL ────────────────────────────── */
-
-function sanitizeExecUrl(url = '') {
-  try {
-    const u = new URL(String(url).trim());
-    if (
-      u.hostname === 'script.google.com' &&
-      u.pathname.startsWith('/macros/s/') &&
-      u.pathname.endsWith('/exec')
-    ) {
-      return `${u.origin}${u.pathname}`;
+  const el = (tag, attrs = {}, ...kids) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v == null) continue;
+      if (k === 'class') n.className = v;
+      else if (k === 'html') n.innerHTML = v;
+      else n.setAttribute(k, v);
     }
-  } catch {}
-  return '';
-}
+    for (const c of kids) n.append(c?.nodeType ? c : document.createTextNode(String(c)));
+    return n;
+  };
 
-function resolveExecBase() {
-  // 1) meta-tag
-  if (typeof document !== 'undefined') {
-    const meta = document.querySelector('meta[name="superhond-exec"]');
-    if (meta?.content) {
-      const safe = sanitizeExecUrl(meta.content);
-      if (safe) return safe;
-    }
-  }
+  function renderTopbar(container, opts, online) {
+    if (!container) return;
+    const { title = 'Superhond', icon = '🐾', home = null, back = null } = opts || {};
+    const isDash = home === true || document.body.classList.contains('dashboard-page');
 
-  // 2) localStorage
-  try {
-    const ls = localStorage.getItem(LS_KEY_EXEC);
-    if (ls) {
-      const safe = sanitizeExecUrl(ls);
-      if (safe) return safe;
-    }
-  } catch {}
-
-  // 3) fallback
-  console.warn('[sheets] Geen geldige exec-URL gevonden (meta-tag of localStorage)');
-  return '';
-}
-
-export function setExecBase(url) {
-  const safe = sanitizeExecUrl(url);
-  EXEC_BASE = safe;
-  try {
-    if (safe) localStorage.setItem(LS_KEY_EXEC, safe);
-    else localStorage.removeItem(LS_KEY_EXEC);
-  } catch {}
-}
-
-export function getExecBase() {
-  return EXEC_BASE || '';
-}
-
-export async function initFromConfig() {
-  if (!EXEC_BASE) {
-    const resolved = resolveExecBase();
-    if (resolved) setExecBase(resolved);
-  }
-}
-
-/* ─────────────────────────── Fetch utils ─────────────────────────── */
-
-function peekBody(s, n = 160) {
-  return String(s || '').trim().replace(/\s+/g, ' ').slice(0, n);
-}
-
-async function fetchWithTimeout(url, init = {}, timeoutMs = DEFAULT_TIMEOUT) {
-  const ac = new AbortController();
-  const to = setTimeout(() => ac.abort(new Error('timeout')), timeoutMs);
-  try {
-    return await fetch(url, { ...init, signal: ac.signal, cache: 'no-store' });
-  } finally {
-    clearTimeout(to);
-  }
-}
-
-async function withRetry(doReq, { retries = DEFAULT_RETRIES, baseDelay = 300 } = {}) {
-  let lastErr;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      return await doReq(attempt);
-    } catch (err) {
-      lastErr = err;
-      const timeout = err?.name === 'AbortError' || err?.message === 'timeout';
-      const transient = timeout || /Failed to fetch|NetworkError|ECONNRESET|ENOTFOUND/i.test(String(err));
-      if (attempt < retries && transient) {
-        const wait = baseDelay * Math.pow(2, attempt);
-        await new Promise(r => setTimeout(r, wait));
-        continue;
-      }
-      break;
-    }
-  }
-  throw lastErr;
-}
-
-/* ───────────────────────────── URL + JSON ───────────────────────────── */
-
-function buildUrl(paramsObj) {
-  if (!EXEC_BASE) throw new Error('Geen Exec-URL geconfigureerd. Voeg een <meta name="superhond-exec"> toe.');
-  const url = new URL(EXEC_BASE);
-  if (paramsObj) {
-    Object.entries(paramsObj).forEach(([k, v]) => {
-      if (v != null && v !== '') url.searchParams.set(k, String(v));
-    });
-  }
-  return url.toString();
-}
-
-async function getJSON(paramsObj, { timeout = DEFAULT_TIMEOUT, signal } = {}) {
-  return withRetry(async () => {
-    const url = buildUrl(paramsObj);
-    const res = await fetchWithTimeout(url, { method: 'GET', signal }, timeout);
-    const text = await res.text();
-
-    let json;
-    try { json = JSON.parse(text); }
-    catch { throw new Error(`Geen geldige JSON (status ${res.status}): ${peekBody(text)}`); }
-
-    if (!res.ok || json?.ok === false) {
-      const err = json?.error || `Upstream ${res.status}`;
-      throw new Error(`${err}: ${peekBody(text)}`);
-    }
-    return json;
-  });
-}
-
-async function postJSON(body, paramsObj, { timeout = DEFAULT_TIMEOUT, signal } = {}) {
-  const bodyText = typeof body === 'string' ? body : JSON.stringify(body || {});
-  return withRetry(async () => {
-    const url = buildUrl(paramsObj);
-    const res = await fetchWithTimeout(
-      url,
-      { method: 'POST', headers: { 'Content-Type': 'text/plain; charset=utf-8' }, body: bodyText, signal },
-      timeout
+    const left = el(
+      'div',
+      { class: 'tb-left' },
+      back
+        ? (typeof back === 'string'
+            ? el('a', { class: 'btn-back', href: back }, '← Terug')
+            : el('button', { class: 'btn-back', type: 'button' }, '← Terug'))
+        : null,
+      isDash
+        ? el('a', { class: 'brand', href: '../dashboard/' }, `${icon} ${title}`)
+        : el('span', { class: 'brand' }, `${icon} ${title}`)
     );
-    const text = await res.text();
-
-    let json;
-    try { json = JSON.parse(text); }
-    catch { throw new Error(`Geen geldige JSON (status ${res.status}): ${peekBody(text)}`); }
-
-    if (!res.ok || json?.ok === false) {
-      const err = json?.error || `Upstream ${res.status}`;
-      throw new Error(`${err}: ${peekBody(text)}`);
+    if (!isDash && back === true) {
+      left.querySelector('.btn-back')?.addEventListener('click', () => history.back());
     }
-    return json;
-  });
-}
 
-/* ───────────────────────────── Netwerk test ───────────────────────────── */
+    const ver = window.APP_BUILD || ('v' + APP_VERSION);
+    const right = el(
+      'div',
+      { class: 'tb-right' },
+      el('span', { class: 'status-dot ' + (online ? 'is-online' : 'is-offline') }),
+      el('span', { class: 'status-text' }, online ? 'Online' : 'Offline'),
+      el('span', { class: 'muted' }, ver)
+    );
 
-export async function pingExec() {
-  try {
-    await initFromConfig();
-    if (!EXEC_BASE) return false;
-    const url = buildUrl({ mode: 'ping', t: Date.now() });
-    const r = await fetchWithTimeout(url, { method: 'GET' }, 6000);
-    return r.ok;
-  } catch {
-    return false;
+    container.innerHTML = '';
+    const inner = el('div', { class: 'topbar-inner container' }, left, right);
+    container.append(inner);
+
+    container.style.background = isDash ? '#f4c400' : '#2563eb';
+    container.style.color = isDash ? '#000' : '#fff';
+
+    if (!document.getElementById('sh-topbar-style')) {
+      const s = el(
+        'style',
+        { id: 'sh-topbar-style' },
+        `
+      #topbar{position:sticky;top:0;z-index:50}
+      #topbar .topbar-inner{display:flex;align-items:center;gap:.75rem;min-height:56px;border-bottom:1px solid #e5e7eb}
+      .tb-left{display:flex;align-items:center;gap:.5rem}
+      .tb-right{margin-left:auto;display:flex;align-items:center;gap:.6rem}
+      .brand{font-weight:800;font-size:20px;text-decoration:none;color:inherit}
+      .btn-back{appearance:none;border:1px solid rgba(0,0,0,.15);background:#fff;color:#111827;border-radius:8px;padding:6px 10px;cursor:pointer}
+      .status-dot{width:.6rem;height:.6rem;border-radius:999px;display:inline-block;background:#9ca3af}
+      .status-dot.is-online{background:#16a34a}
+      .status-dot.is-offline{background:#ef4444}
+      .status-text{font-weight:600}
+      `
+      );
+      document.head.appendChild(s);
+    }
   }
-}
 
-/* ───────────────────────────── Publieke helpers ───────────────────────────── */
+  function renderFooter(container) {
+    if (!container) return;
+    const exec = getExecBase();
+    const ver = window.APP_BUILD || ('v' + APP_VERSION);
+    container.innerHTML = `
+      <div class="row" style="display:flex;gap:.75rem;justify-content:space-between;align-items:center;padding:1rem 0;border-top:1px solid #e5e7eb;color:#6b7280">
+        <div>© ${new Date().getFullYear()} Superhond</div>
+        <div><code>exec: ${exec ? exec.replace(/^https?:\/\/(www\.)?/, '') : 'n.v.t.'}</code></div>
+        <div>${ver}</div>
+      </div>`;
+    if (!exec) console.warn('[layout] Geen exec-URL beschikbaar via getExecBase()');
+  }
 
-export function normStatus(s) {
-  return String(s == null ? '' : s).trim().toLowerCase();
-}
+  function setOnline(ok) {
+    const d = document.querySelector('#topbar .status-dot');
+    const t = document.querySelector('#topbar .status-text');
+    if (d) {
+      d.classList.toggle('is-online', !!ok);
+      d.classList.toggle('is-offline', !ok);
+    }
+    if (t) t.textContent = ok ? 'Online' : 'Offline';
+  }
 
-export async function fetchSheet(tabName, opts = {}) {
-  const mode = String(tabName || '').toLowerCase();
-  if (!mode) throw new Error('tabName vereist');
-  const json = await getJSON({ mode }, opts);
-  return Array.isArray(json) ? json : (json?.data || []);
-}
+  async function mount(opts = {}) {
+    await new Promise((r) => onReady(r));
+    const path = location.pathname.replace(/\/+$/, '');
+    let isDash =
+      /\/dashboard$/.test(path) ||
+      /\/dashboard\/index\.html$/.test(path) ||
+      opts.home === true;
 
-export async function fetchAction(action, params = {}, opts = {}) {
-  const a = String(action || '').trim();
-  if (!a) throw new Error('action vereist');
-  const json = await getJSON({ action: a, ...params }, opts);
-  return Array.isArray(json) ? json : (json?.data || []);
-}
+    // Extra fallback: root pagina
+    if (!isDash && (path === '/index.html' || path === '/')) {
+      isDash = true;
+    }
 
-export async function postAction(entity, action, payload = {}, opts = {}) {
-  const e = String(entity || '').trim().toLowerCase();
-  const a = String(action || '').trim().toLowerCase();
-  if (!e || !a) throw new Error('entity en action vereist');
-  const json = await postJSON({ entity: e, action: a, payload }, undefined, opts);
-  return json?.data || {};
-}
+    document.body.classList.toggle('dashboard-page', isDash);
+    document.body.classList.toggle('subpage', !isDash);
 
-export const saveKlant = (data, opts) => postJSON(data, { mode: 'saveKlant' }, opts).then(j => j.data || {});
-export const saveHond  = (data, opts) => postJSON(data, { mode: 'saveHond'  }, opts).then(j => j.data || {});
-export const saveKlas  = (data, opts) => postJSON(data, { mode: 'saveKlas'  }, opts).then(j => j.data || {});
-export const saveLes   = (data, opts) => postJSON(data, { mode: 'saveLes'   }, opts).then(j => j.data || {});
+    const online = await pingExec();
+    renderTopbar(document.getElementById('topbar'), { ...opts, home: isDash }, online);
+    renderFooter(document.getElementById('footer'));
 
-/* ───────────────────────────── Auto-init ───────────────────────────── */
-(async function autoInit() {
-  try { await initFromConfig(); } catch {}
+    setInterval(async () => {
+      const ok = await pingExec();
+      setOnline(ok);
+    }, 45000);
+  }
+
+  window.SuperhondUI = Object.assign(window.SuperhondUI || {}, {
+    mount,
+    setOnline
+  });
 })();
