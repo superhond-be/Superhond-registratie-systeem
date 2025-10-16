@@ -57,17 +57,8 @@
   </main>
 
   <footer id="footer"></footer>
-<script type="module">
-  import '../js/layout.js?v=0.27.6';      // exporteert SuperhondUI
-  import '../js/klantagenda.js?v=0.1.0';  // bovenstaande file
-</script>  
 
-  <!-- ✅ Één module bootstrap. GEEN losse <script defer src="../js/layout.js"> meer -->
-  <script type="module">
-    import { SuperhondUI } from '../js/layout.js?v=0.27.6';
-    import '../js/klantagenda.js?v=0.1.0'; // dit script importeert niets extra’s voor layout
-    // Als jouw klantagenda.js zélf SuperhondUI.mount() NIET aanroept, dan kun je dat hier doen:
-    // SuperhondUI.mount({ title:'Agenda & Mededelingen', icon:'📅', back:'../dashboard/' });
-  </script>
+  <!-- ÉÉN module: klantagenda.js importeert zelf layout.js -->
+  <script type="module" src="../js/klantagenda.js?v=0.1.0"></script>
 </body>
 </html>
