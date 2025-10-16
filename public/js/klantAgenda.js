@@ -1,85 +1,129 @@
-<!doctype html>
-<html lang="nl">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Agenda & Mededelingen – Superhond</title>
+// public/js/klantagenda.js
 
-  <!-- Meta (mag blijven staan; de lokale variant gebruikt het niet) -->
-  <meta name="superhond-version" content="0.27.6" />
-  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec" />
+import { initFromConfig, fetchSheet } from './sheets.js';
 
-  <!-- CSS -->
-  <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
+const $ = (s, r=document) => r.querySelector(s);
 
-  <style>
-    .toolbar { margin:1rem 0; display:flex; gap:.5rem; flex-wrap:wrap; }
-    select.select {
-      padding:.4rem .75rem; font-size:.9rem; border:1px solid var(--border-color,#d1d5db);
-      border-radius:.375rem; background:var(--bg-input,#fff);
+function escapeHtml(s){
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
+  );
+}
+function toArrayRows(x){
+  if (Array.isArray(x)) return x;
+  if (x?.data && Array.isArray(x.data)) return x.data;
+  if (x?.rows && Array.isArray(x.rows)) return x.rows;
+  if (x?.result && Array.isArray(x.result)) return x.result;
+  return [];
+}
+function normalizeLes(r){
+  const o = Object.fromEntries(Object.entries(r||{}).map(([k,v])=>[String(k||'').toLowerCase(),v]));
+  return {
+    id:(o.id??'').toString(),
+    lesnaam:(o.naam??'').toString(),
+    datum:(o.datum??'').toString(),
+    tijd:(o.tijd??'').toString(),
+    locatie:(o.locatie??'').toString(),
+    groep:(o.groep??'').toString()
+  };
+}
+function normalizeMed(r){
+  const o = Object.fromEntries(Object.entries(r||{}).map(([k,v])=>[String(k||'').toLowerCase(),v]));
+  return {
+    id:(o.id??'').toString(),
+    inhoud:(o.inhoud??'').toString(),
+    datum:(o.datum??'').toString(),
+    tijd:(o.tijd??'').toString(),
+    targetLes:(o.targetles??'').toString(),
+    doelgroep:(o.doelgroep??'').toString(),
+    categorie:(o.categorie??'').toString(),
+    prioriteit:(o.prioriteit??'').toString(),
+    link:(o.link??'').toString(),
+    zichtbaar:String(o.zichtbaar??'').toLowerCase()!=='nee'
+  };
+}
+const currentFilters = { categorie:'', prioriteit:'' };
+
+function filterMededelingen(meds, opt){
+  const now = new Date();
+  return (meds||[]).filter(m=>{
+    if (!m.zichtbaar) return false;
+    if (opt.lesId && m.targetLes && m.targetLes!==opt.lesId) return false;
+    if (opt.dag && m.datum && m.datum!==opt.dag) return false;
+    if (opt.categorie && m.categorie && m.categorie!==opt.categorie) return false;
+    if (opt.prioriteit && m.prioriteit && m.prioriteit!==opt.prioriteit) return false;
+    if (m.datum){
+      const dt = new Date(`${m.datum}T${m.tijd||'00:00'}`);
+      if (dt < now) return false;
     }
-    select.select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 2px rgba(251,191,36,.3); }
+    return true;
+  });
+}
+function renderAgenda(lesData, medData){
+  const el = $('#agenda-list');
+  $('#agenda-loader')?.remove();
+  if (!lesData?.length){
+    el.innerHTML = `<p class="muted">Geen komende lessen.</p>`;
+    return;
+  }
+  el.innerHTML = lesData.map(l=>{
+    const meds = filterMededelingen(medData, {
+      lesId:l.id, dag:l.datum,
+      categorie: currentFilters.categorie,
+      prioriteit: currentFilters.prioriteit
+    });
+    return `
+      <div class="ag-punt">
+        <div class="ag-header"><strong>${escapeHtml(l.lesnaam)}</strong> — ${escapeHtml(l.datum)} ${escapeHtml(l.tijd)}</div>
+        <div class="info">📍 ${escapeHtml(l.locatie || 'Onbekende locatie')}</div>
+        ${meds.length ? `
+          <div class="mededelingen-onder ${meds.some(m=>m.prioriteit==='Hoog')?'urgent':''}">
+            ${meds.map(m=>{
+              const t = `${m.datum}${m.tijd?` ${m.tijd}`:''}`;
+              return `<small>${escapeHtml(t)} • ${escapeHtml(m.categorie||'')}</small>${escapeHtml(m.inhoud)}${m.link?` <a href="${escapeHtml(m.link)}">[Meer]</a>`:''}`;
+            }).join('<br>')}
+          </div>` : '' }
+      </div>`;
+  }).join('');
+}
 
-    .ag-punt { padding:.75rem; border-bottom:1px solid #e5e7eb; transition:background .2s; }
-    .ag-punt:hover { background:#f9fafb; cursor:pointer; }
-    .ag-punt:last-child { border-bottom:none; }
-    .ag-punt .info { color:#6b7280; font-size:.9rem; }
+// helper met timeout
+const withTimeout = (p, ms, label) => Promise.race([
+  p,
+  new Promise((_,rej)=>setTimeout(()=>rej(new Error(`timeout:${label}`)), ms))
+]);
 
-    .mededelingen-onder { margin-top:.5rem; padding-left:1rem; border-left:3px solid var(--accent); color:#374151; font-size:.9rem; }
-    .mededelingen-onder.urgent { border-left-color:#dc2626; background:#fef2f2; }
-    .mededelingen-onder small { display:block; color:#9ca3af; font-size:.8rem; margin-bottom:.25rem; }
+document.addEventListener('DOMContentLoaded', async () => {
+  // filters
+  document.getElementById('filter-categorie')?.addEventListener('change', e => {
+    currentFilters.categorie = e.target.value;
+    renderAgenda(window.__lesData||[], window.__medData||[]);
+  });
+  document.getElementById('filter-prioriteit')?.addEventListener('change', e => {
+    currentFilters.prioriteit = e.target.value;
+    renderAgenda(window.__lesData||[], window.__medData||[]);
+  });
 
-    .tabs .tab { padding:.4rem .8rem; font-size:.9rem; }
-  </style>
-</head>
+  let lesData=[], medData=[];
 
-<body class="subpage page-klantagenda">
-  <header id="topbar"></header>
+  try{
+    await withTimeout(initFromConfig(), 4000, 'init');
+    try {
+      const rawL = await withTimeout(fetchSheet('Lessen'), 4500, 'lessen');
+      lesData = toArrayRows(rawL).map(normalizeLes);
+    } catch(e){ console.warn('[Agenda] Lessen niet geladen:', e.message||e); }
 
-  <main class="container">
-    <h1 class="page-title">Agenda & Mededelingen</h1>
+    try {
+      const rawM = await withTimeout(fetchSheet('Mededelingen'), 4500, 'mededelingen');
+      medData = toArrayRows(rawM).map(normalizeMed);
+    } catch(e){ console.warn('[Agenda] Mededelingen niet geladen:', e.message||e); }
+  } catch(e){
+    console.warn('[Agenda] init timeout/fout:', e.message||e);
+  }
 
-    <!-- Filters -->
-    <div class="toolbar">
-      <select id="filter-categorie" class="select" aria-label="Filter categorie">
-        <option value="">Alle categorieën</option>
-        <option value="Weer">Weer</option>
-        <option value="Info">Info</option>
-        <option value="Boekingen">Boekingen</option>
-      </select>
-      <select id="filter-prioriteit" class="select" aria-label="Filter prioriteit">
-        <option value="">Alle prioriteiten</option>
-        <option value="Laag">Laag</option>
-        <option value="Normaal">Normaal</option>
-        <option value="Hoog">Hoog</option>
-      </select>
-    </div>
-
-    <!-- Agenda container -->
-    <section id="agenda-list" class="card">
-      <p class="muted" id="agenda-loader">⏳ Agenda wordt geladen…</p>
-    </section>
-  </main>
-
-  <footer id="footer"></footer>
-
-  <!-- Layout (blauwe balk / versie / back) -->
-  <script type="module">
-    import { SuperhondUI } from '../js/layout.js?v=0.27.6';
-
-    // Kies automatisch lokaal of productie-script
-    (async () => {
-      // Blauwe balk meteen mounten
-      SuperhondUI.mount({ title: 'Agenda & Mededelingen', icon: '📅', back: '../dashboard/' });
-
-      const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-      if (isLocal) {
-        await import('../js/klantagenda.local.js?v=0.1.0');     // ➜ Optie A of B (zie hieronder)
-      } else {
-        await import('../js/klantagenda.js?v=0.1.0');            // je “echte” (Sheets) versie
-      }
-    })();
-  </script>
-</body>
-</html>
+  // sort + render (ook als het leeg is)
+  lesData.sort((a,b)=>(`${a.datum} ${a.tijd||''}`).localeCompare(`${b.datum} ${b.tijd||''}`));
+  window.__lesData = lesData;
+  window.__medData = medData;
+  renderAgenda(lesData, medData);
+});
