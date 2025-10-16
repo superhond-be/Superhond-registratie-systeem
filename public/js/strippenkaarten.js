@@ -1,5 +1,5 @@
-/*
- * public/js/strippenkaarten.js — met actieknoppen
+/**
+ * public/js/strippenkaarten.js — met modal acties & validatie
  */
 
 import {
@@ -8,15 +8,16 @@ import {
   postAction
 } from './sheets.js';
 
-const $ = (s, r = document) => r.querySelector(s);
-const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 const collator = new Intl.Collator('nl', { sensitivity: 'base', numeric: true });
 
 let alleKaarten = [];
 
+// ─── Helpers ───
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c =>
-    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
+    ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c])
   );
 }
 
@@ -44,12 +45,13 @@ function normalize(row) {
   };
 }
 
+// ─── Rendering ───
 function renderKaarten(statusVal = 'ALL') {
   const tb = $('#s-tbody');
-  const count = $('#s-count');
+  const countEl = $('#s-count');
   const status = (statusVal || '').toLowerCase();
-  let rows = alleKaarten;
 
+  let rows = alleKaarten;
   if (status && status !== 'all') {
     rows = rows.filter(k => (k.status || '').toLowerCase() === status);
   }
@@ -77,9 +79,47 @@ function renderKaarten(statusVal = 'ALL') {
     }
     tb.appendChild(frag);
   }
-  count.textContent = `${rows.length} kaart${rows.length === 1 ? '' : 'en'}`;
+  countEl.textContent = `${rows.length} kaart${rows.length === 1 ? '' : 'en'}`;
 }
 
+// ─── Modals ───
+function ensureModalRoot() {
+  let root = document.getElementById('modal-root');
+  if (!root) {
+    root = document.createElement('div');
+    root.id = 'modal-root';
+    document.body.appendChild(root);
+  }
+  return root;
+}
+
+function closeModal() {
+  const root = document.getElementById('modal-root');
+  if (root) root.innerHTML = '';
+}
+
+function modal(contentHTML, { title = '' } = {}) {
+  ensureModalRoot();
+  const root = document.getElementById('modal-root');
+  root.innerHTML = `
+    <div class="sh-overlay" data-close="1" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
+      <div class="sh-modal">
+        <div class="sh-head">
+          <span>${escapeHtml(title)}</span>
+          <button class="sh-close" type="button" data-close="1">✕</button>
+        </div>
+        <div class="sh-body">${contentHTML}</div>
+      </div>
+    </div>`;
+  root.querySelector('.sh-overlay').addEventListener('click', (e) => {
+    if (e.target?.dataset?.close === '1') closeModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+  }, { once: true });
+}
+
+// ─── Actiehandlers ───
 function wireActions() {
   const tb = $('#s-tbody');
   if (!tb) return;
@@ -93,13 +133,14 @@ function wireActions() {
   });
 }
 
+// Bekijken
 function openView(id) {
   const k = alleKaarten.find(x => x.id === id);
   if (!k) {
     alert('Kaart niet gevonden');
     return;
   }
-  let html = `
+  const html = `
     <div><strong>Klant:</strong> ${escapeHtml(k.klant)}</div>
     <div><strong>Type:</strong> ${escapeHtml(k.type)}</div>
     <div><strong>Credits:</strong> ${escapeHtml(k.credits)}</div>
@@ -107,43 +148,71 @@ function openView(id) {
     <div><strong>Geldig tot:</strong> ${escapeHtml(k.geldig)}</div>
     <div><strong>Status:</strong> ${escapeHtml(k.status)}</div>
   `;
-  // gebruik modal zoals eerder in klassen/lessen
-  // modal(html, { title: 'Strippenkaart bekijken' });
-  alert(html); // tijdelijk
+  modal(html, { title: 'Strippenkaart bekijken' });
 }
 
+// Bewerken
 function openEdit(id) {
   const k = alleKaarten.find(x => x.id === id);
   if (!k) {
     alert('Kaart niet gevonden');
     return;
   }
-  let html = `
+  const html = `
     <form id="edit-form">
-      <div><label>Klant <input name="klant" value="${escapeHtml(k.klant)}" /></label></div>
-      <div><label>Type <input name="type" value="${escapeHtml(k.type)}" /></label></div>
-      <div><label>Credits <input name="credits" value="${escapeHtml(k.credits)}" /></label></div>
-      <div><label>Gebruikt <input name="gebruikt" value="${escapeHtml(k.gebruikt)}" /></label></div>
-      <div><label>Geldig tot <input name="geldig" value="${escapeHtml(k.geldig)}" /></label></div>
-      <div>
-        <label>Status
-          <select name="status">
-            <option value="actief" ${k.status === 'actief' ? 'selected' : ''}>actief</option>
-            <option value="vol" ${k.status === 'vol' ? 'selected' : ''}>vol</option>
-            <option value="verlopen" ${k.status === 'verlopen' ? 'selected' : ''}>verlopen</option>
-          </select>
-        </label>
-      </div>
-      <div style="margin-top:1em;">
-        <button data-close="1" type="button">Annuleren</button>
+      <div class="row"><div class="key">Klant</div><div><input name="klant" value="${escapeHtml(k.klant)}" required></div></div>
+      <div class="row"><div class="key">Type</div><div><input name="type" value="${escapeHtml(k.type)}"></div></div>
+      <div class="row"><div class="key">Credits</div><div><input name="credits" value="${escapeHtml(k.credits)}"></div></div>
+      <div class="row"><div class="key">Gebruikt</div><div><input name="gebruikt" value="${escapeHtml(k.gebruikt)}"></div></div>
+      <div class="row"><div class="key">Geldig tot</div><div><input name="geldig" value="${escapeHtml(k.geldig)}"></div></div>
+      <div class="row"><div class="key">Status</div><div>
+        <select name="status">
+          <option value="actief" ${k.status === 'actief' ? 'selected' : ''}>actief</option>
+          <option value="vol" ${k.status === 'vol' ? 'selected' : ''}>vol</option>
+          <option value="verlopen" ${k.status === 'verlopen' ? 'selected' : ''}>verlopen</option>
+        </select>
+      </div></div>
+      <div class="sh-foot" style="margin-top:1rem;">
+        <button type="button" data-close="1">Annuleren</button>
         <button type="submit">Opslaan</button>
       </div>
     </form>
   `;
-  // modal(html, { title: 'Strippenkaart bewerken' });
-  alert('Edit form:\n' + html); // placeholder
+  modal(html, { title: 'Strippenkaart bewerken' });
+
+  const form = document.getElementById('edit-form');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const payload = {
+      id,
+      klant:    String(fd.get('klant') || '').trim(),
+      type:     String(fd.get('type') || '').trim(),
+      credits:  String(fd.get('credits') || '').trim(),
+      gebruikt: String(fd.get('gebruikt') || '').trim(),
+      geldig:   String(fd.get('geldig') || '').trim(),
+      status:   String(fd.get('status') || '').trim(),
+    };
+
+    // eenvoudige validatie
+    if (!payload.klant) {
+      alert('Klant is verplicht');
+      return;
+    }
+
+    try {
+      await postAction('strippenkaart', 'update', payload);
+      // update lokaal object
+      Object.assign(k, normalize(payload));
+      renderKaarten($('#status')?.value || 'ALL');
+      closeModal();
+    } catch (err) {
+      alert('Opslaan mislukt: ' + (err?.message || err));
+    }
+  });
 }
 
+// Verwijderen
 function confirmDelete(id) {
   if (!confirm('Weet je zeker dat je deze kaart wilt verwijderen?')) return;
   deleteKaart(id);
@@ -154,13 +223,15 @@ async function deleteKaart(id) {
     await postAction('strippenkaart', 'delete', { id });
     alleKaarten = alleKaarten.filter(k => k.id !== id);
     renderKaarten($('#status')?.value || 'ALL');
+    closeModal();
   } catch (err) {
     alert('Verwijderen mislukt: ' + (err?.message || err));
   }
 }
 
-// Boot
+// ─── Boot / init ───
 document.addEventListener('DOMContentLoaded', async () => {
+  console.log('[Strippenkaarten] Initialiseren');
   await initFromConfig();
   $('#status')?.addEventListener('change', e => renderKaarten(e.target.value));
 
@@ -171,6 +242,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const raw = await fetchSheet('Strippenkaarten');
     const rows = toArrayRows(raw);
     alleKaarten = rows.map(normalize);
+    console.log('[Strippenkaarten] geladen kaarten:', alleKaarten.length);
     renderKaarten($('#status')?.value || 'ALL');
   } catch (err) {
     const errEl = $('#s-error');
@@ -178,5 +250,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       errEl.hidden = false;
       errEl.textContent = '❌ Fout laden: ' + (err?.message || err);
     }
+    console.error('[Strippenkaarten] fout bij laden:', err);
   }
 });
