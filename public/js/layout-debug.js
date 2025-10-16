@@ -2,13 +2,6 @@
  * layout-debug.js — Debug versie van layout met extra console.logs
  */
 
-<script type="module">
-  console.log('[DEBUG] script start');
-  import('../js/layout-debug.js')
-    .then(mod => console.log('[DEBUG] layout-debug geladen', mod))
-    .catch(err => console.error('[DEBUG] FOUT:', err));
-</script>
-
 import { getExecBase, pingExec } from './sheets.js';
 
 const APP_VERSION = '0.27.6-debug';
@@ -56,8 +49,6 @@ function renderTopbar(container, opts, online) {
 
   const ver = window.APP_BUILD || ('v' + APP_VERSION);
   const right = el('div', { class: 'tb-right' });
-
-  // In debug, we always append version
   right.append(el('span', { class: 'muted' }, ver));
 
   container.innerHTML = '';
@@ -72,7 +63,6 @@ function renderTopbar(container, opts, online) {
       'style',
       { id: 'sh-topbar-style-debug' },
       `
-      /* debug topbar styles */
       #topbar { position: sticky; top: 0; z-index: 500; }
       #topbar .topbar-inner { display: flex; align-items: center; gap: .75rem; min-height: 56px; border-bottom: 1px solid #e5e7eb; }
       .tb-left { display: flex; align-items: center; gap: .5rem; }
