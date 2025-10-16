@@ -2,6 +2,13 @@
  * layout-debug.js — Debug versie van layout met extra console.logs
  */
 
+<script type="module">
+  console.log('[DEBUG] script start');
+  import('../js/layout-debug.js')
+    .then(mod => console.log('[DEBUG] layout-debug geladen', mod))
+    .catch(err => console.error('[DEBUG] FOUT:', err));
+</script>
+
 import { getExecBase, pingExec } from './sheets.js';
 
 const APP_VERSION = '0.27.6-debug';
