@@ -26,27 +26,27 @@ function toArrayRows(x) {
 function normalizeLes(row) {
   const o = Object.fromEntries(Object.entries(row || {}).map(([k, v]) => [String(k || '').toLowerCase(), v]));
   return {
-    id: String(o.id ?? ''),
-    lesnaam: String(o.naam ?? ''),
-    datum: String(o.datum ?? ''),
-    tijd: String(o.tijd ?? ''),
-    locatie: String(o.locatie ?? ''),
-    groep: String(o.groep ?? '')
+    id: (o.id ?? '').toString(),
+    lesnaam: (o.naam ?? '').toString(),
+    datum: (o.datum ?? '').toString(),
+    tijd: (o.tijd ?? '').toString(),
+    locatie: (o.locatie ?? '').toString(),
+    groep: (o.groep ?? '').toString()
   };
 }
 
 function normalizeMed(row) {
   const o = Object.fromEntries(Object.entries(row || {}).map(([k, v]) => [String(k || '').toLowerCase(), v]));
   return {
-    id: String(o.id ?? ''),
-    inhoud: String(o.inhoud ?? ''),
-    datum: String(o.datum ?? ''),
-    tijd: String(o.tijd ?? ''),
-    targetLes: String(o.targetles ?? ''),
-    doelgroep: String(o.doelgroep ?? ''),
-    categorie: String(o.categorie ?? ''),
-    prioriteit: String(o.prioriteit ?? ''),
-    link: String(o.link ?? ''),
+    id: (o.id ?? '').toString(),
+    inhoud: (o.inhoud ?? '').toString(),
+    datum: (o.datum ?? '').toString(),
+    tijd: (o.tijd ?? '').toString(),
+    targetLes: (o.targetles ?? '').toString(),
+    doelgroep: (o.doelgroep ?? '').toString(),
+    categorie: (o.categorie ?? '').toString(),
+    prioriteit: (o.prioriteit ?? '').toString(),
+    link: (o.link ?? '').toString(),
     zichtbaar: String(o.zichtbaar ?? '').toLowerCase() !== 'nee'
   };
 }
@@ -74,10 +74,9 @@ function renderAgenda(lesData, medData) {
     return;
   }
   if (!lesData || !Array.isArray(lesData)) {
-    el.innerHTML = `<p class="error">Fout: lesData is niet correct geladen.</p>`;
+    el.innerHTML = `<p class="error">Interne fout: lesData is niet geldig.</p>`;
     return;
   }
-
   if (lesData.length === 0) {
     el.innerHTML = `<p class="muted">Geen komende lessen.</p>`;
     return;
@@ -114,74 +113,30 @@ function renderAgenda(lesData, medData) {
   el.innerHTML = html;
 }
 
-const currentFilters = { categorie: '', prioriteit: '' };
+const currentFilters = {
+  categorie: '',
+  prioriteit: ''
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('[Start] DOMContentLoaded');
+  console.log('[Fallback] DOM loaded');
 
-  try {
-    SuperhondUI.mount({
-      title: 'Agenda & Mededelingen',
-      icon: '📅',
-      back: '../dashboard/'
-    });
-    console.log('[Init] SuperhondUI mounted');
-  } catch (e) {
-    console.error('[Init] Error mounting UI:', e);
-  }
+  SuperhondUI.mount({
+    title: 'Agenda & Mededelingen (test modus)',
+    icon: '📅',
+    back: '../dashboard/'
+  });
 
-  try {
-    await initFromConfig();
-    console.log('[Init] Config geladen');
-  } catch (e) {
-    console.error('[Init] initFromConfig mislukt:', e);
-    // We kunnen doorgaan, maar fetchSheet zal falen
-  }
+  // je kunt hier testdata opzetten:
+  let lesData = [
+    { id: 'T1', lesnaam: 'Puppy Groep', datum: '2025-10-20', tijd: '09:00', locatie: 'Hal 1', groep: 'Puppy' },
+    { id: 'T2', lesnaam: 'Gevorderd', datum: '2025-10-21', tijd: '14:00', locatie: 'Hal 2', groep: 'Gevorderd' }
+  ];
+  let medData = [
+    { id: 'M1', inhoud: 'Breng regenjas mee', datum: '2025-10-20', tijd: '08:00', targetLes: 'T1', doelgroep: 'klant', categorie: 'Weer', prioriteit: 'Laag', link: '', zichtbaar: true },
+    { id: 'M2', inhoud: 'Let op: les verlaat uur', datum: '2025-10-21', tijd: '13:30', targetLes: 'T2', doelgroep: 'klant', categorie: 'Info', prioriteit: 'Normaal', link: '', zichtbaar: true }
+  ];
 
-  let lesData = [], medData = [];
-
-  try {
-    const useLocalTemplates = true;
-    const templates = await loadEmailTemplates(useLocalTemplates);
-    console.log('[Load] EmailTemplates geladen:', templates);
-  } catch (e) {
-    console.error('[Load] loadEmailTemplates mislukt:', e);
-  }
-
-  try {
-    const rawL = await fetchSheet('Lessen');
-    console.log('[Load] Ruwe Lessen:', rawL);
-    lesData = toArrayRows(rawL).map(normalizeLes);
-    console.log('[Norm] lesData:', lesData);
-  } catch (e) {
-    console.error('[Load] fetchSheet Lessen mislukt:', e);
-  }
-
-  try {
-    const rawM = await fetchSheet('Mededelingen');
-    console.log('[Load] Ruwe Mededelingen:', rawM);
-    medData = toArrayRows(rawM).map(normalizeMed);
-    console.log('[Norm] medData:', medData);
-  } catch (e) {
-    console.error('[Load] fetchSheet Mededelingen mislukt:', e);
-  }
-
-  // Sorteer lessen
-  try {
-    lesData.sort((a, b) => {
-      const da = `${a.datum} ${a.tijd}`;
-      const db = `${b.datum} ${b.tijd}`;
-      return da.localeCompare(db);
-    });
-  } catch (e) {
-    console.error('[Sort] sorteren mislukt:', e);
-  }
-
-  // Renderen
-  try {
-    renderAgenda(lesData, medData);
-    console.log('[Render] agenda getoond');
-  } catch (e) {
-    console.error('[Render] renderAgenda mislukt:', e);
-  }
+  // Render meteen met testdata
+  renderAgenda(lesData, medData);
 });
