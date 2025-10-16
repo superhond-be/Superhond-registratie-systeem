@@ -31,14 +31,23 @@
     <h1 class="page-title">Hoofdmenu</h1>
 
     <nav class="tiles" aria-label="Hoofdmenu">
-      <!-- Hier komen je tegels -->
-      <!-- <a class="tile" href="../klanten/">👤 Klanten</a> -->
+      <a class="tile" href="../klanten/">👤 Klanten</a>
+      <a class="tile" href="../honden/">🐶 Honden</a>
+      <a class="tile" href="../lessen/">📅 Lessen</a>
+      <a class="tile" href="../agenda/">🗓️ Agenda</a>
+      <a class="tile" href="../mededeling/">📢 Mededelingen</a>
+      <a class="tile" href="../instellingen/">⚙️ Instellingen</a>
     </nav>
   </main>
 
   <footer id="footer" class="footer"></footer>
 
-  <!-- ✅ Alles via module -->
-  <script type="module" src="../js/dashboard.js?v=0.27.5"></script>
+  <!-- ✅ Alles via modules -->
+  <script type="module">
+    import { SuperhondUI } from '../js/layout.js';
+    import '../js/dashboard.js?v=0.27.5';
+
+    SuperhondUI.mount({ title: 'Superhond', icon: '🐾', home: true });
+  </script>
 </body>
 </html>
