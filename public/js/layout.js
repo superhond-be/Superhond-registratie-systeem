@@ -1,11 +1,13 @@
 /**
- * public/js/layout.js — SuperhondUI bar & footer (v0.27.5)
- * Werkt als ES module, exporteert SuperhondUI
+ * layout.js v0.27.6 — Topbar, Footer en Online-status
+ * ✅ Gele balk = dashboard
+ * ✅ Blauwe balk = subpagina
+ * ✅ Online/offline indicator + versie + exec-URL
  */
 
 import { getExecBase, pingExec } from './sheets.js';
 
-const APP_VERSION = '0.27.5';
+const APP_VERSION = '0.27.6';
 
 const onReady = (cb) =>
   document.readyState !== 'loading'
@@ -20,17 +22,14 @@ const el = (tag, attrs = {}, ...kids) => {
     else if (k === 'html') n.innerHTML = v;
     else n.setAttribute(k, v);
   }
-  for (const c of kids) {
-    n.append(c?.nodeType ? c : document.createTextNode(String(c)));
-  }
+  for (const c of kids) n.append(c?.nodeType ? c : document.createTextNode(String(c)));
   return n;
 };
 
 function renderTopbar(container, opts, online) {
   if (!container) return;
   const { title = 'Superhond', icon = '🐾', home = null, back = null } = opts || {};
-  const isDash =
-    home === true || document.body.classList.contains('dashboard-page');
+  const isDash = home === true || document.body.classList.contains('dashboard-page');
 
   const left = el(
     'div',
@@ -41,10 +40,9 @@ function renderTopbar(container, opts, online) {
           : el('button', { class: 'btn-back', type: 'button' }, '← Terug'))
       : null,
     isDash
-      ? el('a', { class: 'brand', href: './' }, `${icon} ${title}`)
+      ? el('a', { class: 'brand', href: '../dashboard/' }, `${icon} ${title}`)
       : el('span', { class: 'brand' }, `${icon} ${title}`)
   );
-
   if (!isDash && back === true) {
     left.querySelector('.btn-back')?.addEventListener('click', () => history.back());
   }
@@ -62,24 +60,26 @@ function renderTopbar(container, opts, online) {
   const inner = el('div', { class: 'topbar-inner container' }, left, right);
   container.append(inner);
 
+  // kleuren
   container.style.background = isDash ? '#f4c400' : '#2563eb';
   container.style.color = isDash ? '#000' : '#fff';
 
+  // injecteer CSS
   if (!document.getElementById('sh-topbar-style')) {
     const s = el(
       'style',
       { id: 'sh-topbar-style' },
       `
-      #topbar { position: sticky; top: 0; z-index: 50; }
-      #topbar .topbar-inner { display: flex; align-items: center; gap: .75rem; min-height: 56px; border-bottom: 1px solid #e5e7eb; }
-      .tb-left { display: flex; align-items: center; gap: .5rem; }
-      .tb-right { margin-left: auto; display: flex; align-items: center; gap: .6rem; }
-      .brand { font-weight: 800; font-size: 20px; text-decoration: none; color: inherit; }
-      .btn-back { appearance: none; border: 1px solid rgba(0,0,0,.15); background: #fff; color: #111827; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
-      .status-dot { width: .6rem; height: .6rem; border-radius: 999px; display: inline-block; background: #9ca3af; }
-      .status-dot.is-online { background: #16a34a; }
-      .status-dot.is-offline { background: #ef4444; }
-      .status-text { font-weight: 600; }
+      #topbar{position:sticky;top:0;z-index:50}
+      #topbar .topbar-inner{display:flex;align-items:center;gap:.75rem;min-height:56px;border-bottom:1px solid #e5e7eb}
+      .tb-left{display:flex;align-items:center;gap:.5rem}
+      .tb-right{margin-left:auto;display:flex;align-items:center;gap:.6rem}
+      .brand{font-weight:800;font-size:20px;text-decoration:none;color:inherit}
+      .btn-back{appearance:none;border:1px solid rgba(0,0,0,.15);background:#fff;color:#111827;border-radius:8px;padding:6px 10px;cursor:pointer}
+      .status-dot{width:.6rem;height:.6rem;border-radius:999px;display:inline-block;background:#9ca3af}
+      .status-dot.is-online{background:#16a34a}
+      .status-dot.is-offline{background:#ef4444}
+      .status-text{font-weight:600}
       `
     );
     document.head.appendChild(s);
@@ -91,13 +91,11 @@ function renderFooter(container) {
   const exec = getExecBase();
   const ver = window.APP_BUILD || ('v' + APP_VERSION);
   container.innerHTML = `
-    <div class="row" style="display:flex; gap:.75rem; justify-content:space-between; align-items:center; padding:1rem 0; border-top:1px solid #e5e7eb; color:#6b7280;">
+    <div class="row" style="display:flex;gap:.75rem;justify-content:space-between;align-items:center;padding:1rem 0;border-top:1px solid #e5e7eb;color:#6b7280">
       <div>© ${new Date().getFullYear()} Superhond</div>
       <div><code>exec: ${exec ? exec.replace(/^https?:\/\/(www\.)?/, '') : 'n.v.t.'}</code></div>
       <div>${ver}</div>
-    </div>
-  `;
-  // optionele waarschuwing
+    </div>`;
   if (!exec) console.warn('[layout] Geen exec-URL beschikbaar via getExecBase()');
 }
 
@@ -112,9 +110,7 @@ function setOnline(ok) {
 }
 
 async function mount(opts = {}) {
-  await new Promise((resolve) => onReady(resolve));
-
-  // Bepaal of dashboard
+  await new Promise((r) => onReady(r));
   const path = location.pathname.replace(/\/+$/, '');
   let isDash =
     /\/dashboard$/.test(path) ||
@@ -138,4 +134,5 @@ async function mount(opts = {}) {
   }, 45000);
 }
 
+// ✅ exporteren voor modules
 export const SuperhondUI = { mount, setOnline };
