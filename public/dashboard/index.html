@@ -4,24 +4,40 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Superhond — Dashboard</title>
-  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
-  <meta name="superhond-branch" content="Ontwikkeling">
-  <meta name="superhond-version" content="0.27.6">
 
-  <link rel="stylesheet" href="../css/style.css?v=0.27.5" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.27.5" />
+  <!-- Versie/branch + directe GAS exec (worden door layout.js gebruikt) -->
+  <meta name="superhond-version" content="0.26.7">
+  <meta name="superhond-branch"  content="Ontwikkeling">
+  <!-- Zet hier jouw eigen EXEC-URL (exact de /exec) -->
+  <meta name="superhond-exec"    content="https://script.google.com/macros/s/AKfycbysc3pCUpgIxKl2aNPBgJGZIJcNcOvaqF48NG_NgBOGec9TIFKNSHS153NIsng0kE7E4Q/exec">
 
+  <!-- Centrale UI -->
+  <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
+
+  <!-- Dashboard-specifiek: GELE topbar hard-forceren (extra veiligheid) -->
   <style>
-    /* Forceren gele balk als dashboard */
     body.dashboard-page #topbar,
-    body.dashboard-page #topbar .topbar-inner {
-      background: var(--accent, #f4c400) !important;
-      color: #000 !important;
+    body.dashboard-page #topbar .topbar-inner{
+      background: var(--accent,#f4c400) !important;
+      color:#000 !important;
     }
+    body.dashboard-page .btn-back{border-color:#e5e7eb;background:#fff;color:#111827}
 
-    /* Optioneel: visualiseer de topbar zone tijdens debug */
-    #topbar {
-      border: 2px dashed red;
+    /* kleine lokale UI */
+    .tabs{display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
+    .tab{position:relative;padding:.4rem .8rem;border:1px solid #e5e7eb;border-radius:.5rem;background:#fff;cursor:pointer}
+    .tab.active{background:var(--accent,#f4c400);font-weight:600}
+    .tab .dot{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;font-size:11px;line-height:1;background:#111827;color:#fff}
+    .muted{color:#6b7280}
+    .error{color:#b91c1c}
+    .tile.badged{position:relative}
+    .tile .badge-dot{
+      position:absolute; top:8px; right:10px; min-width:22px; height:22px; padding:0 6px;
+      display:inline-flex; align-items:center; justify-content:center;
+      border-radius:999px; font-size:12px; line-height:1;
+      background:var(--accent,#f4c400); color:#000; border:1px solid rgba(0,0,0,.08);
+      box-shadow:0 1px 2px rgba(0,0,0,.08);
     }
   </style>
 </head>
@@ -30,27 +46,120 @@
 
   <main class="container" role="main">
     <h1 class="page-title">Hoofdmenu</h1>
+
+    <!-- TEGELS -->
     <nav class="tiles" aria-label="Hoofdmenu">
-      <a class="tile" href="../klanten/"><span>👤</span> Klanten</a>
-      <a class="tile" href="../honden/"><span>🐶</span> Honden</a>
-      <a class="tile" href="../lessen/"><span>📅</span> Lessen</a>
-      <a class="tile" href="../mededeling/"><span>📢</span> Mededelingen</a>
-      <a class="tile" href="../trainers/"><span>🧑‍🏫</span> Trainers</a>
-      <a class="tile" href="../rapporten/"><span>📈</span> Rapporten</a>
-      <a class="tile" href="../instellingen/"><span>⚙️</span> Instellingen</a>
-      <a class="tile" href="../over/"><span>ℹ️</span> Over</a>
+      <a class="tile" href="../klanten/"><span class="tile-icon">👤</span><div class="tile-body"><span class="tile-title">Klanten</span></div></a>
+      <a class="tile" href="../honden/"><span class="tile-icon">🐶</span><div class="tile-body"><span class="tile-title">Honden</span></div></a>
+      <a class="tile" href="../strippenkaarten/"><span class="tile-icon">🎫</span><div class="tile-body"><span class="tile-title">Strippenkaarten</span></div></a>
+
+      <a class="tile badged" href="../lessen/">
+        <span class="tile-icon">📅</span>
+        <div class="tile-body">
+          <span class="tile-title">Lessen</span>
+          <span class="tile-sub" id="lessen-week-sub">—</span>
+        </div>
+        <span class="badge-dot" id="lessen-week-badge" aria-label="Aantal lessen">0</span>
+      </a>
+
+      <a class="tile badged" href="../klassen/">
+        <span class="tile-icon">📚</span>
+        <div class="tile-body">
+          <span class="tile-title">Klassen</span>
+          <span class="tile-sub" id="klassen-sub">—</span>
+        </div>
+        <span class="badge-dot" id="klassen-badge" aria-label="Aantal actieve klassen">0</span>
+      </a>
+
+      <a class="tile badged" href="../lessenreeks/">
+        <span class="tile-icon">📦</span>
+        <div class="tile-body">
+          <span class="tile-title">Lessenreeksen</span>
+          <span class="tile-sub" id="reeksen-sub">—</span>
+        </div>
+        <span class="badge-dot" id="reeksen-badge" aria-label="Aantal actieve reeksen">0</span>
+      </a>
+
+      <a class="tile" href="../mededeling/"><span class="tile-icon">📢</span><div class="tile-body"><span class="tile-title">Mededelingen</span></div></a>
+      <a class="tile" href="../trainers/"><span class="tile-icon">🧑‍🏫</span><div class="tile-body"><span class="tile-title">Trainers</span></div></a>
+      <a class="tile" href="../rapporten/"><span class="tile-icon">📈</span><div class="tile-body"><span class="tile-title">Rapporten</span></div></a>
+      <a class="tile" href="../instellingen/"><span class="tile-icon">⚙️</span><div class="tile-body"><span class="tile-title">Instellingen</span></div></a>
+      <a class="tile" href="../over/"><span class="tile-icon">ℹ️</span><div class="tile-body"><span class="tile-title">Over</span></div></a>
+      <a class="tile" href="../lessen/beheer.html"><span class="tile-icon">⚙️</span><div class="tile-body"><span class="tile-title">Lessenbeheer</span></div></a>
+
+      <a class="tile" href="../admin/" data-admin-only style="display:none">
+        <span class="tile-icon">🛡️</span>
+        <div class="tile-body">
+          <span class="tile-title">Admin</span>
+          <span class="tile-sub">Config & Schema</span>
+        </div>
+      </a>
     </nav>
+
+    <!-- AGENDA -->
+    <section class="card" style="margin-top:1rem">
+      <h2 style="margin:0 0 .5rem">Agenda</h2>
+
+      <div class="tabs" id="agenda-tabs" role="tablist" aria-label="Agendaweergave">
+        <button class="tab active" data-tab="week" role="tab" aria-selected="true">Deze week <span class="dot" id="tab-week-dot">0</span></button>
+        <button class="tab" data-tab="alles" role="tab" aria-selected="false">Alles <span class="dot" id="tab-all-dot">0</span></button>
+        <button class="tab" data-tab="mededelingen" role="tab" aria-selected="false">Mededelingen <span class="dot" id="tab-notes-dot">0</span></button>
+      </div>
+
+      <div id="agenda-loader" class="muted">⏳ Laden…</div>
+      <div id="agenda-error" class="error" style="display:none"></div>
+
+      <div class="table-wrap" id="agenda-table-wrap" style="display:none;">
+        <table id="agenda-table" class="table">
+          <thead>
+            <tr><th>Naam</th><th>Datum</th><th>Locatie</th><th>Trainer(s)</th></tr>
+          </thead>
+          <tbody><!-- gevuld door ../js/agenda.js --></tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
   <footer id="footer" class="footer"></footer>
 
-  <script type="module">
-    import { SuperhondUI } from '../js/layout.js';
-    import '../js/dashboard.js?v=0.27.5';
+  <!-- Scripts -->
+  <!-- NIEUWE layout.js (zorgt voor gele balk + versie/branch + online) -->
+  <script defer src="../js/layout.js?v=0.24.6"></script>
 
-    console.log('[dashboard html] before mount');
-    SuperhondUI.mount({ title: 'Superhond', icon: '🐾', home: true });
-    console.log('[dashboard html] after mount');
+  <!-- Agenda + admin-gate (ongewijzigd) -->
+  <script defer src="../js/agenda.js?v=0.26.7"></script>
+  <script defer src="../js/admin-gate.js?v=0.26.7"></script>
+
+  <!-- Badges (actieve klassen/reeksen) -->
+  <script type="module">
+    const sheets = await import('../js/sheets.js?v=0.26.7');
+    const fetchSheet = sheets.fetchSheet;
+    const initFromConfig = sheets.initFromConfig;
+    const isActief = (s) => String(s||'').toLowerCase() === 'actief';
+
+    await initFromConfig();
+
+    async function updateBadges(){
+      try{
+        const [klassen, reeksen] = await Promise.all([fetchSheet('Klassen'), fetchSheet('Reeksen')]);
+        const actKl = (klassen||[]).filter(k => isActief(k.status)).length;
+        const actRs = (reeksen||[]).filter(r => isActief(r.status)).length;
+        document.getElementById('klassen-badge').textContent = String(actKl);
+        document.getElementById('klassen-sub').textContent   = actKl ? `${actKl} actief` : '—';
+        document.getElementById('reeksen-badge').textContent = String(actRs);
+        document.getElementById('reeksen-sub').textContent   = actRs ? `${actRs} actief` : '—';
+      } catch(e){
+        console.warn('Badges updaten faalde:', e?.message || e);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Mount als dashboard (forceert geel en verbergt back-knop)
+      window.SuperhondUI?.mount?.({ isDashboard:true, title:'Superhond', icon:'🐾' });
+      updateBadges();
+    });
   </script>
+
+  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist om het dashboard te laden.</p></noscript>
 </body>
 </html>
