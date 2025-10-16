@@ -5,9 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Honden – Superhond</title>
 
+  <!-- ✅ Correcte meta-tags -->
   <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
   <meta name="superhond-version" content="0.27.5">
-  <meta name="superhond-branch" content="Ontwikkeling">
+  <meta name="superhond-branch"  content="Ontwikkeling">
 
   <link rel="stylesheet" href="../css/style.css?v=0.27.5"/>
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.5"/>
@@ -27,7 +28,15 @@
 
       <div class="table-wrap" style="margin-top:.5rem">
         <table class="table" id="tbl">
-          <thead><tr><th>Naam</th><th>Ras</th><th>Geboortedatum</th><th>Eigenaar (id)</th><th style="width:1%">Acties</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Naam</th>
+              <th>Ras</th>
+              <th>Geboortedatum</th>
+              <th>Eigenaar (id)</th>
+              <th style="width:1%">Acties</th>
+            </tr>
+          </thead>
           <tbody></tbody>
         </table>
       </div>
@@ -54,8 +63,10 @@
 
   <footer id="footer" class="footer"></footer>
 
+  <!-- ✅ Alleen 1 module script, alles inladen via imports -->
   <script type="module">
     import { SuperhondUI } from '../js/layout.js';
+    import '../js/sheets.js?v=0.27.5';
     import '../js/honden.js?v=0.27.5';
 
     SuperhondUI.mount({ title: 'Honden', icon: '🐶', back: '../dashboard/' });
