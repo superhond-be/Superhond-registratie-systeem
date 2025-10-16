@@ -1,126 +1,157 @@
 /**
- * public/js/layout.js — Topbar & Footer mount (v0.27.3)
- * - Centrale gele topbar + footer
- * - Toont versienummer en build
- * - Detecteert Online/Offline status
- * - Compatibel met diagnose.js EXEC opslag
+ * public/js/layout.js — Topbar & Footer (v0.27.1)
+ * - Dashboard = gele balk, subpagina's = blauwe balk
+ * - Versie uit window.APP_BUILD of interne versie
+ * - Online/offline via directe ping naar GAS /exec (uit meta of localStorage)
+ * - SuperhondUI.mount({ title, icon, home, back }) + setOnline(ok)
  */
 
-(() => {
-  const $  = (sel, root = document) => root.querySelector(sel);
-  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+(function () {
+  const APP_VERSION = '0.27.1';
+  const LS_API = 'superhond:apiBase';
 
-  const VERSION = 'v0.27.3';
-  const BUILD = new Date().toISOString().slice(0, 10);
+  const onReady = (cb) =>
+    document.readyState !== 'loading'
+      ? cb()
+      : document.addEventListener('DOMContentLoaded', cb, { once: true });
 
-  // ───────────────────────── EXEC detectie (met patch)
+  const el = (tag, attrs = {}, ...kids) => {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v == null) continue;
+      if (k === 'class') n.className = v;
+      else if (k === 'html') n.innerHTML = v;
+      else n.setAttribute(k, v);
+    }
+    for (const c of kids) n.append(c?.nodeType ? c : document.createTextNode(String(c)));
+    return n;
+  };
+
   function resolveExecBase() {
-    // 1) localStorage (voorrang)
-    try {
-      const lsApi = localStorage.getItem('superhond:apiBase');
-      if (lsApi) return lsApi;
-      const lsExec = localStorage.getItem('superhond:exec');
-      if (lsExec) return lsExec;
-    } catch {}
-
-    // 2) window-variabele (fallback)
     if (typeof window.SUPERHOND_SHEETS_URL === 'string' && window.SUPERHOND_SHEETS_URL) {
       return window.SUPERHOND_SHEETS_URL;
     }
-
-    // 3) meta-tag (fallback)
     const meta = document.querySelector('meta[name="superhond-exec"]');
     if (meta?.content) return meta.content.trim();
-
-    // 4) Niets gevonden
+    try {
+      const ls = localStorage.getItem(LS_API);
+      if (ls) return ls.trim();
+    } catch {}
     return '';
   }
 
-  // ───────────────────────── UI render ─────────────────────────
-  function renderTopbar() {
-    const el = $('#topbar');
-    if (!el) return;
-
-    const execBase = resolveExecBase();
-    const shortExec = execBase
-      ? execBase.replace(/^https?:\/\/(www\.)?/, '').slice(0, 50) + (execBase.length > 50 ? '…' : '')
-      : 'geen koppeling';
-
-    el.innerHTML = `
-      <div class="topbar-inner" style="background:#FFD500;display:flex;align-items:center;justify-content:space-between;padding:.5rem 1rem">
-        <div class="left">
-          <a href="/dashboard/" class="logo" style="text-decoration:none;color:#111;font-weight:700">🐶 Superhond</a>
-        </div>
-        <div class="right" style="display:flex;align-items:center;gap:.75rem">
-          <span id="netstatus" class="badge offline" title="Geen verbinding">offline</span>
-          <span class="version" title="${execBase}">${VERSION}</span>
-        </div>
-      </div>`;
-  }
-
-  function renderFooter() {
-    const el = $('#footer');
-    if (!el) return;
-    const execBase = resolveExecBase();
-    el.innerHTML = `
-      <div class="footer-inner" style="padding:1rem;text-align:center;color:#6b7280;font-size:.85rem">
-        <p>Superhond Registratiesysteem — ${VERSION} • Build ${BUILD}</p>
-        <p><code>${execBase ? execBase.replace(/^https?:\/\/(www\.)?/, '') : 'geen EXEC gekoppeld'}</code></p>
-      </div>`;
-  }
-
-  // ───────────────────────── Online/Offline badge ─────────────────────────
-  function setOnline(isOnline = true) {
-    const el = $('#netstatus');
-    if (!el) return;
-    if (isOnline) {
-      el.textContent = 'online';
-      el.className = 'badge online';
-      el.style.background = '#22c55e';
-    } else {
-      el.textContent = 'offline';
-      el.className = 'badge offline';
-      el.style.background = '#ef4444';
+  async function pingDirect() {
+    const base = resolveExecBase();
+    if (!base) return false;
+    const url = base + (base.includes('?') ? '&' : '?') + 'mode=ping&t=' + Date.now();
+    try {
+      const r = await fetch(url, { cache: 'no-store' });
+      return r.ok;
+    } catch {
+      return false;
     }
   }
 
-  // ───────────────────────── Exporteer voor globale toegang ─────────────────────────
-  window.SuperhondUI = {
-    mount(opts = {}) {
-      renderTopbar();
-      renderFooter();
-      if (opts.title) document.title = `${opts.title} – Superhond`;
-      if (opts.icon && $('#page-icon')) $('#page-icon').textContent = opts.icon;
-      if (opts.back) {
-        const top = $('#topbar .left');
-        if (top) {
-          const link = document.createElement('a');
-          link.href = opts.back;
-          link.textContent = '← Terug';
-          link.style.marginRight = '1rem';
-          top.prepend(link);
-        }
-      }
-      setOnline(false); // standaard = offline, tot eerste ping
-    },
-    setOnline,
-    resolveExecBase,
-  };
+  function renderTopbar(container, opts, online) {
+    if (!container) return;
+    const { title = 'Superhond', icon = '🐾', home = null, back = null } = opts || {};
+    const isDash = home === true || document.body.classList.contains('dashboard-page');
 
-  // ───────────────────────── Init ─────────────────────────
-  document.addEventListener('DOMContentLoaded', () => {
-    renderTopbar();
-    renderFooter();
-
-    // Test verbinding kort na laden
-    const exec = resolveExecBase();
-    if (exec) {
-      const testUrl = exec + (exec.includes('?') ? '&' : '?') + 'mode=ping&t=' + Date.now();
-      fetch(testUrl, { cache: 'no-store' })
-        .then(r => r.ok ? setOnline(true) : setOnline(false))
-        .catch(() => setOnline(false));
-    } else {
-      setOnline(false);
+    const left = el(
+      'div',
+      { class: 'tb-left' },
+      back
+        ? (typeof back === 'string'
+            ? el('a', { class: 'btn-back', href: back }, '← Terug')
+            : el('button', { class: 'btn-back', type: 'button' }, '← Terug'))
+        : null,
+      isDash
+        ? el('a', { class: 'brand', href: '../dashboard/' }, `${icon} ${title}`)
+        : el('span', { class: 'brand' }, `${icon} ${title}`)
+    );
+    if (!isDash && back === true) {
+      left.querySelector('.btn-back')?.addEventListener('click', () => history.back());
     }
-  }, { once: true });
+
+    const ver = window.APP_BUILD || ('v' + APP_VERSION);
+    const right = el(
+      'div',
+      { class: 'tb-right' },
+      el('span', { class: 'status-dot ' + (online ? 'is-online' : 'is-offline') }),
+      el('span', { class: 'status-text' }, online ? 'Online' : 'Offline'),
+      el('span', { class: 'muted' }, ver)
+    );
+
+    container.innerHTML = '';
+    const inner = el('div', { class: 'topbar-inner container' }, left, right);
+    container.append(inner);
+
+    // kleur hard forceren
+    container.style.background = isDash ? '#f4c400' : '#2563eb';
+    container.style.color = isDash ? '#000' : '#fff';
+
+    // basis css (eenmalig)
+    if (!document.getElementById('sh-topbar-style')) {
+      const s = el(
+        'style',
+        { id: 'sh-topbar-style' },
+        `
+      #topbar{position:sticky;top:0;z-index:50}
+      #topbar .topbar-inner{display:flex;align-items:center;gap:.75rem;min-height:56px;border-bottom:1px solid #e5e7eb}
+      .tb-left{display:flex;align-items:center;gap:.5rem}
+      .tb-right{margin-left:auto;display:flex;align-items:center;gap:.6rem}
+      .brand{font-weight:800;font-size:20px;text-decoration:none;color:inherit}
+      .btn-back{appearance:none;border:1px solid rgba(0,0,0,.15);background:#fff;color:#111827;border-radius:8px;padding:6px 10px;cursor:pointer}
+      .status-dot{width:.6rem;height:.6rem;border-radius:999px;display:inline-block;background:#9ca3af}
+      .status-dot.is-online{background:#16a34a}
+      .status-dot.is-offline{background:#ef4444}
+      .status-text{font-weight:600}
+      `
+      );
+      document.head.appendChild(s);
+    }
+  }
+
+  function renderFooter(container) {
+    if (!container) return;
+    const exec = resolveExecBase() || 'n.v.t.';
+    const ver = window.APP_BUILD || ('v' + APP_VERSION);
+    container.innerHTML = `
+      <div class="row" style="display:flex;gap:.75rem;justify-content:space-between;align-items:center;padding:1rem 0;border-top:1px solid #e5e7eb;color:#6b7280">
+        <div>© ${new Date().getFullYear()} Superhond</div>
+        <div><code>exec: ${exec.replace(/^https?:\/\/(www\.)?/, '')}</code></div>
+        <div>${ver}</div>
+      </div>`;
+  }
+
+  function setOnline(ok) {
+    const d = document.querySelector('#topbar .status-dot');
+    const t = document.querySelector('#topbar .status-text');
+    if (d) {
+      d.classList.toggle('is-online', !!ok);
+      d.classList.toggle('is-offline', !ok);
+    }
+    if (t) t.textContent = ok ? 'Online' : 'Offline';
+  }
+
+  async function mount(opts = {}) {
+    await new Promise((r) => onReady(r));
+    const path = location.pathname.replace(/\/+$/, '');
+    const isDash =
+      /\/dashboard$/.test(path) || /\/dashboard\/index\.html$/.test(path) || opts.home === true;
+    document.body.classList.toggle('dashboard-page', isDash);
+    document.body.classList.toggle('subpage', !isDash);
+
+    const online = await pingDirect();
+    renderTopbar(document.getElementById('topbar'), { ...opts, home: isDash }, online);
+    renderFooter(document.getElementById('footer'));
+
+    // periodiek ping
+    setInterval(async () => setOnline(await pingDirect()), 45000);
+  }
+
+  window.SuperhondUI = Object.assign(window.SuperhondUI || {}, {
+    mount,
+    setOnline
+  });
 })();
