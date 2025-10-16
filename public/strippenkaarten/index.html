@@ -1,17 +1,23 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Strippenkaarten – Superhond</title>
-  <link rel="stylesheet" href="/ui/style.css?v=0.18.9">
-</head>
-<body>
-  <main class="container">
-    <section class="card">
-      <h2>Strippenkaarten</h2>
 
-      <div class="toolbar" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+  <!-- CSS volgens conventie -->
+  <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
+</head>
+
+<body class="subpage page-strippenkaarten">
+  <header id="topbar"></header>
+
+  <main class="container">
+    <h1 class="page-title">Strippenkaarten</h1>
+
+    <section class="card">
+      <div class="toolbar">
         <select id="status" class="select">
           <option value="ALL">Alle statussen</option>
           <option value="actief">Actief</option>
@@ -21,26 +27,55 @@
         <span class="badge" id="s-count">0 kaarten</span>
       </div>
 
-      <div class="table-wrap">
+      <div class="table-wrap" style="margin-top:.5rem">
         <table class="table">
           <thead>
             <tr>
-              <th>Klant</th><th>Type</th><th>Credits</th><th>Gebruikt</th><th>Geldig tot</th><th>Status</th><th>Acties</th>
+              <th>Klant</th>
+              <th>Type</th>
+              <th>Credits</th>
+              <th>Gebruikt</th>
+              <th>Geldig tot</th>
+              <th>Status</th>
+              <th style="width:1%">Acties</th>
             </tr>
           </thead>
           <tbody id="s-tbody"></tbody>
         </table>
       </div>
-      <div class="loader" id="s-loader">Laden…</div>
-      <p class="error" id="s-error" hidden></p>
+
+      <div id="s-loader" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
+      <p id="s-error" class="error" hidden></p>
     </section>
   </main>
 
-  <script src="/ui/layout.js?v=0.18.9"></script>
-  <script>SuperhondUI.mount({ title:'Strippenkaarten', icon:'🎫', back:'/' });</script>
+  <footer id="footer"></footer>
+
+  <!-- Scripts -->
+  <script defer src="../js/layout.js?v=0.27.6"></script>
   <script>
-    const sb=document.getElementById('s-tbody'), sc=document.getElementById('s-count');
-    (async()=>{ sb.innerHTML=''; sc.textContent='0 kaarten'; /* TODO: vullen */ })();
+    document.addEventListener('DOMContentLoaded', () => {
+      SuperhondUI?.mount?.({
+        title: 'Strippenkaarten',
+        icon: '🎫',
+        back: '../dashboard/'
+      });
+    });
+  </script>
+  <script type="module">
+    const sb = document.getElementById('s-tbody');
+    const sc = document.getElementById('s-count');
+    const loader = document.getElementById('s-loader');
+    const error = document.getElementById('s-error');
+
+    (async () => {
+      sb.innerHTML = '';
+      sc.textContent = '0 kaarten';
+      loader.textContent = '⏳ Laden…';
+      error.hidden = true;
+
+      // TODO: haal strippenkaarten op via sheets.js of API
+    })();
   </script>
 </body>
 </html>
