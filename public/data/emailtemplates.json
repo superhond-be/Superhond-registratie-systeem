@@ -1,0 +1,24 @@
+[
+  {
+    "templateId": "concept_herinnering",
+    "naam": "Herinnering: boeking in concept",
+    "trigger": "status_concept",
+    "onderwerp": "{{voornaam}}, je boeking wacht op bevestiging",
+    "body": "Beste {{voornaam}}, je boeking voor {{lesNaam}} op {{lesDatum}} staat nog in concept. Gelieve te bevestigen.",
+    "zichtbaar": "ja",
+    "automatisch": "nee",
+    "categorie": "Boekingen",
+    "doelgroep": "klant"
+  },
+  {
+    "templateId": "bevestiging_boeking",
+    "naam": "Bevestiging boeking",
+    "trigger": "status_bevestigd",
+    "onderwerp": "Je boeking is bevestigd, {{voornaam}}!",
+    "body": "Hallo {{voornaam}}, je boeking voor {{lesNaam}} op {{lesDatum}} is goedgekeurd. Tot dan!",
+    "zichtbaar": "ja",
+    "automatisch": "ja",
+    "categorie": "Boekingen",
+    "doelgroep": "klant"
+  }
+]
