@@ -1,28 +1,15 @@
 #!/bin/bash
-# 🚀 Superhond lokale testserver voor macOS
-# Locatie: hoofdmap van het project
-
+# 🛑 Superhond lokale testserver stoppen (macOS)
 echo "==========================================="
-echo "🐾 Superhond lokale testserver wordt gestart"
+echo "🛑  Superhond lokale testserver wordt gestopt"
 echo "==========================================="
 
-# Ga naar de map van dit script
-cd "$(dirname "$0")"
-
-# Controleer of 'serve' beschikbaar is, anders installeer tijdelijk
-if ! command -v serve &> /dev/null
-then
-  echo "ℹ️  'serve' is niet geïnstalleerd. Start via npx..."
-  npx serve public &
+# Zoek en beëindig processen die op poort 5000 luisteren
+PID=$(lsof -ti tcp:5000)
+if [ -n "$PID" ]; then
+  echo "Proces gevonden op poort 5000 (PID: $PID)"
+  kill -9 $PID
+  echo "✅ Server op poort 5000 gestopt."
 else
-  serve public &
+  echo "ℹ️  Geen actieve server gevonden op poort 5000."
 fi
-
-# Even wachten tot de server draait
-sleep 2
-
-# Open automatisch de klantagenda in de standaardbrowser
-open "http://localhost:5000/klantagenda/"
-
-echo "✅ Server gestart. Te bereiken op http://localhost:5000/"
-echo "Druk Ctrl+C om te stoppen."
