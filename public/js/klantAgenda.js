@@ -1,16 +1,11 @@
-/**
- * public/js/klantAgenda.js
- * Toont klantagenda + gekoppelde mededelingen, met blauwe balk
- */
-
 import {
   initFromConfig,
   fetchSheet
 } from './sheets.js';
 import { SuperhondUI } from './layout.js';
 
-const $ = (s, r = document) => r.querySelector(s);
-const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c =>
@@ -20,9 +15,9 @@ function escapeHtml(s) {
 
 function toArrayRows(x) {
   if (Array.isArray(x)) return x;
-  if (x && Array.isArray(x.data)) return x.data;
-  if (x && Array.isArray(x.rows)) return x.rows;
-  if (x && Array.isArray(x.result)) return x.result;
+  if (x && x.data && Array.isArray(x.data)) return x.data;
+  if (x && x.rows && Array.isArray(x.rows)) return x.rows;
+  if (x && x.result && Array.isArray(x.result)) return x.result;
   return [];
 }
 
@@ -53,6 +48,9 @@ function normalizeMed(row) {
     tijd:      (o.tijd ?? '').toString(),
     targetLes: (o.targetles ?? '').toString(),
     doelgroep: (o.doelgroep ?? '').toString(),
+    categorie: (o.categorie ?? '').toString(),
+    prioriteit: (o.prioriteit ?? '').toString(),
+    link:      (o.link ?? '').toString(),
     zichtbaar: (String(o.zichtbaar ?? '').toLowerCase() !== 'nee')
   };
 }
@@ -63,6 +61,9 @@ function filterMededelingen(meds, opties) {
     if (!m.zichtbaar) return false;
     if (opties.lesId && m.targetLes && m.targetLes !== opties.lesId) return false;
     if (opties.dag && m.datum && m.datum !== opties.dag) return false;
+    if (opties.categorie && m.categorie && m.categorie !== opties.categorie) return false;
+    if (opties.prioriteit && m.prioriteit && m.prioriteit !== opties.prioriteit) return false;
+
     if (m.datum) {
       const dt = new Date(m.datum + (m.tijd ? `T${m.tijd}` : `T00:00`));
       if (dt < now) return false;
@@ -71,27 +72,31 @@ function filterMededelingen(meds, opties) {
   });
 }
 
-function renderAgenda(agendas, mededelingen) {
+function renderAgenda(lesData, medData) {
   const el = $('#agenda-list');
   if (!el) return;
-  if (!agendas.length) {
+  if (!lesData.length) {
     el.innerHTML = `<p class="muted">Geen komende lessen.</p>`;
     return;
   }
-  const html = agendas.map(l => {
-    const medsFor = filterMededelingen(mededelingen, {
+  const html = lesData.map(l => {
+    const meds = filterMededelingen(medData, {
       lesId: l.id,
-      dag: l.datum
+      dag: l.datum,
+      categorie: currentFilters.categorie,
+      prioriteit: currentFilters.prioriteit
     });
     return `
       <div class="ag-punt">
-        <div><strong>${escapeHtml(l.lesnaam)}</strong> — ${escapeHtml(l.datum)} ${escapeHtml(l.tijd)}</div>
+        <div class="ag-header">
+          <strong>${escapeHtml(l.lesnaam)}</strong> — ${escapeHtml(l.datum)} ${escapeHtml(l.tijd)}
+        </div>
         <div class="info">📍 ${escapeHtml(l.locatie || 'Onbekend locatie')}</div>
-        ${medsFor.length ? `
-          <div class="mededelingen-onder">
-            ${medsFor.map(m => {
+        ${meds.length ? `
+          <div class="mededelingen-onder ${meds.some(m=>m.prioriteit==='Hoog') ? 'urgent' : ''}">
+            ${meds.map(m => {
               const tijd = m.datum + (m.tijd ? ` ${m.tijd}` : '');
-              return `<small>${escapeHtml(tijd)}</small>${escapeHtml(m.inhoud)}`;
+              return `<small>${escapeHtml(tijd)} • ${escapeHtml(m.categorie)}</small>${escapeHtml(m.inhoud)}${m.link ? ` <a href="${escapeHtml(m.link)}">[Meer]</a>` : ''}`;
             }).join('<br>')}
           </div>
         ` : ''}
@@ -101,19 +106,28 @@ function renderAgenda(agendas, mededelingen) {
   el.innerHTML = html;
 }
 
+const currentFilters = {
+  categorie: '',
+  prioriteit: ''
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
-  // Topbar + mount
   SuperhondUI.mount({
     title: 'Agenda & Mededelingen',
     icon: '📅',
-    back: '../dashboard/',
-    home: false
+    back: '../dashboard/'
   });
 
   await initFromConfig();
 
-  const params = new URLSearchParams(location.search);
-  const klantId = params.get('klantId') || '';
+  $('#filter-categorie')?.addEventListener('change', e => {
+    currentFilters.categorie = e.target.value;
+    renderAgenda(lesData, medData);
+  });
+  $('#filter-prioriteit')?.addEventListener('change', e => {
+    currentFilters.prioriteit = e.target.value;
+    renderAgenda(lesData, medData);
+  });
 
   let lesData = [];
   let medData = [];
@@ -121,7 +135,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const rawL = await fetchSheet('Lessen');
     lesData = toArrayRows(rawL).map(normalizeLes);
-    // Optioneel filteren op klantId
   } catch (e) {
     console.error('Fout bij laden lessen:', e);
   }
@@ -133,7 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('Fout bij laden mededelingen:', e);
   }
 
-  lesData.sort((a, b) => {
+  lesData.sort((a,b) => {
     const da = a.datum + ' ' + (a.tijd || '');
     const db = b.datum + ' ' + (b.tijd || '');
     return da.localeCompare(db);
