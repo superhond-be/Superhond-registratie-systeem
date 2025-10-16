@@ -1,8 +1,7 @@
 /**
  * layout.js v0.27.6 — Topbar, Footer en Online-status
- * ✅ Gele balk = dashboard
- * ✅ Blauwe balk = subpagina
- * ✅ Online/offline indicator + versie + exec-URL
+ * ✅ Gele balk = dashboard (alleen versie)
+ * ✅ Blauwe balk = subpagina (statusdot + versie)
  */
 
 import { getExecBase, pingExec } from './sheets.js';
@@ -48,13 +47,16 @@ function renderTopbar(container, opts, online) {
   }
 
   const ver = window.APP_BUILD || ('v' + APP_VERSION);
-  const right = el(
-    'div',
-    { class: 'tb-right' },
-    el('span', { class: 'status-dot ' + (online ? 'is-online' : 'is-offline') }),
-    el('span', { class: 'status-text' }, online ? 'Online' : 'Offline'),
-    el('span', { class: 'muted' }, ver)
-  );
+  const right = el('div', { class: 'tb-right' });
+
+  if (!isDash) {
+    right.append(
+      el('span', { class: 'status-dot ' + (online ? 'is-online' : 'is-offline') }),
+      el('span', { class: 'status-text' }, online ? 'Online' : 'Offline')
+    );
+  }
+
+  right.append(el('span', { class: 'muted' }, ver));
 
   container.innerHTML = '';
   const inner = el('div', { class: 'topbar-inner container' }, left, right);
@@ -128,11 +130,12 @@ async function mount(opts = {}) {
   renderTopbar(document.getElementById('topbar'), { ...opts, home: isDash }, online);
   renderFooter(document.getElementById('footer'));
 
-  setInterval(async () => {
-    const ok = await pingExec();
-    setOnline(ok);
-  }, 45000);
+  if (!isDash) {
+    setInterval(async () => {
+      const ok = await pingExec();
+      setOnline(ok);
+    }, 45000);
+  }
 }
 
-// ✅ exporteren voor modules
 export const SuperhondUI = { mount, setOnline };
