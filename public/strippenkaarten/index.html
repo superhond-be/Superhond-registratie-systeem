@@ -5,9 +5,17 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Strippenkaarten – Superhond</title>
 
-  <!-- CSS volgens conventie -->
+  <meta name="superhond-exec" content="YOUR_EXEC_URL_HIER" />
+  <meta name="superhond-version" content="0.27.6" />
+
   <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
+
+  <style>
+    footer#footer:empty {
+      display: none;
+    }
+  </style>
 </head>
 
 <body class="subpage page-strippenkaarten">
@@ -51,32 +59,19 @@
 
   <footer id="footer"></footer>
 
-  <!-- Scripts -->
-  <script type="module" src="/js/strippenkaarten.js?v=0.1.0"></script>
+  <!-- Eerst layout.js zodat SuperhondUI bestaat -->
   <script defer src="../js/layout.js?v=0.27.6"></script>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      SuperhondUI?.mount?.({
+      // Mount van topbar / versie
+      window.SuperhondUI?.mount?.({
         title: 'Strippenkaarten',
         icon: '🎫',
         back: '../dashboard/'
       });
     });
   </script>
-  <script type="module">
-    const sb = document.getElementById('s-tbody');
-    const sc = document.getElementById('s-count');
-    const loader = document.getElementById('s-loader');
-    const error = document.getElementById('s-error');
 
-    (async () => {
-      sb.innerHTML = '';
-      sc.textContent = '0 kaarten';
-      loader.textContent = '⏳ Laden…';
-      error.hidden = true;
-
-      // TODO: haal strippenkaarten op via sheets.js of API
-    })();
-  </script>
+  <script type="module" src="../js/strippenkaarten.js?v=0.1.0"></script>
 </body>
 </html>
