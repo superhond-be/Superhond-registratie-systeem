@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Superhond — Dashboard</title>
+  <title>Superhond — Dashboard (Debug)</title>
   <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
   <meta name="superhond-branch" content="Ontwikkeling">
   <meta name="superhond-version" content="0.27.6-debug">
@@ -17,13 +17,17 @@
       background: var(--accent, #f4c400) !important;
       color: #000 !important;
     }
+    /* Vizualiseer #topbar-gebied */
+    #topbar {
+      border: 2px dashed red;
+    }
   </style>
 </head>
 <body class="dashboard-page">
-  <header id="topbar"></header>
+  <header id="topbar">[TOPBAR PLACEHOLDER]</header>
 
   <main class="container" role="main">
-    <h1 class="page-title">Hoofdmenu</h1>
+    <h1 class="page-title">Hoofdmenu (DEBUG)</h1>
     <nav class="tiles" aria-label="Hoofdmenu">
       <a class="tile" href="../klanten/"><span>👤</span> Klanten</a>
       <a class="tile" href="../honden/"><span>🐶</span> Honden</a>
@@ -36,14 +40,16 @@
     </nav>
   </main>
 
-  <footer id="footer" class="footer"></footer>
+  <footer id="footer" class="footer">[FOOTER PLACEHOLDER]</footer>
 
   <script type="module">
+    console.log('[dashboard debug html] module script start');
     import { SuperhondUI } from '../js/layout-debug.js';
+    console.log('[dashboard debug html] imported layout-debug');
     import '../js/dashboard.js?v=0.27.5';
-
-    console.log('[dashboard debug] calling mount');
+    console.log('[dashboard debug html] imported dashboard.js');
     SuperhondUI.mount({ title: 'Superhond', icon: '🐾', home: true });
+    console.log('[dashboard debug html] after mount call');
   </script>
 </body>
 </html>
