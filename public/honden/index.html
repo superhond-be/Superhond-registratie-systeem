@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Honden – Superhond</title>
 
-  <!-- ✅ Juiste exec meta-tag -->
   <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
   <meta name="superhond-version" content="0.27.5">
   <meta name="superhond-branch" content="Ontwikkeling">
@@ -28,15 +27,7 @@
 
       <div class="table-wrap" style="margin-top:.5rem">
         <table class="table" id="tbl">
-          <thead>
-            <tr>
-              <th>Naam</th>
-              <th>Ras</th>
-              <th>Geboortedatum</th>
-              <th>Eigenaar (id)</th>
-              <th style="width:1%">Acties</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Naam</th><th>Ras</th><th>Geboortedatum</th><th>Eigenaar (id)</th><th style="width:1%">Acties</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -63,13 +54,11 @@
 
   <footer id="footer" class="footer"></footer>
 
-  <script defer src="../js/layout.js?v=0.27.5"></script>
-  <script type="module" src="../js/honden.js?v=0.27.5"></script>
+  <script type="module">
+    import { SuperhondUI } from '../js/layout.js';
+    import '../js/honden.js?v=0.27.5';
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      window.SuperhondUI?.mount?.({ title:'Honden', icon:'🐶', back:'../dashboard/' });
-    });
+    SuperhondUI.mount({ title: 'Honden', icon: '🐶', back: '../dashboard/' });
   </script>
 </body>
 </html>
