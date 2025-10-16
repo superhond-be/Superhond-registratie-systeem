@@ -5,39 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Superhond — Dashboard</title>
 
-  <!-- ✅ Enkel de juiste meta-tag -->
+  <!-- ✅ Meta-tags (versie en exec) -->
   <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
   <meta name="superhond-branch" content="Ontwikkeling">
   <meta name="superhond-version" content="0.27.5">
 
   <link rel="stylesheet" href="../css/style.css?v=0.27.5" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.5" />
-  <style>
-    /* ✅ Gele topbar voor dashboard forceren */
-    body.dashboard-page #topbar,
-    body.dashboard-page #topbar .topbar-inner {
-      background: var(--accent, #f4c400) !important;
-      color: #000 !important;
-    }
-
-    .tile.badged { position: relative; }
-    .tile .badge-dot {
-      position: absolute;
-      top: 8px;
-      right: 10px;
-      min-width: 22px;
-      height: 22px;
-      padding: 0 6px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 999px;
-      font-size: 12px;
-      background: var(--accent, #f4c400);
-      color: #000;
-      border: 1px solid rgba(0,0,0,.08);
-    }
-  </style>
 </head>
 <body class="dashboard-page">
   <header id="topbar"></header>
@@ -61,7 +35,7 @@
     </nav>
 
     <section class="card" style="margin-top:1rem">
-      <h2 style="margin:0 0 .5rem">Agenda</h2>
+      <h2>Agenda</h2>
       <div id="agenda-loader" class="muted">⏳ Laden…</div>
       <div class="table-wrap" id="agenda-table-wrap" style="display:none;">
         <table id="agenda-table" class="table">
@@ -69,18 +43,24 @@
           <tbody></tbody>
         </table>
       </div>
+      <div id="agenda-error" class="error" style="display:none;"></div>
     </section>
   </main>
 
   <footer id="footer" class="footer"></footer>
 
-  <script defer src="../js/layout.js?v=0.27.5"></script>
-  <!-- <script defer src="../js/agenda.js?v=0.27.5"></script> -->
+  <script type="module">
+    import { SuperhondUI } from '../js/layout.js';
+    import '../js/sheets.js?v=0.27.5';
+    import '../js/agenda.js?v=0.27.5';
 
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      window.SuperhondUI?.mount?.({ title: 'Superhond', icon: '🐾', home: true });
+    SuperhondUI.mount({
+      title: 'Superhond',
+      icon: '🐾',
+      home: true
     });
   </script>
+
+  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p></noscript>
 </body>
 </html>
