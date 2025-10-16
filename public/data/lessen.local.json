@@ -1,0 +1,5 @@
+// public/data/lessen.local.json
+[
+  { "id":"T1","lesnaam":"Puppy Groep","datum":"2025-10-20","tijd":"09:00","locatie":"Hal 1","groep":"Puppy" },
+  { "id":"T2","lesnaam":"Gevorderd","datum":"2025-10-21","tijd":"14:00","locatie":"Hal 2","groep":"Gevorderd" }
+]
