@@ -7,6 +7,8 @@ import {
 import { SuperhondUI } from './layout.js';
 import { loadEmailTemplates } from './emailTemplates.js';
 
+alert('✅ klantagenda.js geladen');
+
 const $ = (s, r = document) => r.querySelector(s);
 
 function escapeHtml(s) {
