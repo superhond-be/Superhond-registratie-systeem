@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Agenda & Mededelingen – Superhond</title>
 
-  <!-- Meta info -->
+  <!-- Meta (mag blijven staan; de lokale variant gebruikt het niet) -->
   <meta name="superhond-version" content="0.27.6" />
   <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec" />
 
@@ -44,9 +44,15 @@
     <div class="toolbar">
       <select id="filter-categorie" class="select" aria-label="Filter categorie">
         <option value="">Alle categorieën</option>
+        <option value="Weer">Weer</option>
+        <option value="Info">Info</option>
+        <option value="Boekingen">Boekingen</option>
       </select>
       <select id="filter-prioriteit" class="select" aria-label="Filter prioriteit">
         <option value="">Alle prioriteiten</option>
+        <option value="Laag">Laag</option>
+        <option value="Normaal">Normaal</option>
+        <option value="Hoog">Hoog</option>
       </select>
     </div>
 
@@ -58,7 +64,22 @@
 
   <footer id="footer"></footer>
 
-  <!-- ÉÉN module: klantagenda.js importeert zelf layout.js -->
-  <script type="module" src="../js/klantagenda.js?v=0.1.0"></script>
+  <!-- Layout (blauwe balk / versie / back) -->
+  <script type="module">
+    import { SuperhondUI } from '../js/layout.js?v=0.27.6';
+
+    // Kies automatisch lokaal of productie-script
+    (async () => {
+      // Blauwe balk meteen mounten
+      SuperhondUI.mount({ title: 'Agenda & Mededelingen', icon: '📅', back: '../dashboard/' });
+
+      const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      if (isLocal) {
+        await import('../js/klantagenda.local.js?v=0.1.0');     // ➜ Optie A of B (zie hieronder)
+      } else {
+        await import('../js/klantagenda.js?v=0.1.0');            // je “echte” (Sheets) versie
+      }
+    })();
+  </script>
 </body>
 </html>
