@@ -130,5 +130,6 @@ import { getExecBase, pingExec } from './sheets.js';
   window.SuperhondUI = Object.assign(window.SuperhondUI || {}, {
     mount,
     setOnline
-  });
+    
+  }export const SuperhondUI = { mount, setOnline };;
 })();
