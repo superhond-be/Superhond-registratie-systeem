@@ -5,12 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Lessenreeksen – Superhond</title>
 
-  <!-- Centrale UI -->
-  <link rel="stylesheet" href="../css/style.css?v=0.20.0" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.20.0" />
+  <meta name="superhond-version" content="0.27.6" />
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec" />
+
+  <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
 
   <style>
-    /* Kleine icon-only knoppen in Superhond proef-stijl */
     .icon-actions { display:flex; gap:.35rem; align-items:center; }
     .icon-btn{
       display:inline-flex; align-items:center; justify-content:center;
@@ -18,14 +19,10 @@
       background:#fff; cursor:pointer; text-decoration:none; color:#111827;
     }
     .icon-btn:hover{ background:#f8fafc; }
-    .icon{
-      width:18px; height:18px; display:inline-block; line-height:1; text-align:center;
-      font-style:normal;
-    }
+    .icon{ width:18px; height:18px; display:inline-block; line-height:1; text-align:center; }
     .icon-view::before{ content:"👁️"; }
     .icon-edit::before{ content:"✏️"; }
     .icon-del::before{ content:"🗑️"; }
-
     .table th:nth-child(1), .table td:nth-child(1){ width:34%; }
     .table th:nth-child(2), .table td:nth-child(2){ width:16%; }
     .table th:nth-child(3), .table td:nth-child(3){ width:14%; }
@@ -34,44 +31,53 @@
     .table th:nth-child(6), .table td:nth-child(6){ width:10%; white-space:nowrap; }
   </style>
 </head>
-<body class="subpage">
-<header id="topbar" class="topbar"></header>
+<body class="subpage page-lessenreeksen">
+  <header id="topbar"></header>
 
-<main class="container">
-  <h1 class="page-title">Lessenreeksen</h1>
+  <main class="container">
+    <h1 class="page-title">Lessenreeksen</h1>
 
-  <div class="card" style="margin-bottom:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-    <input id="zoek" class="input" type="search" placeholder="Zoek reeks…">
-    <a class="btn" href="./nieuw.html">➕ Nieuwe reeks</a>
-  </div>
+    <div class="card" style="margin-bottom:12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <input id="zoek" class="input" type="search" placeholder="Zoek reeks…" />
+      <a class="btn" href="./nieuw.html">➕ Nieuwe reeks</a>
+    </div>
 
-  <div id="loader" class="loader">⏳ Laden…</div>
-  <div id="error" class="error" style="display:none;"></div>
+    <div id="loader" class="loader">⏳ Laden…</div>
+    <div id="error" class="error" style="display:none;"></div>
 
-  <div class="table-wrap" id="wrap" style="display:none;">
-    <table id="tabel" class="table">
-      <thead>
-        <tr>
-          <th>Actief</th>
-          <th>Naam</th>
-          <th>Thema</th>
-          <th>Tijd</th>
-          <th>Aantal lessen</th>
-          <th>Prijs</th>
-          <th>Acties</th>
-        </tr>
-      </thead>
-      <tbody><!-- gevuld door index.js --></tbody>
-    </table>
-    <p class="muted" style="margin:.5rem 0 0">
-      Tip: zet <code>../data/lessenreeksen.json</code> of werk in <code>localStorage</code> via <em>Nieuwe reeks</em>.
-    </p>
-  </div>
-</main>
+    <div class="table-wrap" id="wrap" style="display:none;">
+      <table id="tabel" class="table">
+        <thead>
+          <tr>
+            <th>Actief</th>
+            <th>Naam</th>
+            <th>Thema</th>
+            <th>Tijd</th>
+            <th>Aantal lessen</th>
+            <th>Prijs</th>
+            <th>Acties</th>
+          </tr>
+        </thead>
+        <tbody><!-- gevuld door index.js --></tbody>
+      </table>
+      <p class="muted" style="margin:.5rem 0 0">
+        Tip: zet <code>../data/lessenreeksen.json</code> of werk in <code>localStorage</code> via <em>Nieuwe reeks</em>.
+      </p>
+    </div>
+  </main>
 
-<footer id="footer" class="footer"></footer>
+  <footer id="footer"></footer>
 
-<script src="../js/layout.js?v=0.20.0" defer></script>
-<script type="module" src="./index.js?v=0.20.0" defer></script>
+  <script type="module">
+    import { SuperhondUI } from '../js/layout.js';
+    import './index.js?v=0.20.0';
+
+    SuperhondUI.mount({
+      title: 'Lessenreeksen',
+      icon: '📦',
+      back: '../dashboard/',
+      home: false
+    });
+  </script>
 </body>
 </html>
