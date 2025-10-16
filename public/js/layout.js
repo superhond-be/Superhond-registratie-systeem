@@ -1,13 +1,7 @@
-/**
- * layout.js v0.27.6 — Topbar, Footer en Online-status
- * ✅ Gele balk = dashboard
- * ✅ Blauwe balk = subpagina
- * ✅ Online/offline indicator + versie + exec-URL
- */
-
+// layout.js — Superhond UI bar en footer (v0.27.5)
 import { getExecBase, pingExec } from './sheets.js';
 
-const APP_VERSION = '0.27.6';
+const APP_VERSION = '0.27.5';
 
 const onReady = (cb) =>
   document.readyState !== 'loading'
@@ -60,27 +54,25 @@ function renderTopbar(container, opts, online) {
   const inner = el('div', { class: 'topbar-inner container' }, left, right);
   container.append(inner);
 
-  // kleuren
   container.style.background = isDash ? '#f4c400' : '#2563eb';
   container.style.color = isDash ? '#000' : '#fff';
 
-  // injecteer CSS
   if (!document.getElementById('sh-topbar-style')) {
     const s = el(
       'style',
       { id: 'sh-topbar-style' },
       `
-      #topbar{position:sticky;top:0;z-index:50}
-      #topbar .topbar-inner{display:flex;align-items:center;gap:.75rem;min-height:56px;border-bottom:1px solid #e5e7eb}
-      .tb-left{display:flex;align-items:center;gap:.5rem}
-      .tb-right{margin-left:auto;display:flex;align-items:center;gap:.6rem}
-      .brand{font-weight:800;font-size:20px;text-decoration:none;color:inherit}
-      .btn-back{appearance:none;border:1px solid rgba(0,0,0,.15);background:#fff;color:#111827;border-radius:8px;padding:6px 10px;cursor:pointer}
-      .status-dot{width:.6rem;height:.6rem;border-radius:999px;display:inline-block;background:#9ca3af}
-      .status-dot.is-online{background:#16a34a}
-      .status-dot.is-offline{background:#ef4444}
-      .status-text{font-weight:600}
-      `
+    #topbar{position:sticky;top:0;z-index:50}
+    #topbar .topbar-inner{display:flex;align-items:center;gap:.75rem;min-height:56px;border-bottom:1px solid #e5e7eb}
+    .tb-left{display:flex;align-items:center;gap:.5rem}
+    .tb-right{margin-left:auto;display:flex;align-items:center;gap:.6rem}
+    .brand{font-weight:800;font-size:20px;text-decoration:none;color:inherit}
+    .btn-back{appearance:none;border:1px solid rgba(0,0,0,.15);background:#fff;color:#111827;border-radius:8px;padding:6px 10px;cursor:pointer}
+    .status-dot{width:.6rem;height:.6rem;border-radius:999px;display:inline-block;background:#9ca3af}
+    .status-dot.is-online{background:#16a34a}
+    .status-dot.is-offline{background:#ef4444}
+    .status-text{font-weight:600}
+    `
     );
     document.head.appendChild(s);
   }
@@ -134,5 +126,5 @@ async function mount(opts = {}) {
   }, 45000);
 }
 
-// ✅ exporteren voor modules
+// ✅ export als ES module
 export const SuperhondUI = { mount, setOnline };
