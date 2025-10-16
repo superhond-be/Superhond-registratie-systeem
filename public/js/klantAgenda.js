@@ -1,3 +1,34 @@
+
+import {
+  initFromConfig,
+  fetchSheet
+} from './sheets.js';
+import { SuperhondUI } from './layout.js';
+import { loadEmailTemplates } from './emailTemplates.js';
+
+const $ = (s, r = document) => r.querySelector(s);
+// ...
+
+document.addEventListener('DOMContentLoaded', async () => {
+  SuperhondUI.mount({
+    title: 'Agenda & Mededelingen',
+    icon: '📅',
+    back: '../dashboard/'
+  });
+
+  await initFromConfig();
+
+  // Kies hier: true = lokaal JSON gebruiken, false = Sheets backend gebruiken
+  const useLocalTemplates = true;
+
+  const templates = await loadEmailTemplates(useLocalTemplates);
+  console.log('Loaded email templates:', templates);
+
+  // Je kan templates nu gebruiken, bijv. in beheer of in individuele verzending
+
+  // Verder je bestaande code: laden van lessen, mededelingen, weergave ...
+});
+
 import {
   initFromConfig,
   fetchSheet
