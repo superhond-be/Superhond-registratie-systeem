@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Beheer E‑Mailtemplates – Superhond</title>
+
+  <meta name="superhond-version" content="0.27.6" />
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec" />
+
+  <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
+
+  <style>
+    .template-list {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .template-list th,
+    .template-list td {
+      border: 1px solid #e5e7eb;
+      padding: 0.5rem;
+    }
+    .template-list th {
+      background: #f3f4f6;
+    }
+    .btn-actions button {
+      margin-right: 0.5rem;
+    }
+    .form-section {
+      margin-top: 2rem;
+      border: 1px solid #d1d5db;
+      padding: 1rem;
+      border-radius: 0.5rem;
+    }
+    .form-section label {
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+    .form-section input,
+    .form-section select,
+    .form-section textarea {
+      width: 100%;
+      padding: 0.4rem;
+      margin-top: 0.2rem;
+      margin-bottom: 0.8rem;
+    }
+  </style>
+</head>
+<body class="subpage page-emailtemplates">
+  <header id="topbar"></header>
+
+  <main class="container">
+    <h1 class="page-title">E‑Mailtemplates Beheer</h1>
+
+    <!-- Lijst met templates -->
+    <section class="card">
+      <table class="template-list" id="tpl-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Naam</th>
+            <th>Trigger</th>
+            <th>Categorie</th>
+            <th>Doelgroep</th>
+            <th>Automatisch</th>
+            <th style="width:1%">Acties</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td colspan="7" class="muted">Laden…</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- Formulier voor toevoegen / bewerken -->
+    <section class="card form-section">
+      <h2 id="form-title">Nieuwe template</h2>
+      <form id="tpl-form">
+        <input name="templateId" placeholder="Template ID (uniek)" required />
+        <input name="naam" placeholder="Naam" required />
+        <input name="trigger" placeholder="Trigger (bv. status_concept)" required />
+        <input name="categorie" placeholder="Categorie" />
+        <input name="doelgroep" placeholder="Doelgroep" />
+        <select name="automatisch">
+          <option value="ja">Automatisch</option>
+          <option value="nee">Niet automatisch</option>
+        </select>
+        <input name="onderwerp" placeholder="Onderwerp (met {{placeholders}})" required />
+        <textarea name="body" rows="4" placeholder="Inhoud / body (met {{placeholders}})"></textarea>
+        <select name="zichtbaar">
+          <option value="ja">Zichtbaar</option>
+          <option value="nee">Niet zichtbaar</option>
+        </select>
+        <button type="submit">Opslaan</button>
+        <button type="button" id="btn-cancel">Annuleren</button>
+      </form>
+    </section>
+  </main>
+
+  <footer id="footer"></footer>
+
+  <script defer src="../js/layout.js?v=0.27.6"></script>
+  <script type="module" src="../js/emailtemplates-beheer.js?v=0.1.0"></script>
+</body>
+</html>
