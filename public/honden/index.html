@@ -20,9 +20,9 @@
     <h1 class="page-title">Honden</h1>
 
     <section class="card">
-      <div style="display:flex;gap:.5rem;align-items:center">
-        <input id="search" class="input" placeholder="Zoek op naam of chip…"/>
-        <button id="refresh" class="btn">🔄 Verversen</button>
+      <div class="toolbar">
+        <input id="search" class="input" placeholder="Zoek op naam of chip…" aria-label="Zoeken"/>
+        <button id="refresh" class="btn" type="button">🔄 Verversen</button>
       </div>
       <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
 
@@ -44,7 +44,7 @@
 
     <section class="card" style="margin-top:1rem">
       <h2>Nieuwe hond toevoegen</h2>
-      <form id="form-add" autocomplete="off">
+      <form id="form-add" class="form-grid" autocomplete="off">
         <input name="name" class="input" placeholder="Naam" required/>
         <input name="breed" class="input" placeholder="Ras"/>
         <input name="birthdate" class="input" type="date" placeholder="YYYY-MM-DD"/>
@@ -57,19 +57,25 @@
         </select>
         <button class="btn primary" type="submit">💾 Opslaan</button>
       </form>
-      <div id="form-msg" class="muted"></div>
+      <div id="form-msg" class="muted" role="status" aria-live="polite"></div>
     </section>
   </main>
 
   <footer id="footer" class="footer"></footer>
 
-  <!-- ✅ Alleen 1 module script, alles inladen via imports -->
+  <!-- ✅ Uniforme script-opbouw met klanten -->
   <script type="module">
     import { SuperhondUI } from '../js/layout.js';
-    import '../js/sheets.js?v=0.27.5';
     import '../js/honden.js?v=0.27.5';
 
-    SuperhondUI.mount({ title: 'Honden', icon: '🐶', back: '../dashboard/' });
+    SuperhondUI.mount({
+      title: 'Honden',
+      icon: '🐶',
+      back: '../dashboard/',
+      home: false
+    });
   </script>
+
+  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p></noscript>
 </body>
 </html>
