@@ -1,6 +1,6 @@
 /**
  * public/js/klantAgenda.js
- * Toont klantagenda + gekoppelde mededelingen
+ * Toont klantagenda + gekoppelde mededelingen met blauwe balk
  */
 
 import {
@@ -10,8 +10,8 @@ import {
 } from './sheets.js';
 import { SuperhondUI } from './layout.js';
 
-const $ = (s, r=document) => r.querySelector(s);
-const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c =>
@@ -62,7 +62,6 @@ function filterMededelingen(meds, opties) {
   const now = new Date();
   return meds.filter(m => {
     if (!m.zichtbaar) return false;
-    // Filter op targetLes of doelgroep of tijd
     if (opties.lesId && m.targetLes && m.targetLes !== opties.lesId) return false;
     if (opties.dag && m.datum && m.datum !== opties.dag) return false;
     if (m.datum) {
@@ -104,9 +103,16 @@ function renderAgenda(agendas, mededelingen) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Mount de topbar / blauwe balk / versie
+  SuperhondUI.mount({
+    title: 'Agenda',
+    icon: '📅',
+    back: '../dashboard/',
+    home: false
+  });
+
   await initFromConfig();
 
-  // We gaan ervan uit dat je klantId kent via sessie, token of URL param
   const params = new URLSearchParams(location.search);
   const klantId = params.get('klantId') || '';
 
@@ -114,9 +120,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   let medData = [];
 
   try {
-    const rawL = await fetchSheet('Lessen');  // of een sheet die jouw lessen van klanten bevat
+    const rawL = await fetchSheet('Lessen');
     lesData = toArrayRows(rawL).map(normalizeLes);
-    // Option: filter lessen per klantId
+    // Optioneel: filter op klantId indien je lesdata per klant hebt
   } catch (e) {
     console.error('Fout bij laden lessen:', e);
   }
@@ -128,7 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('Fout bij laden mededelingen:', e);
   }
 
-  // Sorteer op datum/tijd
+  // sorteer op datum + tijd
   lesData.sort((a, b) => {
     const da = a.datum + ' ' + (a.tijd || '');
     const db = b.datum + ' ' + (b.tijd || '');
