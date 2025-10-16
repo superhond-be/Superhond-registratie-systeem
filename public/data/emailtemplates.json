@@ -20,5 +20,60 @@
     "automatisch": "ja",
     "categorie": "Boekingen",
     "doelgroep": "klant"
+  },
+  {
+    "templateId": "verjaardag_hond",
+    "naam": "Verjaardagswens hond",
+    "trigger": "verjaardag_hond",
+    "onderwerp": "🎉 Proficiat met {{hondNaam}}'s verjaardag!",
+    "body": "Hoi {{voornaam}}, we wensen {{hondNaam}} een fantastische verjaardag toe vandaag! 🐾",
+    "zichtbaar": "ja",
+    "automatisch": "ja",
+    "categorie": "Verjaardagen",
+    "doelgroep": "klant"
+  },
+  {
+    "templateId": "les_herinnering",
+    "naam": "Herinnering: les morgen",
+    "trigger": "les_herinnering",
+    "onderwerp": "Reminder: les {{lesNaam}} morgen om {{lesTijd}}",
+    "body": "Beste {{voornaam}}, vergeet je les {{lesNaam}} op {{lesDatum}} om {{lesTijd}} niet. Tot dan!",
+    "zichtbaar": "ja",
+    "automatisch": "ja",
+    "categorie": "Herinneringen",
+    "doelgroep": "klant"
+  },
+  {
+    "templateId": "training_gewijzigd",
+    "naam": "Training gewijzigd",
+    "trigger": "les_gewijzigd",
+    "onderwerp": "Update: jouw les {{lesNaam}} is gewijzigd",
+    "body": "Hoi {{voornaam}}, let op: je les {{lesNaam}} op {{lesDatum}} is aangepast. Bekijk je agenda voor meer info.",
+    "zichtbaar": "ja",
+    "automatisch": "nee",
+    "categorie": "Planning",
+    "doelgroep": "klant"
+  },
+  {
+    "templateId": "trainer_toegewezen",
+    "naam": "Nieuwe les toegewezen",
+    "trigger": "nieuwe_les_trainer",
+    "onderwerp": "Je bent toegevoegd aan les {{lesNaam}}",
+    "body": "Hallo {{trainerNaam}}, je bent toegevoegd aan les {{lesNaam}} op {{lesDatum}} om {{lesTijd}}.",
+    "zichtbaar": "ja",
+    "automatisch": "ja",
+    "categorie": "Planning",
+    "doelgroep": "trainer"
+  },
+  {
+    "templateId": "groepsmail_annulatie",
+    "naam": "Annulering les (groep)",
+    "trigger": "les_geannuleerd",
+    "onderwerp": "Let op: les {{lesNaam}} is geannuleerd",
+    "body": "Beste allemaal, de les {{lesNaam}} op {{lesDatum}} is helaas geannuleerd. We houden jullie op de hoogte voor een nieuwe datum.",
+    "zichtbaar": "ja",
+    "automatisch": "ja",
+    "categorie": "Mededelingen",
+    "doelgroep": "klant"
   }
 ]
