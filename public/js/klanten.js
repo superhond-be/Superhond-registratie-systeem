@@ -1,16 +1,11 @@
-/**
- * public/js/klanten.js — Lijst + zoeken + toevoegen + acties (v0.27.4)
- * - Zelfde stijl als honden.js: één exec-bron via sheets.js
- * - Robuuste parsing, timeout/abort, console-log van exec-base
- */
-
 import {
   initFromConfig,
   fetchSheet,
   saveKlant,
-  postAction,
-  getBaseUrl,     // enkel voor debug/log
+  postAction
 } from './sheets.js';
+
+import { SuperhondUI } from './layout.js';
 
 const $  = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
@@ -22,7 +17,6 @@ let allRows = [];
 let viewRows = [];
 let lastAbort = null;
 
-/* ---------- helpers ---------- */
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c =>
     ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
@@ -65,7 +59,6 @@ function rowMatches(r, q){
   return hay.includes(q);
 }
 
-/* ---------- render ---------- */
 function render(rows){
   const tb = $('#tbl tbody'); if (!tb) return;
   tb.innerHTML = '';
@@ -97,7 +90,6 @@ const doFilter = () => {
   render(viewRows);
 };
 
-/* ---------- data ---------- */
 async function refresh(){
   if (lastAbort) lastAbort.abort();
   const ac = new AbortController(); lastAbort = ac;
@@ -106,7 +98,6 @@ async function refresh(){
   try{
     setState('⏳ Laden…');
 
-    // Probeer 'Klanten', val terug op 'Leden'
     let rows = [];
     try {
       rows = toArrayRows(await fetchSheet('Klanten', { signal: ac.signal, timeout: TIMEOUT_MS }));
@@ -118,12 +109,12 @@ async function refresh(){
     doFilter();
 
     setState(`✅ ${viewRows.length} klant${viewRows.length===1?'':'en'} geladen`);
-    window.SuperhondUI?.setOnline?.(true);
+    SuperhondUI.setOnline(true);
   } catch (e){
     if (e?.name === 'AbortError') return;
     console.error('[klanten] laden mislukt:', e);
     setState('❌ Laden mislukt: ' + (e?.message || e), 'error');
-    window.SuperhondUI?.setOnline?.(false);
+    SuperhondUI.setOnline(false);
   } finally {
     clearTimeout(t);
   }
@@ -156,7 +147,7 @@ async function onSubmit(e){
   if (msg){ msg.className='muted'; msg.textContent='⏳ Opslaan…'; }
 
   try{
-    const r  = await saveKlant(payload); // verwacht { id }
+    const r  = await saveKlant(payload);
     const id = r?.id || '';
     allRows.push(normalize({ id, naam: `${payload.voornaam} ${payload.achternaam}`.trim(), ...payload }));
     allRows.sort((a,b)=>collator.compare(a.naam||'', b.naam||''));
@@ -171,12 +162,10 @@ async function onSubmit(e){
   }
 }
 
-/* ---------- boot ---------- */
 document.addEventListener('DOMContentLoaded', async () => {
-  window.SuperhondUI?.mount?.({ title:'Klanten', icon:'👤', back:'../dashboard/' });
+  SuperhondUI.mount({ title:'Klanten', icon:'👤', back:'../dashboard/' });
 
   await initFromConfig();
-  try { console.info('[Klanten] exec base =', getBaseUrl?.() || '(onbekend)'); } catch {}
 
   $('#search')?.addEventListener('input', doFilter);
   $('#refresh')?.addEventListener('click', refresh);
