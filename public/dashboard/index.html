@@ -15,7 +15,6 @@
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.5" />
 
   <style>
-    /* ✅ Gele topbar forceren */
     body.dashboard-page #topbar,
     body.dashboard-page #topbar .topbar-inner {
       background: var(--accent, #f4c400) !important;
@@ -31,18 +30,20 @@
     <h1 class="page-title">Hoofdmenu</h1>
 
     <nav class="tiles" aria-label="Hoofdmenu">
-      <a class="tile" href="../klanten/">👤 Klanten</a>
-      <a class="tile" href="../honden/">🐶 Honden</a>
-      <a class="tile" href="../lessen/">📅 Lessen</a>
-      <a class="tile" href="../agenda/">🗓️ Agenda</a>
-      <a class="tile" href="../mededeling/">📢 Mededelingen</a>
-      <a class="tile" href="../instellingen/">⚙️ Instellingen</a>
+      <a class="tile" href="../klanten/"><span>👤</span> Klanten</a>
+      <a class="tile" href="../honden/"><span>🐶</span> Honden</a>
+      <a class="tile" href="../lessen/"><span>📅</span> Lessen</a>
+      <a class="tile" href="../agenda/"><span>🗓️</span> Agenda</a>
+      <a class="tile" href="../mededeling/"><span>📢</span> Mededelingen</a>
+      <a class="tile" href="../trainers/"><span>🧑‍🏫</span> Trainers</a>
+      <a class="tile" href="../rapporten/"><span>📈</span> Rapporten</a>
+      <a class="tile" href="../instellingen/"><span>⚙️</span> Instellingen</a>
+      <a class="tile" href="../over/"><span>ℹ️</span> Over</a>
     </nav>
   </main>
 
   <footer id="footer" class="footer"></footer>
 
-  <!-- ✅ Alles via modules -->
   <script type="module">
     import { SuperhondUI } from '../js/layout.js';
     import '../js/dashboard.js?v=0.27.5';
