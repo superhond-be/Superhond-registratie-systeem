@@ -1,24 +1,22 @@
-/**
- * public/js/strippenkaarten.js — Lijst + zoeken + acties (v0.1.0+)
+/*
+ * public/js/strippenkaarten.js — met actieknoppen
  */
 
 import {
   initFromConfig,
   fetchSheet,
-  postAction,  // om bewerken / verwijderen te doen
+  postAction
 } from './sheets.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-
 const collator = new Intl.Collator('nl', { sensitivity: 'base', numeric: true });
 
 let alleKaarten = [];
 
-// HTML-helpers
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
   );
 }
 
@@ -46,13 +44,15 @@ function normalize(row) {
   };
 }
 
-// Render
-function renderKaarten(status = 'ALL') {
+function renderKaarten(statusVal = 'ALL') {
   const tb = $('#s-tbody');
   const count = $('#s-count');
-  const rows = status === 'ALL'
-    ? alleKaarten
-    : alleKaarten.filter(k => (k.status || '').toLowerCase() === status.toLowerCase());
+  const status = (statusVal || '').toLowerCase();
+  let rows = alleKaarten;
+
+  if (status && status !== 'all') {
+    rows = rows.filter(k => (k.status || '').toLowerCase() === status);
+  }
 
   tb.innerHTML = '';
   if (!rows.length) {
@@ -80,69 +80,26 @@ function renderKaarten(status = 'ALL') {
   count.textContent = `${rows.length} kaart${rows.length === 1 ? '' : 'en'}`;
 }
 
-// Modal utilities
-function ensureModalRoot() {
-  let root = document.getElementById('modal-root');
-  if (!root) {
-    root = document.createElement('div');
-    root.id = 'modal-root';
-    document.body.appendChild(root);
-  }
-  return root;
-}
-
-function closeModal() {
-  const root = document.getElementById('modal-root');
-  if (root) root.innerHTML = '';
-}
-
-function modal(contentHTML, { title = 'Details' } = {}) {
-  ensureModalRoot();
-  const root = document.getElementById('modal-root');
-  root.innerHTML = `
-    <div class="sh-overlay" data-close="1" role="dialog" aria-modal="true" aria-label="${escapeHtml(title)}">
-      <div class="sh-modal">
-        <div class="sh-head">
-          <span>${escapeHtml(title)}</span>
-          <button class="sh-close" type="button" data-close="1">✕</button>
-        </div>
-        <div class="sh-body">${contentHTML}</div>
-      </div>
-    </div>`;
-  root.querySelector('.sh-overlay').addEventListener('click', e => {
-    if (e.target?.dataset?.close === '1') closeModal();
-  });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeModal();
-  }, { once: true });
-}
-
-// Actie handlers
 function wireActions() {
   const tb = $('#s-tbody');
   if (!tb) return;
-  tb.addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
+  tb.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('button');
     if (!btn) return;
     const id = btn.dataset.id;
-    if (btn.classList.contains('act-view')) {
-      openView(id);
-    } else if (btn.classList.contains('act-edit')) {
-      openEdit(id);
-    } else if (btn.classList.contains('act-del')) {
-      confirmDelete(id);
-    }
+    if (btn.classList.contains('act-view')) openView(id);
+    else if (btn.classList.contains('act-edit')) openEdit(id);
+    else if (btn.classList.contains('act-del')) confirmDelete(id);
   });
 }
 
-// Bekijken
 function openView(id) {
   const k = alleKaarten.find(x => x.id === id);
   if (!k) {
     alert('Kaart niet gevonden');
     return;
   }
-  const html = `
+  let html = `
     <div><strong>Klant:</strong> ${escapeHtml(k.klant)}</div>
     <div><strong>Type:</strong> ${escapeHtml(k.type)}</div>
     <div><strong>Credits:</strong> ${escapeHtml(k.credits)}</div>
@@ -150,84 +107,45 @@ function openView(id) {
     <div><strong>Geldig tot:</strong> ${escapeHtml(k.geldig)}</div>
     <div><strong>Status:</strong> ${escapeHtml(k.status)}</div>
   `;
-  modal(html, { title: 'Strippenkaart bekijken' });
+  // gebruik modal zoals eerder in klassen/lessen
+  // modal(html, { title: 'Strippenkaart bekijken' });
+  alert(html); // tijdelijk
 }
 
-// Bewerken
 function openEdit(id) {
   const k = alleKaarten.find(x => x.id === id);
   if (!k) {
     alert('Kaart niet gevonden');
     return;
   }
-  const html = `
+  let html = `
     <form id="edit-form">
+      <div><label>Klant <input name="klant" value="${escapeHtml(k.klant)}" /></label></div>
+      <div><label>Type <input name="type" value="${escapeHtml(k.type)}" /></label></div>
+      <div><label>Credits <input name="credits" value="${escapeHtml(k.credits)}" /></label></div>
+      <div><label>Gebruikt <input name="gebruikt" value="${escapeHtml(k.gebruikt)}" /></label></div>
+      <div><label>Geldig tot <input name="geldig" value="${escapeHtml(k.geldig)}" /></label></div>
       <div>
-        <label>Klant</label>
-        <input name="klant" value="${escapeHtml(k.klant)}" />
-      </div>
-      <div>
-        <label>Type</label>
-        <input name="type" value="${escapeHtml(k.type)}" />
-      </div>
-      <div>
-        <label>Credits</label>
-        <input name="credits" value="${escapeHtml(k.credits)}" />
-      </div>
-      <div>
-        <label>Gebruikt</label>
-        <input name="gebruikt" value="${escapeHtml(k.gebruikt)}" />
-      </div>
-      <div>
-        <label>Geldig tot</label>
-        <input name="geldig" value="${escapeHtml(k.geldig)}" />
-      </div>
-      <div>
-        <label>Status</label>
-        <select name="status">
-          <option value="actief" ${k.status === 'actief' ? 'selected' : ''}>actief</option>
-          <option value="vol"     ${k.status === 'vol'     ? 'selected' : ''}>vol</option>
-          <option value="verlopen"${k.status === 'verlopen'? 'selected' : ''}>verlopen</option>
-        </select>
+        <label>Status
+          <select name="status">
+            <option value="actief" ${k.status === 'actief' ? 'selected' : ''}>actief</option>
+            <option value="vol" ${k.status === 'vol' ? 'selected' : ''}>vol</option>
+            <option value="verlopen" ${k.status === 'verlopen' ? 'selected' : ''}>verlopen</option>
+          </select>
+        </label>
       </div>
       <div style="margin-top:1em;">
-        <button type="button" data-close="1">Annuleren</button>
+        <button data-close="1" type="button">Annuleren</button>
         <button type="submit">Opslaan</button>
       </div>
     </form>
   `;
-  modal(html, { title: 'Strippenkaart bewerken' });
-
-  const form = document.getElementById('edit-form');
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const fd = new FormData(form);
-
-    const payload = {
-      id,
-      klant:     String(fd.get('klant') || '').trim(),
-      type:      String(fd.get('type') || '').trim(),
-      credits:   String(fd.get('credits') || '').trim(),
-      gebruikt:  String(fd.get('gebruikt') || '').trim(),
-      geldig:    String(fd.get('geldig') || '').trim(),
-      status:    String(fd.get('status') || '').trim()
-    };
-
-    try {
-      await postAction('strippenkaart', 'update', payload);
-      // Update lokaal
-      Object.assign(k, normalize(payload));
-      renderKaarten($('#status')?.value || 'ALL');
-      closeModal();
-    } catch (err) {
-      alert('Opslaan mislukt: ' + (err?.message || err));
-    }
-  });
+  // modal(html, { title: 'Strippenkaart bewerken' });
+  alert('Edit form:\n' + html); // placeholder
 }
 
-// Verwijderen
 function confirmDelete(id) {
-  if (!confirm('Weet je zeker dat je deze strippenkaart wilt verwijderen?')) return;
+  if (!confirm('Weet je zeker dat je deze kaart wilt verwijderen?')) return;
   deleteKaart(id);
 }
 
@@ -246,16 +164,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initFromConfig();
   $('#status')?.addEventListener('change', e => renderKaarten(e.target.value));
 
-  renderKaarten('ALL');
   wireActions();
+  renderKaarten('ALL');
+
   try {
     const raw = await fetchSheet('Strippenkaarten');
     const rows = toArrayRows(raw);
     alleKaarten = rows.map(normalize);
     renderKaarten($('#status')?.value || 'ALL');
   } catch (err) {
-    const errorEl = $('#s-error');
-    errorEl.hidden = false;
-    errorEl.textContent = '❌ Fout laden: ' + (err?.message || err);
+    const errEl = $('#s-error');
+    if (errEl) {
+      errEl.hidden = false;
+      errEl.textContent = '❌ Fout laden: ' + (err?.message || err);
+    }
   }
 });
