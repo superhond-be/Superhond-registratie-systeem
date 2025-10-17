@@ -1,180 +1,82 @@
-import {
-  initFromConfig,
-  fetchSheet,
-  saveHond
-} from './sheets.js';
+/**
+ * sheets.js – API helpers voor Google Apps Script backend
+ */
 
-const $ = (s, r = document) => r.querySelector(s);
-const TIMEOUT_MS = 20000;
-const collator = new Intl.Collator('nl', { sensitivity: 'base', numeric: true });
+const $metaExec = document.querySelector('meta[name="superhond-exec"]');
+const EXEC_URL = $metaExec?.getAttribute('content') || '';
 
-let allRows = [];
-let viewRows = [];
-let lastAbort = null;
-
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
-  );
-}
-
-function fmtDate(iso) {
-  const s = String(iso || '');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const [y, m, d] = s.split('-');
-  return `${d}/${m}/${y}`;
-}
-
-function normalize(row) {
-  const o = {};
-  for (const [k, v] of Object.entries(row || {})) {
-    o[String(k || '').toLowerCase()] = v;
+/**
+ * Voor initialisatie – eventueel later uitbreiden
+ */
+export async function initFromConfig() {
+  if (!EXEC_URL) {
+    console.warn('[sheets] Geen exec-URL gevonden in meta-tag.');
+  } else {
+    console.log('[sheets] initFromConfig:', EXEC_URL);
   }
-  const result = {
-    id:        (o.id ?? o.hondid ?? '').toString(),
-    name:      (o.name ?? '').toString(),
-    breed:     (o.breed ?? '').toString(),
-    birthdate: (o.birthdate ?? '').toString(),
-    ownerid:   (o.ownerid ?? '').toString(),
-    chip:      (o.chip ?? '').toString(),
-    notes:     (o.notes ?? '').toString(),
-    status:    (o.status ?? '').toString(),
-  };
-  console.log('[honden-tab] normalized row:', result);
+}
+
+/**
+ * Haalt een sheet op via Apps Script GET ?sheet=...
+ * @param {string} sheetName - naam van de sheet, bv. 'Honden'
+ * @param {object} options - fetch opties (bv. { signal, timeout })
+ */
+export async function fetchSheet(sheetName, options = {}) {
+  if (!EXEC_URL) {
+    throw new Error('Geen exec URL geconfigureerd');
+  }
+
+  const url = new URL(EXEC_URL);
+  url.searchParams.set('sheet', sheetName);
+
+  const controller = options.signal
+    ? { signal: options.signal }
+    : {};
+
+  const resp = await fetch(url.toString(), {
+    method: 'GET',
+    ...controller
+  });
+
+  if (!resp.ok) {
+    throw new Error(`Fout bij ophalen van ${sheetName}: ${resp.status} ${resp.statusText}`);
+  }
+
+  const json = await resp.json();
+  if (!json || !Array.isArray(json.data)) {
+    throw new Error(`Ongeldig antwoord van server voor ${sheetName}`);
+  }
+
+  return json;
+}
+
+/**
+ * Slaat een hond op via POST naar de Apps Script exec
+ * @param {object} data - de hondgegevens
+ * @returns {object} resultaat (bijv. { id: '1234' })
+ */
+export async function saveHond(data) {
+  if (!EXEC_URL) {
+    throw new Error('Geen exec URL geconfigureerd');
+  }
+
+  const resp = await fetch(EXEC_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      action: 'saveHond',
+      data
+    })
+  });
+
+  if (!resp.ok) {
+    throw new Error(`Opslaan mislukt: ${resp.status} ${resp.statusText}`);
+  }
+
+  const result = await resp.json();
+  if (!result || !result.success) {
+    throw new Error(`Fout in backend: ${result?.error || 'onbekende fout'}`);
+  }
+
   return result;
-}
-
-function rowMatches(r, q) {
-  if (!q) return true;
-  const hay = [r.name, r.breed, r.ownerid, r.chip, r.notes, r.status]
-    .map(x => String(x || '').toLowerCase())
-    .join(' ');
-  return hay.includes(q);
-}
-
-function setState(t, k = 'muted') {
-  const el = $('#state-hond');
-  if (!el) {
-    console.warn('[honden-tab] setState: element state-hond not found');
-    return;
-  }
-  el.className = k;
-  el.textContent = t;
-  el.setAttribute('role', k === 'error' ? 'alert' : 'status');
-  console.log(`[honden-tab] state set: (${k}) ${t}`);
-}
-
-function render(rows) {
-  const tb = $('#tbl-hond tbody');
-  if (!tb) {
-    console.warn('[honden-tab] render: tbody not found');
-    return;
-  }
-  tb.innerHTML = '';
-  if (!rows.length) {
-    tb.innerHTML = `<tr><td colspan="5" class="muted">Geen resultaten.</td></tr>`;
-    console.log('[honden-tab] render: geen rijen');
-    return;
-  }
-  const frag = document.createDocumentFragment();
-  for (const r of rows) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${escapeHtml(r.name)}</td>
-      <td>${escapeHtml(r.breed)}</td>
-      <td>${escapeHtml(fmtDate(r.birthdate))}</td>
-      <td>${escapeHtml(r.ownerid)}</td>
-      <td class="nowrap">
-        <button class="btn btn-xs act-edit" data-id="${escapeHtml(r.id)}">✏️</button>
-        <button class="btn btn-xs danger act-del" data-id="${escapeHtml(r.id)}">🗑️</button>
-      </td>`;
-    frag.appendChild(tr);
-  }
-  tb.appendChild(frag);
-  console.log('[honden-tab] render: rijen toegevoegd', rows.length);
-}
-
-function doFilter() {
-  const q = String($('#search-hond')?.value || '').trim().toLowerCase();
-  viewRows = allRows.filter(r => rowMatches(r, q));
-  console.log('[honden-tab] filter met query:', q, '=> result count:', viewRows.length);
-  render(viewRows);
-}
-
-async function refresh() {
-  console.log('[honden-tab] refresh start');
-  if (lastAbort) lastAbort.abort();
-  const ac = new AbortController();
-  lastAbort = ac;
-  const t = setTimeout(() => ac.abort(new Error('timeout')), TIMEOUT_MS);
-
-  try {
-    setState('⏳ Laden…');
-    const raw = await fetchSheet('Honden', { signal: ac.signal, timeout: TIMEOUT_MS });
-    console.log('[honden-tab] raw data from fetchSheet:', raw);
-    const rows = Array.isArray(raw?.data) ? raw.data : [];
-    allRows = rows.map(normalize).sort((a, b) => collator.compare(a.name, b.name));
-    doFilter();
-    setState(`✅ ${viewRows.length} geladen`);
-    console.log('[honden-tab] refresh success, rows count:', viewRows.length);
-  } catch (e) {
-    console.error('[honden-tab] error in refresh:', e);
-    setState('❌ Laden mislukt: ' + (e?.message || e), 'error');
-  } finally {
-    clearTimeout(t);
-  }
-}
-
-async function onSubmit(e) {
-  e.preventDefault();
-  const f = e.currentTarget;
-  const fd = new FormData(f);
-
-  const payload = {
-    name:      fd.get('name')?.trim(),
-    breed:     fd.get('breed')?.trim(),
-    birthdate: fd.get('birthdate')?.trim(),
-    ownerId:   fd.get('ownerId')?.trim(),
-    chip:      fd.get('chip')?.trim(),
-    notes:     fd.get('notes')?.trim(),
-    status:    fd.get('status')?.trim() || 'actief'
-  };
-
-  const msg = $('#form-msg-hond');
-  console.log('[honden-tab] onSubmit payload:', payload);
-
-  if (!payload.name || !payload.ownerId) {
-    msg.textContent = '❌ Naam en eigenaar zijn verplicht';
-    msg.className = 'error';
-    return;
-  }
-
-  msg.textContent = '⏳ Opslaan…';
-  msg.className = 'muted';
-
-  try {
-    const result = await saveHond(payload);
-    console.log('[honden-tab] save result:', result);
-    allRows.push(normalize({ id: result?.id || '', ...payload }));
-    allRows.sort((a, b) => collator.compare(a.name, b.name));
-    doFilter();
-    f.reset();
-    msg.textContent = '✅ Hond toegevoegd';
-  } catch (err) {
-    console.error('[honden-tab] save error:', err);
-    msg.textContent = '❌ Opslaan mislukt: ' + (err?.message || err);
-    msg.className = 'error';
-  }
-}
-
-export async function initHondenTab() {
-  console.log('[honden-tab] initHondenTab start');
-  await initFromConfig();
-  console.log('[honden-tab] initFromConfig done');
-  $('#search-hond')?.addEventListener('input', doFilter);
-  $('#refresh-hond')?.addEventListener('click', refresh);
-  $('#form-add-hond')?.addEventListener('submit', onSubmit);
-  console.log('[honden-tab] eventlisteners set');
-  await refresh();
-  console.log('[honden-tab] initHondenTab done');
 }
