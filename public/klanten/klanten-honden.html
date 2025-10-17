@@ -4,8 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Klanten & Honden – Superhond</title>
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj‑aP6ud8mG49xicSHd8SUcG22sPw/exec">
 
-<meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">  <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
+  <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
 </head>
 
@@ -21,7 +22,7 @@
       <button class="tab" data-tab="honden">🐶 Honden</button>
     </div>
 
-    <!-- Klanten -->
+    <!-- Klanten content -->
     <section id="tab-content-klanten" class="tab-panel">
       <section class="card">
         <div class="toolbar">
@@ -61,7 +62,7 @@
       </section>
     </section>
 
-    <!-- Honden -->
+    <!-- Honden content -->
     <section id="tab-content-honden" class="tab-panel" style="display:none">
       <section class="card">
         <div class="toolbar">
@@ -102,6 +103,7 @@
         <div id="form-msg-hond" class="muted" role="status" aria-live="polite"></div>
       </section>
     </section>
+
   </main>
 
   <footer id="footer"></footer>
@@ -119,7 +121,6 @@
     });
 
     let hondenIngeladen = false;
-
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', async () => {
         const selected = tab.dataset.tab;
@@ -141,8 +142,6 @@
     });
   </script>
 
-  <noscript>
-    <p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p>
-  </noscript>
+  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p></noscript>
 </body>
 </html>
