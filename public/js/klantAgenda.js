@@ -21,9 +21,7 @@ function toArrayRows(x) {
 }
 
 function normalizeLes(r) {
-  const o = Object.fromEntries(
-    Object.entries(r || {}).map(([k, v]) => [String(k || '').toLowerCase(), v])
-  );
+  const o = Object.fromEntries(Object.entries(r || {}).map(([k, v]) => [String(k || '').toLowerCase(), v]));
   return {
     id: (o.id ?? '').toString(),
     lesnaam: (o.naam ?? '').toString(),
@@ -35,9 +33,7 @@ function normalizeLes(r) {
 }
 
 function normalizeMed(r) {
-  const o = Object.fromEntries(
-    Object.entries(r || {}).map(([k, v]) => [String(k || '').toLowerCase(), v])
-  );
+  const o = Object.fromEntries(Object.entries(r || {}).map(([k, v]) => [String(k || '').toLowerCase(), v]));
   return {
     id: (o.id ?? '').toString(),
     inhoud: (o.inhoud ?? '').toString(),
@@ -49,13 +45,12 @@ function normalizeMed(r) {
     prioriteit: (o.prioriteit ?? '').toString(),
     link: (o.link ?? '').toString(),
     zichtbaar: String(o.zichtbaar ?? '').toLowerCase() !== 'nee',
-    templateId: (o.templateid ?? '').toString()  // optioneel: bewaar gekozen template
+    templateId: (o.templateid ?? '').toString()
   };
 }
 
 const currentFilters = { categorie: '', prioriteit: '' };
 
-/** Filter mededelingen volgens criteria */
 function filterMededelingen(meds, opt) {
   const now = new Date();
   return (meds || []).filter(m => {
@@ -72,7 +67,6 @@ function filterMededelingen(meds, opt) {
   });
 }
 
-/** Render agenda + mededelingen */
 function renderAgenda(lesData, medData) {
   const el = $('#agenda-list');
   $('#agenda-loader')?.remove();
@@ -101,170 +95,149 @@ function renderAgenda(lesData, medData) {
             }).join('<br>')}
           </div>` : ''}
         <div class="actions">
-          <button class="btn-edit-mededeling" data-les="${escapeHtml(l.id)}">✏️ Nieuw / Bewerken mededeling</button>
+          <button class="btn btn-secondary btn-edit-mededeling" data-les="${escapeHtml(l.id)}">✏️ Mededeling</button>
         </div>
       </div>`;
   }).join('');
 
-  // voeg eventlisteners aan “Nieuw / Bewerken mededeling” buttons
-  $$('.btn-edit-mededeling').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const lesId = btn.getAttribute('data-les');
+  $$("button.btn-edit-mededeling").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const lesId = btn.getAttribute("data-les");
+      // optioneel: vind bestaande mededeling-id als je dat kent
       openMededelingModal({ lesId });
     });
   });
 }
 
-/** Helper: open de modal voor mededeling maken / bewerken */
+/** Sluit de modal */
+function closeMededelingModal() {
+  const modal = document.getElementById("mededelingModal");
+  if (modal) modal.style.display = "none";
+}
+
+/** Open modal (nieuw / bewerken) */
 function openMededelingModal(params = {}) {
-  // params kan bevatten: lesId, bestaande mededeling id etc.
-  // Haal DOM modal (zorg dat die in je HTML staat) of creëer dynamisch
-  const modalEl = document.getElementById('mededelingModal');
-  if (!modalEl) {
-    console.error("Modal-element #mededelingModal niet gevonden");
+  const modal = document.getElementById("mededelingModal");
+  if (!modal) {
+    console.error("Modal #mededelingModal niet gevonden");
     return;
   }
 
-  // Vul inhoud van modal (velden) op basis van params / default
-  const selTemplate = modalEl.querySelector("#selEmailTemplate");
-  const inputDatum = modalEl.querySelector("#inputDatum");
-  const inputTijd = modalEl.querySelector("#inputTijd");
-  const textareaInhoud = modalEl.querySelector("#inputInhoud");
-  const selCategorie = modalEl.querySelector("#inputCategorie");
-  const selPrioriteit = modalEl.querySelector("#inputPrioriteit");
-  const btnSave = modalEl.querySelector("#btnSaveMededeling");
+  const selTemplate = modal.querySelector("#selEmailTemplate");
+  const inputDatum = modal.querySelector("#inputDatum");
+  const inputTijd = modal.querySelector("#inputTijd");
+  const textareaInhoud = modal.querySelector("#inputInhoud");
+  const inputCategorie = modal.querySelector("#inputCategorie");
+  const inputPrioriteit = modal.querySelector("#inputPrioriteit");
+  const btnSave = modal.querySelector("#btnSaveMededeling");
+  const btnDelete = modal.querySelector("#btnDeleteMededeling");
+  const btnPreview = modal.querySelector("#btnPreviewEmail");
 
-  // Reset form
-  selTemplate.value = '';
-  inputDatum.value = '';
-  inputTijd.value = '';
-  textareaInhoud.value = '';
-  selCategorie.value = '';
-  selPrioriteit.value = '';
+  const previewDiv = modal.querySelector("#emailPreview");
+  const spanOnderwerp = modal.querySelector("#previewOnderwerp");
+  const divBody = modal.querySelector("#previewBody");
 
-  // Als bewerken bestaande mededeling: je zou hier code toevoegen om te vullen
+  // Reset / vooraf invullen
+  selTemplate.innerHTML = `<option value="">-- Geen template --</option>`;
+  inputDatum.value = params.datum || "";
+  inputTijd.value = params.tijd || "";
+  textareaInhoud.value = params.inhoud || "";
+  inputCategorie.value = params.categorie || "";
+  inputPrioriteit.value = params.prioriteit || "";
 
-  // Context voor merge: je moet deze context zelf opbouwen, afhankelijk van klant/les
-  // Bijvoorbeeld (Dummy voorbeeld):
+  // Context (vul zelf volgens je objecten)
   const context = {
-    voornaam: params.voornaam || '',
-    lesNaam: params.lesNaam || '',
-    lesDatum: params.lesDatum || '',
-    lesTijd: params.lesTijd || '',
-    hondNaam: params.hondNaam || ''
+    voornaam: params.voornaam || "",
+    lesNaam: params.lesNaam || "",
+    lesDatum: params.lesDatum || "",
+    lesTijd: params.lesTijd || "",
+    hondNaam: params.hondNaam || ""
   };
 
-  // Setup template select & preview in modal
-  setupTemplateInModal(modalEl, context);
-
-  // Save handler
-  btnSave.onclick = async () => {
-    const med = {
-      id: params.id ?? null,
-      targetLes: params.lesId ?? '',
-      datum: inputDatum.value,
-      tijd: inputTijd.value,
-      inhoud: textareaInhoud.value,
-      categorie: selCategorie.value,
-      prioriteit: selPrioriteit.value,
-      templateId: selTemplate.value || ''
-    };
-
-    // Save de mededeling (in testmodus of production)
-    await saveMededeling(med);
-
-    // Als template gekozen is: kies of automatisch verzenden
-    if (med.templateId) {
-      const tmpl = getTemplateById(med.templateId);
-      if (tmpl) {
-        const merged = renderTemplate(tmpl, context);
-        console.log("=== Automatische/Manuele e-mail ===");
-        console.log("Onderwerp:", merged.onderwerp);
-        console.log("Body:", merged.body);
-        // In productie: hier je backend aanroepen
-      }
-    }
-
-    // Sluit modal en herlaad agenda
-    modalEl.style.display = 'none';
-    renderAgenda(window.__lesData || [], window.__medData || []);
-  };
-
-  // Toon modal
-  modalEl.style.display = 'block';
-}
-
-/** setup template keuze + preview + test verzend in modal */
-function setupTemplateInModal(modalEl, contextData) {
-  const sel = modalEl.querySelector("#selEmailTemplate");
-  const btnPreview = modalEl.querySelector("#btnPreviewEmail");
-  const previewDiv = modalEl.querySelector("#emailPreview");
-  const spanOnderwerp = modalEl.querySelector("#previewOnderwerp");
-  const divBody = modalEl.querySelector("#previewBody");
-  const btnSendTest = modalEl.querySelector("#btnSendTestEmail");
-
-  // Voeg opties
+  // Vul template dropdown
   const templatesForKlant = listTemplates({ doelgroep: "klant" });
   templatesForKlant.forEach(t => {
     const opt = document.createElement("option");
     opt.value = t.templateId;
     opt.textContent = `${t.naam} (${t.trigger})`;
-    sel.appendChild(opt);
+    selTemplate.appendChild(opt);
   });
 
-  // Preview event
+  // Preview knop
   btnPreview.onclick = () => {
-    const tid = sel.value;
+    const tid = selTemplate.value;
     if (!tid) {
       previewDiv.style.display = "none";
       return;
     }
     const tmpl = getTemplateById(tid);
     if (!tmpl) {
-      console.warn("Template niet gevonden:", tid);
       previewDiv.style.display = "none";
+      console.warn("Template niet gevonden:", tid);
       return;
     }
-    const merged = renderTemplate(tmpl, contextData);
+    const merged = renderTemplate(tmpl, context);
     spanOnderwerp.textContent = merged.onderwerp;
     divBody.textContent = merged.body;
     previewDiv.style.display = "block";
   };
 
-  // Test verzenden event
-  btnSendTest.onclick = () => {
-    const tid = sel.value;
-    if (!tid) {
-      alert("Selecteer eerst een template");
-      return;
+  // Save knop (opslaan & eventueel mail trigger)
+  btnSave.onclick = async () => {
+    const med = {
+      id: params.id || null,
+      datum: inputDatum.value,
+      tijd: inputTijd.value,
+      inhoud: textareaInhoud.value,
+      categorie: inputCategorie.value,
+      prioriteit: inputPrioriteit.value,
+      templateId: selTemplate.value || ""
+    };
+    await saveMededeling(med);
+
+    if (med.templateId) {
+      const tmpl = getTemplateById(med.templateId);
+      const merged = renderTemplate(tmpl, context);
+      console.log("Verzonden test-mail/actie:", merged);
+      // In productie: hier echte mail/WhatsApp verzendcall
     }
-    const tmpl = getTemplateById(tid);
-    const merged = renderTemplate(tmpl, contextData);
-    console.log("=== Testmail ===");
-    console.log("Onderwerp:", merged.onderwerp);
-    console.log("Body:", merged.body);
-    alert("Testmail gelogd in console (testmodus).");
+    closeMededelingModal();
+    renderAgenda(window.__lesData || [], window.__medData || []);
   };
-}
 
-/** Save mededeling (testmodus / productie) */
-async function saveMededeling(m) {
-  // In jouw eerdere code je local / Sheets logica
-  // Hier een stub:
-  if (m.id == null) {
-    m.id = Date.now().toString();
-    window.__medData = window.__medData || [];
-    window.__medData.push(m);
-  } else {
-    const idx = (window.__medData || []).findIndex(x => x.id === m.id);
-    if (idx >= 0) {
-      window.__medData[idx] = m;
+  // Delete knop
+  btnDelete.onclick = async () => {
+    if (params.id) {
+      await deleteMededeling(params.id);
     }
-  }
-  return m;
+    closeMededelingModal();
+    renderAgenda(window.__lesData || [], window.__medData || []);
+  };
+
+  modal.querySelector("#btnCloseModal").onclick = closeMededelingModal;
+  modal.querySelector(".modal-backdrop")?.onclick = closeMededelingModal;
+
+  modal.style.display = "flex";
 }
 
-/** Init — laad les + mededelingen + templates, render, etc. */
+// Stubs of jouw bestaande functies: pas indien nodig
+async function saveMededeling(med) {
+  // Testmodus: in-memory
+  window.__medData = window.__medData || [];
+  if (!med.id) {
+    med.id = Date.now().toString();
+    window.__medData.push(med);
+  } else {
+    const idx = window.__medData.findIndex(m => m.id === med.id);
+    if (idx >= 0) window.__medData[idx] = med;
+  }
+  return med;
+}
+
+async function deleteMededeling(id) {
+  window.__medData = (window.__medData || []).filter(m => m.id !== id);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     await initFromConfig();
@@ -272,7 +245,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn("[Agenda] init error:", e.message || e);
   }
 
-  // Sla templates lokaal (bijv. in je JSON‑variabele of Sheets)
+  // Voorbeeld templates: je vervangt dit door jouw load uit JSON / Sheets
   const exampleTemplates = [
     {
       "templateId": "concept_herinnering",
@@ -307,11 +280,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       "categorie": "Herinneringen",
       "doelgroep": "klant"
     }
-    // voeg desgewenst de rest toe
   ];
   loadEmailTemplates(exampleTemplates);
 
-  // Laad lessen en mededelingen uit Sheets
   let lesData = [], medData = [];
 
   try {
@@ -327,13 +298,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('[Agenda] Mededelingen niet geladen:', e.message || e);
   }
 
-  // Sorteren
   lesData.sort((a, b) => (`${a.datum} ${a.tijd || ''}`).localeCompare(`${b.datum} ${b.tijd || ''}`));
-
   window.__lesData = lesData;
   window.__medData = medData;
 
-  // Filter event handlers
   $('#filter-categorie')?.addEventListener('change', e => {
     currentFilters.categorie = e.target.value;
     renderAgenda(window.__lesData, window.__medData);
@@ -343,6 +311,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderAgenda(window.__lesData, window.__medData);
   });
 
-  // Initial render
   renderAgenda(lesData, medData);
 });
