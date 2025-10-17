@@ -52,7 +52,10 @@ function rowMatches(r, q) {
 
 function setState(t, k = 'muted') {
   const el = $('#state-hond');
-  if (!el) return;
+  if (!el) {
+    console.warn('[honden-tab] setState: element state-hond not found');
+    return;
+  }
   el.className = k;
   el.textContent = t;
   el.setAttribute('role', k === 'error' ? 'alert' : 'status');
@@ -60,7 +63,10 @@ function setState(t, k = 'muted') {
 
 function render(rows) {
   const tb = $('#tbl-hond tbody');
-  if (!tb) return;
+  if (!tb) {
+    console.warn('[honden-tab] render: tbody not found');
+    return;
+  }
   tb.innerHTML = '';
   if (!rows.length) {
     tb.innerHTML = `<tr><td colspan="5" class="muted">Geen resultaten.</td></tr>`;
@@ -90,6 +96,7 @@ function doFilter() {
 }
 
 async function refresh() {
+  console.log('[honden-tab] refresh start');
   if (lastAbort) lastAbort.abort();
   const ac = new AbortController();
   lastAbort = ac;
@@ -102,11 +109,10 @@ async function refresh() {
     allRows = rows.map(normalize).sort((a, b) => collator.compare(a.name, b.name));
     doFilter();
     setState(`✅ ${viewRows.length} geladen`);
+    console.log('[honden-tab] refresh success');
   } catch (e) {
-    if (e?.name !== 'AbortError') {
-      console.error('[honden-tab] fout:', e);
-      setState('❌ Laden mislukt: ' + (e?.message || e), 'error');
-    }
+    console.error('[honden-tab] error in refresh:', e);
+    setState('❌ Laden mislukt: ' + (e?.message || e), 'error');
   } finally {
     clearTimeout(t);
   }
@@ -145,18 +151,18 @@ async function onSubmit(e) {
     f.reset();
     msg.textContent = '✅ Hond toegevoegd';
   } catch (err) {
-    console.error('[honden-tab] opslaan fout:', err);
+    console.error('[honden-tab] save error:', err);
     msg.textContent = '❌ Opslaan mislukt: ' + (err?.message || err);
     msg.className = 'error';
   }
 }
 
 export async function initHondenTab() {
+  console.log('[honden-tab] initHondenTab start');
   await initFromConfig();
-
   $('#search-hond')?.addEventListener('input', doFilter);
   $('#refresh-hond')?.addEventListener('click', refresh);
   $('#form-add-hond')?.addEventListener('submit', onSubmit);
-
   await refresh();
+  console.log('[honden-tab] initHondenTab done');
 }
