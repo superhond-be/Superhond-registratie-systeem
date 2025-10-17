@@ -1,19 +1,18 @@
 // public/js/emailTemplates.js
 
-// In-memory opslag van templates
 let templates = [];
 
 /**
- * Laad een array templates (bijv. uit JSON of Sheet)
- * @param {Array<Object>} arr 
+ * Laadt de templates (uit JSON, Sheets, etc.)
+ * @param {Array<Object>} arr
  */
 export function loadEmailTemplates(arr) {
   templates = Array.isArray(arr) ? arr : [];
 }
 
 /**
- * Retourneer alle templates, met optionele filters
- * @param {Object} opts — { trigger, doelgroep, automatisch (string “ja”/“nee”) }
+ * Haal alle templates, met optionele filters
+ * @param {Object} opts — { trigger?, doelgroep?, automatisch? }
  * @returns {Array}
  */
 export function listTemplates(opts = {}) {
@@ -26,8 +25,8 @@ export function listTemplates(opts = {}) {
 }
 
 /**
- * Zoek template op templateId
- * @param {string} id 
+ * Haal template op ID
+ * @param {string} id
  * @returns {Object|undefined}
  */
 export function getTemplateById(id) {
@@ -35,17 +34,17 @@ export function getTemplateById(id) {
 }
 
 /**
- * Render (merge) een template met contextdata
- * @param {Object} template — een template object
- * @param {Object} context — object met sleutel→waarde voor mergevelden
- * @returns {Object} — { onderwerp: string, body: string }
+ * Render (merge) de template met contextdata
+ * @param {Object} template
+ * @param {Object} context — e.g. { voornaam, lesNaam, lesDatum, lesTijd, hondNaam, … }
+ * @returns {{onderwerp: string, body: string}}
  */
 export function renderTemplate(template, context) {
   const merge = (str) => {
     if (typeof str !== 'string') return '';
     return str.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
       const k = key.trim();
-      // indien niet aanwezig, leeg string
+      // fallback: lege string als niet aanwezig
       return (context[k] != null ? context[k] : '');
     });
   };
