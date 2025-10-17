@@ -1,8 +1,13 @@
+/**
+ * klanten.js — Beheer van klanten voor Superhond
+ * Verbeterde versie met logging, timeouts en foutafhandeling
+ * © 2025 Superhond
+ */
+
 import {
   initFromConfig,
   fetchSheet,
-  saveKlant,
-  postAction
+  saveKlant
 } from './sheets.js';
 
 import { SuperhondUI } from './layout.js';
@@ -17,31 +22,44 @@ let allRows = [];
 let viewRows = [];
 let lastAbort = null;
 
-function escapeHtml(s){
+/* ----------------------------------------------
+ * Helpers
+ * ---------------------------------------------- */
+
+function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c =>
-    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
   );
 }
-function setState(t,k='muted'){
-  const el = $('#state'); if (!el) return;
-  el.className = k; el.textContent = t;
-  el.setAttribute('role', k==='error' ? 'alert' : 'status');
+
+function setState(msg, cls = 'muted') {
+  const el = $('#state');
+  if (!el) return;
+  el.className = cls;
+  el.textContent = msg;
+  el.setAttribute('role', cls === 'error' ? 'alert' : 'status');
 }
-function toArrayRows(x){
+
+function toArrayRows(x) {
+  if (!x) return [];
   if (Array.isArray(x)) return x;
-  if (x && Array.isArray(x.data)) return x.data;
-  if (x && Array.isArray(x.rows)) return x.rows;
-  if (x && Array.isArray(x.result)) return x.result;
-  if (x && x.data && Array.isArray(x.data.rows)) return x.data.rows;
-  if (x && x.ok === true && Array.isArray(x.data)) return x.data;
+  if (Array.isArray(x.data)) return x.data;
+  if (Array.isArray(x.rows)) return x.rows;
+  if (x.result && Array.isArray(x.result)) return x.result;
   return [];
 }
-function normalize(row){
-  const o={}; for (const [k,v] of Object.entries(row||{})) o[String(k||'').toLowerCase()]=v;
-  const id = (o.id ?? o.klantid ?? o['klant id'] ?? o['id.'] ?? o['klant_id'] ?? o.col1 ?? '').toString();
+
+function normalize(row) {
+  const o = {};
+  for (const [k, v] of Object.entries(row || {})) {
+    o[String(k || '').toLowerCase()] = v;
+  }
+
+  const id = (o.id ?? o.klantid ?? o['klant id'] ?? o['id.'] ?? '').toString();
   const vn = (o.voornaam || '').toString().trim();
   const an = (o.achternaam || '').toString().trim();
   const naam = (o.naam || `${vn} ${an}`.trim()).toString();
+
   return {
     id,
     voornaam: vn,
@@ -52,29 +70,38 @@ function normalize(row){
     status: (o.status || '').toString(),
   };
 }
-function rowMatches(r, q){
+
+function rowMatches(r, q) {
   if (!q) return true;
   const hay = [r.naam, r.email, r.telefoon, r.status]
-    .map(x => String(x||'').toLowerCase()).join(' ');
+    .map(x => String(x || '').toLowerCase())
+    .join(' ');
   return hay.includes(q);
 }
 
-function render(rows){
-  const tb = $('#tbl tbody'); if (!tb) return;
+/* ----------------------------------------------
+ * Rendering
+ * ---------------------------------------------- */
+
+function render(rows) {
+  const tb = $('#tbl tbody');
+  if (!tb) return;
   tb.innerHTML = '';
-  if (!rows.length){
+
+  if (!rows.length) {
     tb.innerHTML = `<tr><td colspan="5" class="muted">Geen resultaten.</td></tr>`;
     return;
   }
+
   const frag = document.createDocumentFragment();
-  for (const r of rows){
+  for (const r of rows) {
     const tr = document.createElement('tr');
     tr.dataset.id = r.id || '';
     tr.innerHTML = `
-      <td>${escapeHtml(r.naam||'')}</td>
+      <td>${escapeHtml(r.naam || '')}</td>
       <td>${r.email ? `<a href="mailto:${escapeHtml(r.email)}">${escapeHtml(r.email)}</a>` : ''}</td>
-      <td>${escapeHtml(r.telefoon||'')}</td>
-      <td>${escapeHtml(r.status||'')}</td>
+      <td>${escapeHtml(r.telefoon || '')}</td>
+      <td>${escapeHtml(r.status || '')}</td>
       <td class="nowrap">
         <button class="btn btn-xs act-edit" data-id="${escapeHtml(r.id)}" title="Wijzigen">✏️</button>
         <button class="btn btn-xs danger act-del" data-id="${escapeHtml(r.id)}" title="Verwijderen">🗑️</button>
@@ -84,35 +111,51 @@ function render(rows){
   tb.appendChild(frag);
 }
 
-const doFilter = () => {
+/* ----------------------------------------------
+ * Filtering + Refresh
+ * ---------------------------------------------- */
+
+function doFilter() {
   const q = String($('#search')?.value || '').trim().toLowerCase();
   viewRows = allRows.filter(r => rowMatches(r, q));
   render(viewRows);
-};
+}
 
-async function refresh(){
+async function refresh() {
+  console.log('[klanten] refresh start');
   if (lastAbort) lastAbort.abort();
-  const ac = new AbortController(); lastAbort = ac;
+  const ac = new AbortController();
+  lastAbort = ac;
   const t = setTimeout(() => ac.abort(new Error('timeout')), TIMEOUT_MS);
 
-  try{
+  try {
     setState('⏳ Laden…');
-
     let rows = [];
+
     try {
-      rows = toArrayRows(await fetchSheet('Klanten', { signal: ac.signal, timeout: TIMEOUT_MS }));
-    } catch {
-      rows = toArrayRows(await fetchSheet('Leden',   { signal: ac.signal, timeout: TIMEOUT_MS }));
+      console.log('[klanten] → fetchSheet("Klanten")');
+      const raw = await fetchSheet('Klanten', { signal: ac.signal, timeout: TIMEOUT_MS });
+      console.log('[klanten] ✅ Data van "Klanten" ontvangen');
+      rows = toArrayRows(raw);
+    } catch (err1) {
+      console.warn('[klanten] ⚠️ Fallback naar "Leden":', err1?.message);
+      const raw2 = await fetchSheet('Leden', { signal: ac.signal, timeout: TIMEOUT_MS });
+      console.log('[klanten] ✅ Data van "Leden" ontvangen');
+      rows = toArrayRows(raw2);
     }
 
-    allRows = rows.map(normalize).sort((a,b)=>collator.compare(a.naam||'', b.naam||''));
+    allRows = rows.map(normalize).sort((a, b) => collator.compare(a.naam || '', b.naam || ''));
+    console.log(`[klanten] ${allRows.length} rijen genormaliseerd`);
     doFilter();
 
-    setState(`✅ ${viewRows.length} klant${viewRows.length===1?'':'en'} geladen`);
+    setState(`✅ ${viewRows.length} klant${viewRows.length === 1 ? '' : 'en'} geladen`);
     SuperhondUI.setOnline(true);
-  } catch (e){
-    if (e?.name === 'AbortError') return;
-    console.error('[klanten] laden mislukt:', e);
+  } catch (e) {
+    if (e?.name === 'AbortError') {
+      console.warn('[klanten] refresh geannuleerd');
+      return;
+    }
+    console.error('[klanten] ❌ Laden mislukt:', e);
     setState('❌ Laden mislukt: ' + (e?.message || e), 'error');
     SuperhondUI.setOnline(false);
   } finally {
@@ -120,50 +163,64 @@ async function refresh(){
   }
 }
 
-async function onSubmit(e){
+/* ----------------------------------------------
+ * Nieuwe klant toevoegen
+ * ---------------------------------------------- */
+
+async function onSubmit(e) {
   e.preventDefault();
-  const f  = e.currentTarget;
+  const f = e.currentTarget;
   const fd = new FormData(f);
-
-  const payload = {
-    voornaam:   String(fd.get('voornaam')||'').trim(),
-    achternaam: String(fd.get('achternaam')||'').trim(),
-    email:      String(fd.get('email')||'').trim(),
-    telefoon:   String(fd.get('telefoon')||'').trim(),
-    status:     String(fd.get('status')||'').trim() || 'actief',
-  };
-
   const msg = $('#form-msg');
 
-  if (!payload.voornaam || !payload.achternaam){
-    if (msg){ msg.className='error'; msg.textContent='Voornaam en achternaam zijn verplicht'; }
-    return;
-  }
-  if (payload.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(payload.email)){
-    if (msg){ msg.className='error'; msg.textContent='Ongeldig e-mailadres'; }
+  const payload = {
+    voornaam: fd.get('voornaam')?.trim() || '',
+    achternaam: fd.get('achternaam')?.trim() || '',
+    email: fd.get('email')?.trim() || '',
+    telefoon: fd.get('telefoon')?.trim() || '',
+    status: fd.get('status')?.trim() || 'actief',
+  };
+
+  if (!payload.voornaam || !payload.achternaam) {
+    msg.className = 'error';
+    msg.textContent = '❌ Voornaam en achternaam zijn verplicht.';
     return;
   }
 
-  if (msg){ msg.className='muted'; msg.textContent='⏳ Opslaan…'; }
+  if (payload.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(payload.email)) {
+    msg.className = 'error';
+    msg.textContent = '❌ Ongeldig e-mailadres.';
+    return;
+  }
 
-  try{
-    const r  = await saveKlant(payload);
-    const id = r?.id || '';
+  msg.className = 'muted';
+  msg.textContent = '⏳ Opslaan…';
+
+  try {
+    const result = await saveKlant(payload);
+    console.log('[klanten] ✅ Klant opgeslagen:', result);
+
+    const id = result?.id || '';
     allRows.push(normalize({ id, naam: `${payload.voornaam} ${payload.achternaam}`.trim(), ...payload }));
-    allRows.sort((a,b)=>collator.compare(a.naam||'', b.naam||''));
+    allRows.sort((a, b) => collator.compare(a.naam || '', b.naam || ''));
     doFilter();
 
     f.reset();
-    const sel = f.querySelector('[name="status"]'); if (sel && !sel.value) sel.value = 'actief';
-    if (msg){ msg.textContent='✅ Bewaard'; }
-  } catch (err){
-    console.error('[klanten] opslaan mislukt:', err);
-    if (msg){ msg.className='error'; msg.textContent='❌ Opslaan mislukt: ' + (err?.message||err); }
+    msg.textContent = '✅ Klant toegevoegd';
+  } catch (err) {
+    console.error('[klanten] ❌ Opslaan mislukt:', err);
+    msg.className = 'error';
+    msg.textContent = '❌ Opslaan mislukt: ' + (err?.message || err);
   }
 }
 
+/* ----------------------------------------------
+ * Initialisatie
+ * ---------------------------------------------- */
+
 document.addEventListener('DOMContentLoaded', async () => {
-  SuperhondUI.mount({ title:'Klanten', icon:'👤', back:'../dashboard/' });
+  console.log('[klanten] pagina geladen, init start');
+  SuperhondUI.mount({ title: 'Klanten', icon: '👤', back: '../dashboard/' });
 
   await initFromConfig();
 
@@ -171,8 +228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   $('#refresh')?.addEventListener('click', refresh);
   $('#form-add')?.addEventListener('submit', onSubmit);
 
-  const submitBtn = $('#form-add button, #form-add [type="submit"]');
-  if (submitBtn) submitBtn.type = 'submit';
-
+  console.log('[klanten] Eventlisteners toegevoegd, data laden…');
   await refresh();
+  console.log('[klanten] Init volledig afgerond');
 });
