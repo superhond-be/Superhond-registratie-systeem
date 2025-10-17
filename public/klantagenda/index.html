@@ -5,21 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Agenda & Mededelingen – Superhond</title>
 
-  <meta name="superhond-version" content="0.27.6" />
-  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec" />
-
+  <!-- Alleen UI/CSS + layout.js -->
   <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
-
   <style>
     .toolbar { margin:1rem 0; display:flex; gap:.5rem; flex-wrap:wrap; }
-    select.select {
-      padding:.4rem .75rem; font-size:.9rem; border:1px solid var(--border-color,#d1d5db);
-      border-radius:.375rem; background:var(--bg-input,#fff);
-    }
+    select.select { padding:.4rem .75rem; font-size:.9rem; border:1px solid #d1d5db; border-radius:.375rem; background:#fff; }
     .ag-punt { padding:.75rem; border-bottom:1px solid #e5e7eb; }
     .ag-punt .info { color:#6b7280; font-size:.9rem; }
-    .mededelingen-onder { margin-top:.5rem; padding-left:1rem; border-left:3px solid var(--accent); }
+    .mededelingen-onder { margin-top:.5rem; padding-left:1rem; border-left:3px solid var(--accent,#f4c400); font-size:.9rem; }
     .mededelingen-onder.urgent { border-left-color:#dc2626; background:#fef2f2; }
     .mededelingen-onder small { display:block; color:#9ca3af; font-size:.8rem; margin-bottom:.25rem; }
   </style>
@@ -33,14 +27,16 @@
 
     <div class="toolbar">
       <select id="filter-categorie" class="select" aria-label="Filter categorie">
-        <option value="">Boekingen</option>
-        <option value="Weer">Weer</option>
-        <option value="Info">Info</option>
+        <option value="">Alle categorieën</option>
+        <option>Weer</option>
+        <option>Info</option>
+        <option>Boekingen</option>
       </select>
       <select id="filter-prioriteit" class="select" aria-label="Filter prioriteit">
-        <option value="">Normaal</option>
-        <option value="Laag">Laag</option>
-        <option value="Hoog">Hoog</option>
+        <option value="">Alle prioriteiten</option>
+        <option>Laag</option>
+        <option>Normaal</option>
+        <option>Hoog</option>
       </select>
     </div>
 
@@ -51,23 +47,81 @@
 
   <footer id="footer"></footer>
 
-  <!-- layout eerst -->
-  <script type="module" src="../js/layout.js?v=0.27.6"></script>
-
-  <!-- Slimme bootstrap: kies lokaal of productie op basis van ?local=1 -->
   <script type="module">
     import { SuperhondUI } from '../js/layout.js?v=0.27.6';
-    SuperhondUI.mount({ title:'Agenda & Mededelingen', icon:'📅', back:'../dashboard/' });
 
-    const qs = new URLSearchParams(location.search);
-    const isLocalHost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-    const forceLocal  = qs.has('local') || qs.get('mode') === 'local';
+    // ---------- HULP ----------
+    const $ = (s, r=document) => r.querySelector(s);
+    const escapeHtml = s => String(s).replace(/[&<>"']/g, c =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);
 
-    if (isLocalHost || forceLocal) {
-      await import('../js/klantagenda.local.js?v=0.1.0');
-    } else {
-      await import('../js/klantagenda.js?v=0.1.0');
+    const currentFilters = { categorie:'', prioriteit:'' };
+
+    function filterMededelingen(meds, {lesId, dag, categorie, prioriteit}){
+      const now = new Date();
+      return meds.filter(m=>{
+        if(!m.zichtbaar) return false;
+        if(lesId && m.targetLes && m.targetLes!==lesId) return false;
+        if(dag && m.datum && m.datum!==dag) return false;
+        if(categorie && m.categorie && m.categorie!==categorie) return false;
+        if(prioriteit && m.prioriteit && m.prioriteit!==prioriteit) return false;
+        if(m.datum){
+          const dt = new Date(`${m.datum}T${m.tijd||'00:00'}`);
+          if(dt < now) return false;
+        }
+        return true;
+      });
     }
+
+    function renderAgenda(lesData, medData){
+      const el = $('#agenda-list');
+      if(!lesData?.length){
+        el.innerHTML = `<p class="muted">Geen komende lessen.</p>`;
+        return;
+      }
+      const html = lesData.map(l=>{
+        const meds = filterMededelingen(medData, {
+          lesId:l.id, dag:l.datum,
+          categorie:currentFilters.categorie,
+          prioriteit:currentFilters.prioriteit
+        });
+        return `
+          <div class="ag-punt">
+            <div class="ag-header"><strong>${escapeHtml(l.lesnaam)}</strong> — ${escapeHtml(l.datum)} ${escapeHtml(l.tijd)}</div>
+            <div class="info">📍 ${escapeHtml(l.locatie||'Onbekende locatie')}</div>
+            ${meds.length?`
+              <div class="mededelingen-onder ${meds.some(m=>m.prioriteit==='Hoog')?'urgent':''}">
+                ${meds.map(m=>{
+                  const t = `${m.datum}${m.tijd?` ${m.tijd}`:''}`;
+                  return `<small>${escapeHtml(t)} • ${escapeHtml(m.categorie)}</small>${escapeHtml(m.inhoud)}${m.link?` <a href="${escapeHtml(m.link)}">[Meer]</a>`:''}`;
+                }).join('<br>')}
+              </div>`:''}
+          </div>`;
+      }).join('');
+      el.innerHTML = html;
+    }
+
+    // ---------- BOOTSTRAP ----------
+    document.addEventListener('DOMContentLoaded', () => {
+      SuperhondUI.mount({ title:'Agenda & Mededelingen', icon:'📅', back:'../dashboard/' });
+
+      // 🔸 PURE LOKALE TESTDATA (geen Sheets, geen fetch)
+      const lesData = [
+        { id:'T1', lesnaam:'Puppy Groep', datum:'2025-10-20', tijd:'09:00', locatie:'Hal 1', groep:'Puppy' },
+        { id:'T2', lesnaam:'Gevorderd',  datum:'2025-10-21', tijd:'14:00', locatie:'Hal 2', groep:'Gevorderd' }
+      ];
+      const medData = [
+        { id:'M1', inhoud:'Breng regenjas mee', datum:'2025-10-20', tijd:'08:00', targetLes:'T1', doelgroep:'klant', categorie:'Weer', prioriteit:'Laag',   zichtbaar:true },
+        { id:'M2', inhoud:'Les verlaat 30 min', datum:'2025-10-21', tijd:'13:30', targetLes:'T2', doelgroep:'klant', categorie:'Info', prioriteit:'Normaal', zichtbaar:true },
+        { id:'M3', inhoud:'Parkeer op parking B', datum:'2025-10-20', tijd:'08:45', targetLes:'T1', doelgroep:'klant', categorie:'Info', prioriteit:'Hoog',  zichtbaar:true }
+      ];
+
+      // events
+      $('#filter-categorie')?.addEventListener('change', e=>{ currentFilters.categorie = e.target.value; renderAgenda(lesData, medData); });
+      $('#filter-prioriteit')?.addEventListener('change', e=>{ currentFilters.prioriteit = e.target.value; renderAgenda(lesData, medData); });
+
+      renderAgenda(lesData, medData);
+    });
   </script>
 </body>
 </html>
