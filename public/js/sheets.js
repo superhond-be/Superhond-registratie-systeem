@@ -1,71 +1,82 @@
 /**
- * sheets.js – eenvoudige testversie
- * Gebruik dit om te testen of jouw `honden-tab.js` werkt.
+ * sheets.js – API helpers voor Google Apps Script backend
  */
 
 const $metaExec = document.querySelector('meta[name="superhond-exec"]');
 const EXEC_URL = $metaExec?.getAttribute('content') || '';
 
 /**
- * Init config – hier kun je in testomgeving default waarden zetten.
+ * Voor initialisatie – eventueel later uitbreiden
  */
 export async function initFromConfig() {
-  console.log('[sheets] initFromConfig, exec =', EXEC_URL);
-  // In productie misschien extra initialisaties, validaties, etc.
-  return;
+  if (!EXEC_URL) {
+    console.warn('[sheets] Geen exec-URL gevonden in meta-tag.');
+  } else {
+    console.log('[sheets] initFromConfig:', EXEC_URL);
+  }
 }
 
 /**
- * Haal rijen op van een sheet via Google Apps Script
- * Verwacht dat de Apps Script endpoint iets zoals:
- *   GET EXEC_URL?sheet=sheetName
+ * Haalt een sheet op via Apps Script GET ?sheet=...
+ * @param {string} sheetName - naam van de sheet, bv. 'Honden'
+ * @param {object} options - fetch opties (bv. { signal, timeout })
  */
 export async function fetchSheet(sheetName, options = {}) {
   if (!EXEC_URL) {
-    throw new Error('No exec URL configured');
+    throw new Error('Geen exec URL geconfigureerd');
   }
+
   const url = new URL(EXEC_URL);
   url.searchParams.set('sheet', sheetName);
 
-  // Voeg eventueel signal/timeout toe
+  const controller = options.signal
+    ? { signal: options.signal }
+    : {};
+
   const resp = await fetch(url.toString(), {
     method: 'GET',
-    signal: options.signal,
-    // headers: { 'Accept': 'application/json' } // indien nodig
+    ...controller
   });
 
   if (!resp.ok) {
-    throw new Error(`Fetch failed: ${resp.status} ${resp.statusText}`);
+    throw new Error(`Fout bij ophalen van ${sheetName}: ${resp.status} ${resp.statusText}`);
   }
 
-  const data = await resp.json();
-  // Verwacht vorm: { data: [ { col1: val1, col2: val2, ... }, ... ] }
-  return data;
+  const json = await resp.json();
+  if (!json || !Array.isArray(json.data)) {
+    throw new Error(`Ongeldig antwoord van server voor ${sheetName}`);
+  }
+
+  return json;
 }
 
 /**
- * Sla een hond op via de Apps Script
- * Verwacht dat POST naar exec endpoint kan.
+ * Slaat een hond op via POST naar de Apps Script exec
+ * @param {object} data - de hondgegevens
+ * @returns {object} resultaat (bijv. { id: '1234' })
  */
-export async function saveHond(payload) {
+export async function saveHond(data) {
   if (!EXEC_URL) {
-    throw new Error('No exec URL configured');
+    throw new Error('Geen exec URL geconfigureerd');
   }
+
   const resp = await fetch(EXEC_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       action: 'saveHond',
-      data: payload
+      data
     })
   });
 
   if (!resp.ok) {
-    throw new Error(`Save failed: ${resp.status} ${resp.statusText}`);
+    throw new Error(`Opslaan mislukt: ${resp.status} ${resp.statusText}`);
   }
 
   const result = await resp.json();
+  if (!result || !result.success) {
+    throw new Error(`Fout in backend: ${result?.error || 'onbekende fout'}`);
+  }
+
   return result;
 }
