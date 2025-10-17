@@ -5,14 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Honden – Superhond</title>
 
-  <!-- ✅ Correcte meta-tags -->
+  <!-- 🔗 Koppel met juiste Google Apps Script -->
   <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
-  <meta name="superhond-version" content="0.27.5">
-  <meta name="superhond-branch"  content="Ontwikkeling">
 
-  <link rel="stylesheet" href="../css/style.css?v=0.27.5"/>
-  <link rel="stylesheet" href="../css/superhond.css?v=0.27.5"/>
+  <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
 </head>
+
 <body class="subpage page-honden">
   <header id="topbar"></header>
 
@@ -21,13 +20,13 @@
 
     <section class="card">
       <div class="toolbar">
-        <input id="search" class="input" placeholder="Zoek op naam of chip…" aria-label="Zoeken"/>
-        <button id="refresh" class="btn" type="button">🔄 Verversen</button>
+        <input id="search-hond" class="input" placeholder="Zoek op naam of chip…" />
+        <button id="refresh-hond" class="btn" type="button">🔄 Verversen</button>
       </div>
-      <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
+      <div id="state-hond" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
 
       <div class="table-wrap" style="margin-top:.5rem">
-        <table class="table" id="tbl">
+        <table class="table" id="tbl-hond">
           <thead>
             <tr>
               <th>Naam</th>
@@ -44,29 +43,29 @@
 
     <section class="card" style="margin-top:1rem">
       <h2>Nieuwe hond toevoegen</h2>
-      <form id="form-add" class="form-grid" autocomplete="off">
-        <input name="name" class="input" placeholder="Naam" required/>
-        <input name="breed" class="input" placeholder="Ras"/>
-        <input name="birthdate" class="input" type="date" placeholder="YYYY-MM-DD"/>
-        <input name="ownerId" class="input" placeholder="Eigenaar (id)"/>
-        <input name="chip" class="input" placeholder="Chipnummer"/>
-        <input name="notes" class="input" placeholder="Notities"/>
+      <form id="form-add-hond" class="form-grid" autocomplete="off">
+        <input name="name" class="input" placeholder="Naam" required />
+        <input name="breed" class="input" placeholder="Ras" />
+        <input name="birthdate" class="input" type="date" />
+        <input name="ownerId" class="input" placeholder="Eigenaar (id)" required />
+        <input name="chip" class="input" placeholder="Chipnummer" />
+        <input name="notes" class="input" placeholder="Notities" />
         <select name="status" class="input">
           <option value="actief" selected>actief</option>
           <option value="inactief">inactief</option>
         </select>
         <button class="btn primary" type="submit">💾 Opslaan</button>
       </form>
-      <div id="form-msg" class="muted" role="status" aria-live="polite"></div>
+      <div id="form-msg-hond" class="muted" role="status" aria-live="polite"></div>
     </section>
   </main>
 
   <footer id="footer" class="footer"></footer>
 
-  <!-- ✅ Uniforme script-opbouw met klanten -->
+  <!-- ✅ Goed script -->
   <script type="module">
     import { SuperhondUI } from '../js/layout.js';
-    import '../js/honden.js?v=0.27.5';
+    import { initHondenTab } from '../js/honden-tab.js?v=0.27.6';
 
     SuperhondUI.mount({
       title: 'Honden',
@@ -74,6 +73,8 @@
       back: '../dashboard/',
       home: false
     });
+
+    initHondenTab();
   </script>
 
   <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p></noscript>
