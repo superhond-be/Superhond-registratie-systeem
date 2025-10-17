@@ -5,17 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Superhond — Dashboard</title>
 
-  <!-- Versie/branch + directe GAS exec (worden door layout.js gebruikt) -->
   <meta name="superhond-version" content="0.26.7">
   <meta name="superhond-branch"  content="Ontwikkeling">
-  <!-- Zet hier jouw eigen EXEC-URL (exact de /exec) -->
   <meta name="superhond-exec"    content="https://script.google.com/macros/s/AKfycbysc3pCUpgIxKl2aNPBgJGZIJcNcOvaqF48NG_NgBOGec9TIFKNSHS153NIsng0kE7E4Q/exec">
 
-  <!-- Centrale UI -->
   <link rel="stylesheet" href="../css/style.css?v=0.26.7" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.26.7" />
 
-  <!-- Dashboard-specifiek: GELE topbar hard-forceren (extra veiligheid) -->
   <style>
     body.dashboard-page #topbar,
     body.dashboard-page #topbar .topbar-inner{
@@ -23,8 +19,6 @@
       color:#000 !important;
     }
     body.dashboard-page .btn-back{border-color:#e5e7eb;background:#fff;color:#111827}
-
-    /* kleine lokale UI */
     .tabs{display:flex;gap:.5rem;margin:1rem 0;flex-wrap:wrap}
     .tab{position:relative;padding:.4rem .8rem;border:1px solid #e5e7eb;border-radius:.5rem;background:#fff;cursor:pointer}
     .tab.active{background:var(--accent,#f4c400);font-weight:600}
@@ -41,17 +35,32 @@
     }
   </style>
 </head>
+
 <body class="dashboard-page">
   <header id="topbar"></header>
 
   <main class="container" role="main">
     <h1 class="page-title">Hoofdmenu</h1>
 
-    <!-- TEGELS -->
     <nav class="tiles" aria-label="Hoofdmenu">
-      <a class="tile" href="../klanten/"><span class="tile-icon">👤</span><div class="tile-body"><span class="tile-title">Klanten</span></div></a>
-      <a class="tile" href="../honden/"><span class="tile-icon">🐶</span><div class="tile-body"><span class="tile-title">Honden</span></div></a>
+      <a class="tile" href="../klanten/">
+        <span class="tile-icon">🐾</span>
+        <div class="tile-body">
+          <span class="tile-title">Klanten & Honden</span>
+          <span class="tile-sub">Beheer baasjes en honden</span>
+        </div>
+      </a>
+
       <a class="tile" href="../strippenkaarten/"><span class="tile-icon">🎫</span><div class="tile-body"><span class="tile-title">Strippenkaarten</span></div></a>
+
+      <a class="tile badged" href="../klassen/">
+        <span class="tile-icon">📚</span>
+        <div class="tile-body">
+          <span class="tile-title">Klassen & Activiteiten</span>
+          <span class="tile-sub">Maak/beheer klassen en activiteiten</span>
+        </div>
+        <span class="badge-dot" id="klassen-badge" aria-label="Aantal actieve klassen">0</span>
+      </a>
 
       <a class="tile badged" href="../lessen/">
         <span class="tile-icon">📅</span>
@@ -62,29 +71,13 @@
         <span class="badge-dot" id="lessen-week-badge" aria-label="Aantal lessen">0</span>
       </a>
 
-      <a class="tile badged" href="../klassen/">
-        <span class="tile-icon">📚</span>
+      <a class="tile" href="../klantagenda/">
+        <span class="tile-icon">📅</span>
         <div class="tile-body">
-          <span class="tile-title">Klassen</span>
-          <span class="tile-sub" id="klassen-sub">—</span>
+          <span class="tile-title">Agenda & Mededelingen</span>
         </div>
-        <span class="badge-dot" id="klassen-badge" aria-label="Aantal actieve klassen">0</span>
       </a>
 
-      <a class="tile badged" href="../lessenreeks/">
-        <span class="tile-icon">📦</span>
-        <div class="tile-body">
-          <span class="tile-title">Lessenreeksen</span>
-          <span class="tile-sub" id="reeksen-sub">—</span>
-        </div>
-        <span class="badge-dot" id="reeksen-badge" aria-label="Aantal actieve reeksen">0</span>
-        </a>
-       <a class="tile" href="../klantagenda/">
-      <span class="tile-icon">📅</span>
-      <div class="tile-body">
-      <span class="tile-title">Agenda & Mededelingen</span>
-      </div>
-      </a>    
       <a class="tile" href="../trainers/"><span class="tile-icon">🧑‍🏫</span><div class="tile-body"><span class="tile-title">Trainers</span></div></a>
       <a class="tile" href="../rapporten/"><span class="tile-icon">📈</span><div class="tile-body"><span class="tile-title">Rapporten</span></div></a>
       <a class="tile" href="../instellingen/"><span class="tile-icon">⚙️</span><div class="tile-body"><span class="tile-title">Instellingen</span></div></a>
@@ -100,7 +93,6 @@
       </a>
     </nav>
 
-    <!-- AGENDA -->
     <section class="card" style="margin-top:1rem">
       <h2 style="margin:0 0 .5rem">Agenda</h2>
 
@@ -118,7 +110,7 @@
           <thead>
             <tr><th>Naam</th><th>Datum</th><th>Locatie</th><th>Trainer(s)</th></tr>
           </thead>
-          <tbody><!-- gevuld door ../js/agenda.js --></tbody>
+          <tbody></tbody>
         </table>
       </div>
     </section>
@@ -126,15 +118,10 @@
 
   <footer id="footer" class="footer"></footer>
 
-  <!-- Scripts -->
-  <!-- NIEUWE layout.js (zorgt voor gele balk + versie/branch + online) -->
   <script defer src="../js/layout.js?v=0.24.6"></script>
-
-  <!-- Agenda + admin-gate (ongewijzigd) -->
   <script defer src="../js/agenda.js?v=0.26.7"></script>
   <script defer src="../js/admin-gate.js?v=0.26.7"></script>
 
-  <!-- Badges (actieve klassen/reeksen) -->
   <script type="module">
     const sheets = await import('../js/sheets.js?v=0.26.7');
     const fetchSheet = sheets.fetchSheet;
@@ -148,17 +135,14 @@
         const [klassen, reeksen] = await Promise.all([fetchSheet('Klassen'), fetchSheet('Reeksen')]);
         const actKl = (klassen||[]).filter(k => isActief(k.status)).length;
         const actRs = (reeksen||[]).filter(r => isActief(r.status)).length;
-        document.getElementById('klassen-badge').textContent = String(actKl);
-        document.getElementById('klassen-sub').textContent   = actKl ? `${actKl} actief` : '—';
-        document.getElementById('reeksen-badge').textContent = String(actRs);
-        document.getElementById('reeksen-sub').textContent   = actRs ? `${actRs} actief` : '—';
+        document.getElementById('klassen-badge').textContent = String(actKl + actRs);
+        document.getElementById('klassen-sub').textContent = (actKl + actRs) ? `${actKl + actRs} actief` : '—';
       } catch(e){
         console.warn('Badges updaten faalde:', e?.message || e);
       }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-      // Mount als dashboard (forceert geel en verbergt back-knop)
       window.SuperhondUI?.mount?.({ isDashboard:true, title:'Superhond', icon:'🐾' });
       updateBadges();
     });
