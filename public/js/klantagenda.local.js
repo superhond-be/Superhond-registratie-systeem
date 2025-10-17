@@ -1,85 +1,62 @@
-// public/js/klantagenda.local.js
+// In je klantagenda.js of mededelingenbeheer‑module
+import { listTemplates, getTemplateById, renderTemplate } from "./emailTemplates.js";
 
-const $ = (s, r=document) => r.querySelector(s);
+/**
+ * setupTemplateInModal
+ * Koppelt de template‑selectie + preview + testknop in de modal
+ * @param {HTMLElement} modalEl — root element van modal
+ * @param {Object} contextData — de waarden die je wil mergen (voornaam, lesNaam, lesDatum, etc.)
+ */
+function setupTemplateInModal(modalEl, contextData) {
+  const sel = modalEl.querySelector("#selEmailTemplate");
+  const btnPreview = modalEl.querySelector("#btnPreviewEmail");
+  const previewDiv = modalEl.querySelector("#emailPreview");
+  const spanOnderwerp = modalEl.querySelector("#previewOnderwerp");
+  const divBody = modalEl.querySelector("#previewBody");
+  const btnSendTest = modalEl.querySelector("#btnSendTestEmail");
 
-function escapeHtml(s) {
-  return String(s ?? '').replace(/[&<>"']/g, c =>
-    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
-  );
-}
+  // Vul de opties in de select
+  // Filter bijv. op doelgroep “klant”
+  const templatesForKlant = listTemplates({ doelgroep: "klant" });
+  templatesForKlant.forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t.templateId;
+    opt.textContent = `${t.naam} (${t.trigger})`;
+    sel.appendChild(opt);
+  });
 
-const currentFilters = { categorie:'', prioriteit:'' };
-
-function filterMededelingen(meds, opties) {
-  const now = new Date();
-  return meds.filter(m => {
-    if (m.zichtbaar === false) return false;
-    if (opties.lesId && m.targetLes && m.targetLes !== opties.lesId) return false;
-    if (opties.dag && m.datum && m.datum !== opties.dag) return false;
-    if (opties.categorie && m.categorie && m.categorie !== opties.categorie) return false;
-    if (opties.prioriteit && m.prioriteit && m.prioriteit !== opties.prioriteit) return false;
-    if (m.datum) {
-      const dt = new Date(`${m.datum}T${m.tijd || '00:00'}`);
-      if (dt < now) return false;
+  // Event: Voorbeeld tonen
+  btnPreview.addEventListener("click", () => {
+    const tid = sel.value;
+    if (!tid) {
+      previewDiv.style.display = "none";
+      return;
     }
-    return true;
+    const tmpl = getTemplateById(tid);
+    if (!tmpl) {
+      console.warn("Template niet gevonden:", tid);
+      previewDiv.style.display = "none";
+      return;
+    }
+    const merged = renderTemplate(tmpl, contextData);
+    spanOnderwerp.textContent = merged.onderwerp;
+    divBody.textContent = merged.body;
+    previewDiv.style.display = "block";
+  });
+
+  // Event: Test versturen
+  btnSendTest.addEventListener("click", () => {
+    const tid = sel.value;
+    if (!tid) {
+      alert("Selecteer eerst een template");
+      return;
+    }
+    const tmpl = getTemplateById(tid);
+    const merged = renderTemplate(tmpl, contextData);
+    console.log("=== Testmail ===");
+    console.log("Onderwerp:", merged.onderwerp);
+    console.log("Body:", merged.body);
+    alert("Testmail gelogd in console.");
+    // In productie: hier je e-mail / WhatsApp logica aanroepen
   });
 }
-
-function renderAgenda(lesData, medData) {
-  const wrap = $('#agenda-list');
-  $('#agenda-loader')?.remove();
-  if (!lesData?.length) {
-    wrap.innerHTML = `<p class="muted">Geen komende lessen.</p>`;
-    return;
-  }
-
-  const html = lesData.map(l => {
-    const meds = filterMededelingen(medData, {
-      lesId: l.id, dag: l.datum,
-      categorie: currentFilters.categorie,
-      prioriteit: currentFilters.prioriteit
-    });
-    return `
-      <div class="ag-punt">
-        <div class="ag-header"><strong>${escapeHtml(l.lesnaam)}</strong> — ${escapeHtml(l.datum)} ${escapeHtml(l.tijd)}</div>
-        <div class="info">📍 ${escapeHtml(l.locatie || 'Onbekende locatie')}</div>
-        ${meds.length ? `
-          <div class="mededelingen-onder ${meds.some(m => m.prioriteit === 'Hoog') ? 'urgent' : ''}">
-            ${meds.map(m => {
-              const t = `${m.datum}${m.tijd ? ` ${m.tijd}` : ''}`;
-              return `<small>${escapeHtml(t)} • ${escapeHtml(m.categorie||'')}</small>${escapeHtml(m.inhoud)}${m.link ? ` <a href="${escapeHtml(m.link)}">[Meer]</a>` : ''}`;
-            }).join('<br>')}
-          </div>` : ''}
-      </div>`;
-  }).join('');
-  wrap.innerHTML = html;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  // ✳️ Lokale testdata
-  const lesData = [
-    { id:'T1', lesnaam:'Puppy Groep', datum:'2025-10-20', tijd:'09:00', locatie:'Hal 1', groep:'Puppy' },
-    { id:'T2', lesnaam:'Gevorderd',  datum:'2025-10-21', tijd:'14:00', locatie:'Hal 2', groep:'Gevorderd' }
-  ];
-  const medData = [
-    { id:'M1', inhoud:'Breng regenjas mee', datum:'2025-10-20', tijd:'08:00', targetLes:'T1', categorie:'Weer', prioriteit:'Laag',   zichtbaar:true },
-    { id:'M2', inhoud:'Les verlaat uur',    datum:'2025-10-21', tijd:'13:30', targetLes:'T2', categorie:'Info', prioriteit:'Normaal', zichtbaar:true },
-    { id:'M3', inhoud:'Trainer ziek → afgelast', datum:'2025-10-21', tijd:'11:00', targetLes:'T2', categorie:'Info', prioriteit:'Hoog', zichtbaar:true }
-  ];
-
-  // sorteer lessen
-  lesData.sort((a,b)=>(`${a.datum} ${a.tijd||''}`).localeCompare(`${b.datum} ${b.tijd||''}`));
-
-  // filter events
-  $('#filter-categorie')?.addEventListener('change', e => {
-    currentFilters.categorie = e.target.value;
-    renderAgenda(lesData, medData);
-  });
-  $('#filter-prioriteit')?.addEventListener('change', e => {
-    currentFilters.prioriteit = e.target.value;
-    renderAgenda(lesData, medData);
-  });
-
-  renderAgenda(lesData, medData);
-});
