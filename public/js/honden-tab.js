@@ -1,168 +1,147 @@
-import {
-  initFromConfig,
-  fetchSheet,
-  saveHond
-} from './sheets.js';
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Klanten & Honden – Superhond</title>
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj‑aP6ud8mG49xicSHd8SUcG22sPw/exec">
 
-const $ = (s, r = document) => r.querySelector(s);
-const TIMEOUT_MS = 20000;
-const collator = new Intl.Collator('nl', { sensitivity: 'base', numeric: true });
+  <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
+  <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
+</head>
 
-let allRows = [];
-let viewRows = [];
-let lastAbort = null;
+<body class="subpage page-klanten">
+  <header id="topbar"></header>
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
-  );
-}
+  <main class="container">
+    <h1 class="page-title">Klanten & Honden</h1>
 
-function fmtDate(iso) {
-  const s = String(iso || '');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const [y, m, d] = s.split('-');
-  return `${d}/${m}/${y}`;
-}
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="klanten">🧑 Klanten</button>
+      <button class="tab" data-tab="honden">🐶 Honden</button>
+    </div>
 
-function normalize(row) {
-  const o = {};
-  for (const [k, v] of Object.entries(row || {})) {
-    o[String(k || '').toLowerCase()] = v;
-  }
-  return {
-    id:        (o.id ?? o.hondid ?? '').toString(),
-    name:      (o.name ?? '').toString(),
-    breed:     (o.breed ?? '').toString(),
-    birthdate: (o.birthdate ?? '').toString(),
-    ownerid:   (o.ownerid ?? '').toString(),
-    chip:      (o.chip ?? '').toString(),
-    notes:     (o.notes ?? '').toString(),
-    status:    (o.status ?? '').toString(),
-  };
-}
+    <!-- Klanten content -->
+    <section id="tab-content-klanten" class="tab-panel">
+      <section class="card">
+        <div class="toolbar">
+          <input id="search" class="input" placeholder="Zoek op naam of e-mail…" />
+          <button id="refresh" class="btn" type="button">🔄 Verversen</button>
+        </div>
+        <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
+        <div class="table-wrap" style="margin-top:.5rem">
+          <table class="table" id="tbl">
+            <thead>
+              <tr>
+                <th>Naam</th>
+                <th>E-mail</th>
+                <th>Telefoon</th>
+                <th>Status</th>
+                <th style="width:1%">Acties</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card" style="margin-top:1rem">
+        <h2>Nieuwe klant toevoegen</h2>
+        <form id="form-add" class="form-grid" autocomplete="off">
+          <input name="voornaam" class="input" placeholder="Voornaam" required />
+          <input name="achternaam" class="input" placeholder="Achternaam" required />
+          <input name="email" class="input" type="email" placeholder="E-mail" />
+          <input name="telefoon" class="input" placeholder="Telefoon" />
+          <select name="status" class="input">
+            <option value="actief" selected>actief</option>
+            <option value="inactief">inactief</option>
+          </select>
+          <button class="btn primary" type="submit">💾 Opslaan</button>
+        </form>
+        <div id="form-msg" class="muted" role="status" aria-live="polite"></div>
+      </section>
+    </section>
 
-function rowMatches(r, q) {
-  if (!q) return true;
-  const hay = [r.name, r.breed, r.ownerid, r.chip, r.notes, r.status]
-    .map(x => String(x || '').toLowerCase())
-    .join(' ');
-  return hay.includes(q);
-}
+    <!-- Honden content -->
+    <section id="tab-content-honden" class="tab-panel" style="display:none">
+      <section class="card">
+        <div class="toolbar">
+          <input id="search-hond" class="input" placeholder="Zoek op naam of chip…" />
+          <button id="refresh-hond" class="btn" type="button">🔄 Verversen</button>
+        </div>
+        <div id="state-hond" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
+        <div class="table-wrap" style="margin-top:.5rem">
+          <table class="table" id="tbl-hond">
+            <thead>
+              <tr>
+                <th>Naam</th>
+                <th>Ras</th>
+                <th>Geboortedatum</th>
+                <th>Eigenaar (id)</th>
+                <th style="width:1%">Acties</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="card" style="margin-top:1rem">
+        <h2>Nieuwe hond toevoegen</h2>
+        <form id="form-add-hond" class="form-grid" autocomplete="off">
+          <input name="name" class="input" placeholder="Naam" required />
+          <input name="breed" class="input" placeholder="Ras" />
+          <input name="birthdate" class="input" type="date" />
+          <input name="ownerId" class="input" placeholder="Eigenaar (id)" required />
+          <input name="chip" class="input" placeholder="Chipnummer" />
+          <input name="notes" class="input" placeholder="Notities" />
+          <select name="status" class="input">
+            <option value="actief" selected>actief</option>
+            <option value="inactief">inactief</option>
+          </select>
+          <button class="btn primary" type="submit">💾 Opslaan</button>
+        </form>
+        <div id="form-msg-hond" class="muted" role="status" aria-live="polite"></div>
+      </section>
+    </section>
 
-function setState(t, k = 'muted') {
-  const el = $('#state-hond');
-  if (!el) {
-    console.warn('[honden-tab] setState: element state-hond not found');
-    return;
-  }
-  el.className = k;
-  el.textContent = t;
-  el.setAttribute('role', k === 'error' ? 'alert' : 'status');
-}
+  </main>
 
-function render(rows) {
-  const tb = $('#tbl-hond tbody');
-  if (!tb) {
-    console.warn('[honden-tab] render: tbody not found');
-    return;
-  }
-  tb.innerHTML = '';
-  if (!rows.length) {
-    tb.innerHTML = `<tr><td colspan="5" class="muted">Geen resultaten.</td></tr>`;
-    return;
-  }
-  const frag = document.createDocumentFragment();
-  for (const r of rows) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${escapeHtml(r.name)}</td>
-      <td>${escapeHtml(r.breed)}</td>
-      <td>${escapeHtml(fmtDate(r.birthdate))}</td>
-      <td>${escapeHtml(r.ownerid)}</td>
-      <td class="nowrap">
-        <button class="btn btn-xs act-edit" data-id="${escapeHtml(r.id)}">✏️</button>
-        <button class="btn btn-xs danger act-del" data-id="${escapeHtml(r.id)}">🗑️</button>
-      </td>`;
-    frag.appendChild(tr);
-  }
-  tb.appendChild(frag);
-}
+  <footer id="footer"></footer>
 
-function doFilter() {
-  const q = String($('#search-hond')?.value || '').trim().toLowerCase();
-  viewRows = allRows.filter(r => rowMatches(r, q));
-  render(viewRows);
-}
+  <script type="module">
+    import { SuperhondUI } from '../js/layout.js';
+    import '../js/klanten.js?v=0.27.6';
+    import { initHondenTab } from '../js/honden-tab.js?v=0.27.6';
 
-async function refresh() {
-  console.log('[honden-tab] refresh start');
-  if (lastAbort) lastAbort.abort();
-  const ac = new AbortController();
-  lastAbort = ac;
-  const t = setTimeout(() => ac.abort(new Error('timeout')), TIMEOUT_MS);
+    SuperhondUI.mount({
+      title: 'Klanten & Honden',
+      icon: '🐾',
+      back: '../dashboard/',
+      home: false
+    });
 
-  try {
-    setState('⏳ Laden…');
-    const raw = await fetchSheet('Honden', { signal: ac.signal, timeout: TIMEOUT_MS });
-    const rows = Array.isArray(raw?.data) ? raw.data : [];
-    allRows = rows.map(normalize).sort((a, b) => collator.compare(a.name, b.name));
-    doFilter();
-    setState(`✅ ${viewRows.length} geladen`);
-    console.log('[honden-tab] refresh success');
-  } catch (e) {
-    console.error('[honden-tab] error in refresh:', e);
-    setState('❌ Laden mislukt: ' + (e?.message || e), 'error');
-  } finally {
-    clearTimeout(t);
-  }
-}
+    let hondenIngeladen = false;
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', async () => {
+        const selected = tab.dataset.tab;
+        console.log('[TABS] selected =', selected);
 
-async function onSubmit(e) {
-  e.preventDefault();
-  const f = e.currentTarget;
-  const fd = new FormData(f);
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
 
-  const payload = {
-    name:      fd.get('name')?.trim(),
-    breed:     fd.get('breed')?.trim(),
-    birthdate: fd.get('birthdate')?.trim(),
-    ownerId:   fd.get('ownerId')?.trim(),
-    chip:      fd.get('chip')?.trim(),
-    notes:     fd.get('notes')?.trim(),
-    status:    fd.get('status')?.trim() || 'actief'
-  };
+        tab.classList.add('active');
+        document.getElementById(`tab-content-${selected}`).style.display = '';
 
-  const msg = $('#form-msg-hond');
-  if (!payload.name || !payload.ownerId) {
-    msg.textContent = '❌ Naam en eigenaar zijn verplicht';
-    msg.className = 'error';
-    return;
-  }
+        if (selected === 'honden' && !hondenIngeladen) {
+          console.log('[TABS] initializing honden tab');
+          await initHondenTab();
+          hondenIngeladen = true;
+          console.log('[TABS] honden tab initialized');
+        }
+      });
+    });
+  </script>
 
-  msg.textContent = '⏳ Opslaan…';
-  msg.className = 'muted';
-
-  try {
-    const result = await saveHond(payload);
-    allRows.push(normalize({ id: result?.id || '', ...payload }));
-    allRows.sort((a, b) => collator.compare(a.name, b.name));
-    doFilter();
-    f.reset();
-    msg.textContent = '✅ Hond toegevoegd';
-  } catch (err) {
-    console.error('[honden-tab] save error:', err);
-    msg.textContent = '❌ Opslaan mislukt: ' + (err?.message || err);
-    msg.className = 'error';
-  }
-}
-
-export async function initHondenTab() {
-  console.log('[honden-tab] initHondenTab start');
-  await initFromConfig();
-  $('#search-hond')?.addEventListener('input', doFilter);
-  $('#refresh-hond')?.addEventListener('click', refresh);
-  $('#form-add-hond')?.addEventListener('submit', onSubmit);
-  await refresh();
-  console.log('[honden-tab] initHondenTab done');
-}
+  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p></noscript>
+</body>
+</html>
