@@ -1,77 +1,105 @@
-// public/js/honden-tab.js — v0.27.6
-import { initFromConfig, fetchSheet, saveHond } from './sheets.js';
+/**
+ * honden-tab.js — v0.27.7
+ * Stabiele versie: langere timeout, duidelijke statusmeldingen,
+ * en consistente code met klanten.js.
+ */
+
+import { fetchSheet, initFromConfig } from './sheets.js';
+
+const TIMEOUT_MS = 15000; // 15s i.p.v. 8s
+let aborter = null;
+
+// DOM helpers
+const $ = (s, r = document) => r.querySelector(s);
+const tblBody = $('#tbl-hond tbody');
+const stateBox = $('#state-hond');
+
+function setState(msg, cls = '') {
+  stateBox.textContent = msg;
+  stateBox.className = 'muted ' + cls;
+}
+
+function renderTable(rows = []) {
+  tblBody.innerHTML = '';
+  if (!rows.length) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="5" class="muted">Geen honden gevonden.</td>`;
+    tblBody.appendChild(tr);
+    return;
+  }
+
+  for (const row of rows) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${row.naam || ''}</td>
+      <td>${row.ras || ''}</td>
+      <td>${row.geboortedatum || ''}</td>
+      <td>${row.eigenaar || row.eigenaar_id || ''}</td>
+      <td><button class="btn small">✏️</button></td>
+    `;
+    tblBody.appendChild(tr);
+  }
+}
 
 export async function initHondenTab() {
-  console.log('[honden-tab] Initialisatie gestart');
-  const stateEl = document.getElementById('state-hond');
-  const tableBody = document.querySelector('#tbl-hond tbody');
-  const refreshBtn = document.getElementById('refresh-hond');
-  const searchInput = document.getElementById('search-hond');
-  const form = document.getElementById('form-add-hond');
-  const msgEl = document.getElementById('form-msg-hond');
+  console.log('[honden] init gestart');
 
-  let honden = [];
+  await initFromConfig(); // ✅ eerst Exec-URL ophalen
 
-  function renderTable(data) {
-    tableBody.innerHTML = '';
-    if (!data?.length) {
-      tableBody.innerHTML = `<tr><td colspan="5" class="muted">Geen honden gevonden.</td></tr>`;
-      return;
-    }
-    for (const hond of data) {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${hond.naam || ''}</td>
-        <td>${hond.ras || ''}</td>
-        <td>${hond.geboortedatum || ''}</td>
-        <td>${hond.eigenaar_id || ''}</td>
-        <td><button class="btn small">✏️</button></td>
-      `;
-      tableBody.appendChild(tr);
+  $('#refresh-hond')?.addEventListener('click', refresh);
+  $('#search-hond')?.addEventListener('input', filter);
+
+  refresh(); // eerste load
+}
+
+async function refresh() {
+  console.log('[honden] refresh start');
+  if (aborter) aborter.abort();
+  aborter = new AbortController();
+
+  setState('⏳ Laden…');
+
+  const timer = setTimeout(() => {
+    aborter.abort();
+    console.warn('[honden] Timeout na', TIMEOUT_MS, 'ms');
+  }, TIMEOUT_MS);
+
+  try {
+    const raw = await fetchSheet('Honden', { signal: aborter.signal });
+    clearTimeout(timer);
+
+    console.log('[honden] Data ontvangen:', raw);
+    const rows = Array.isArray(raw.data) ? normalize(raw.data) : [];
+    renderTable(rows);
+
+    setState(`✅ ${rows.length} honden geladen`, 'ok');
+  } catch (err) {
+    clearTimeout(timer);
+    console.error('[honden] Laden mislukt:', err);
+
+    if (err.name === 'AbortError') {
+      setState('⚠️ Verbinding traag, probeer opnieuw', 'warn');
+    } else {
+      setState('❌ Fout bij laden', 'error');
     }
   }
+}
 
-  async function loadData() {
-    try {
-      stateEl.textContent = '⏳ Laden…';
-      await initFromConfig();
-      const rows = await fetchSheet('Honden');
-      honden = rows;
-      renderTable(honden);
-      stateEl.textContent = `✅ ${rows.length} honden geladen`;
-    } catch (err) {
-      console.error('[honden-tab] Fout bij laden:', err);
-      stateEl.textContent = '❌ Fout bij laden';
-    }
-  }
-
-  refreshBtn.addEventListener('click', loadData);
-
-  searchInput.addEventListener('input', (e) => {
-    const term = e.target.value.toLowerCase();
-    const filtered = honden.filter(h =>
-      (h.naam || '').toLowerCase().includes(term) ||
-      (h.chip || '').toLowerCase().includes(term)
-    );
-    renderTable(filtered);
+function normalize(rows) {
+  const [header, ...body] = rows;
+  const map = header.map(h => h.toLowerCase());
+  return body.map(r => {
+    const o = {};
+    map.forEach((k, i) => (o[k] = r[i]));
+    return o;
   });
+}
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(form).entries());
-    try {
-      msgEl.textContent = '💾 Opslaan…';
-      await saveHond(data);
-      msgEl.textContent = '✅ Opgeslagen!';
-      form.reset();
-      await loadData();
-    } catch (err) {
-      console.error('[honden-tab] Opslaan mislukt:', err);
-      msgEl.textContent = '❌ Fout bij opslaan';
-    }
+function filter() {
+  const q = $('#search-hond').value.trim().toLowerCase();
+  const allRows = Array.from(tblBody.rows);
+  allRows.forEach(tr => {
+    const match = tr.textContent.toLowerCase().includes(q);
+    tr.style.display = match ? '' : 'none';
   });
-
-  // Eerste load
-  await loadData();
-  console.log('[honden-tab] Init voltooid');
 }
