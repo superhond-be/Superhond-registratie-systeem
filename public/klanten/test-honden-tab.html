@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Test – Honden-tab</title>
+
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
+
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/superhond.css">
+</head>
+
+<body class="subpage">
+  <main class="container">
+    <h1>Test – Honden-tab</h1>
+
+    <section class="card">
+      <div class="toolbar">
+        <input id="search-hond" class="input" placeholder="Zoek op naam of chip…">
+        <button id="refresh-hond" class="btn">🔄 Verversen</button>
+      </div>
+
+      <div id="state-hond" class="muted">⏳ Initieel laden…</div>
+
+      <div class="table-wrap">
+        <table class="table" id="tbl-hond">
+          <thead>
+            <tr>
+              <th>Naam</th>
+              <th>Ras</th>
+              <th>Geboortedatum</th>
+              <th>Eigenaar (id)</th>
+              <th>Acties</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Nieuwe hond toevoegen</h2>
+      <form id="form-add-hond" class="form-grid">
+        <input name="name" class="input" placeholder="Naam" required />
+        <input name="breed" class="input" placeholder="Ras" />
+        <input name="birthdate" class="input" type="date" />
+        <input name="ownerId" class="input" placeholder="Eigenaar (id)" required />
+        <input name="chip" class="input" placeholder="Chipnummer" />
+        <input name="notes" class="input" placeholder="Notities" />
+        <select name="status" class="input">
+          <option value="actief" selected>actief</option>
+          <option value="inactief">inactief</option>
+        </select>
+        <button class="btn primary" type="submit">💾 Opslaan</button>
+      </form>
+      <div id="form-msg-hond" class="muted"></div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initHondenTab } from '../js/honden-tab.js?v=0.27.6';
+
+    initHondenTab().catch(e => {
+      console.error('❌ initHondenTab() failed:', e);
+      document.getElementById('state-hond').textContent = '❌ Honden-tab laden mislukt';
+    });
+  </script>
+</body>
+</html>
