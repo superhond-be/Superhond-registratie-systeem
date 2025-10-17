@@ -6,131 +6,131 @@
   <title>Klanten & Honden – Superhond</title>
 
   <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
-  <meta name="superhond-version" content="0.27.6">
-  <meta name="superhond-branch" content="Ontwikkeling">
+  <meta name="superhond-version" content="0.27.6" />
+  <meta name="superhond-branch" content="Ontwikkeling" />
 
   <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
 </head>
 
-<body class="subpage page-klanten-honden">
+<body class="subpage page-klanten">
   <header id="topbar"></header>
 
   <main class="container">
     <h1 class="page-title">Klanten & Honden</h1>
-    <p class="muted">Beheer baasjes en honden</p>
 
     <div class="tabs">
       <button class="tab active" data-tab="klanten">🧑 Klanten</button>
       <button class="tab" data-tab="honden">🐶 Honden</button>
     </div>
 
+    <!-- Klanten -->
     <section id="tab-content-klanten" class="tab-panel">
-      <!-- ==== Klanten-module inhoud (gekopieerd van jouw huidige klanten pagina) ==== -->
       <section class="card">
         <div class="toolbar">
-          <input id="search" class="input" placeholder="Zoek op naam of e-mail…" aria-label="Zoeken" />
-          <button id="refresh" class="btn" type="button">🔄 Verversen</button>
+          <input id="search-klanten" class="input" placeholder="Zoek op naam of e-mail…" />
+          <button id="refresh-klanten" class="btn" type="button">🔄 Verversen</button>
         </div>
         <div id="state-klanten" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
         <div class="table-wrap" style="margin-top:.5rem">
           <table class="table" id="tbl-klanten">
             <thead>
               <tr>
-                <th>Naam</th><th>E-mail</th><th>Telefoon</th><th>Status</th><th style="width:1%">Acties</th>
+                <th>Naam</th>
+                <th>E-mail</th>
+                <th>Telefoon</th>
+                <th>Status</th>
+                <th style="width:1%">Acties</th>
               </tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
       </section>
+
       <section class="card" style="margin-top:1rem">
         <h2>Nieuwe klant toevoegen</h2>
-        <form id="form-add-klant" class="form-grid" autocomplete="off">
+        <form id="form-klanten" class="form-grid">
           <input name="voornaam" class="input" placeholder="Voornaam" required />
           <input name="achternaam" class="input" placeholder="Achternaam" required />
           <input name="email" class="input" type="email" placeholder="E-mail" />
           <input name="telefoon" class="input" placeholder="Telefoon" />
-          <select name="status" class="input" aria-label="Status">
-            <option value="actief" selected>actief</option>
-            <option value="inactief">inactief</option>
-          </select>
-          <button class="btn primary" type="submit">💾 Opslaan</button>
-        </form>
-        <div id="form-msg-klant" class="muted" role="status" aria-live="polite"></div>
-      </section>
-    </section>
-
-    <section id="tab-content-honden" class="tab-panel" style="display:none">
-      <!-- ==== Honden-module inhoud ==== -->
-      <section class="card">
-        <div class="toolbar">
-          <input id="hond-search" class="input" placeholder="Zoek op naam of chip…" aria-label="Zoeken" />
-          <button id="refresh-honden" class="btn" type="button">🔄 Verversen</button>
-        </div>
-        <div id="state-honden" class="muted" style="margin-top:.5rem">⏳ Laden honden…</div>
-        <div class="table-wrap" style="margin-top:.5rem">
-          <table class="table" id="tbl-honden">
-            <thead>
-              <tr>
-                <th>Naam</th><th>Ras</th><th>Geboortedatum</th><th>Eigenaar</th><th style="width:1%">Acties</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </section>
-      <section class="card" style="margin-top:1rem">
-        <h2>Nieuwe hond toevoegen</h2>
-        <form id="form-add-hond" class="form-grid" autocomplete="off">
-          <input name="naam" class="input" placeholder="Naam hond" required />
-          <input name="ras" class="input" placeholder="Ras" />
-          <input name="gebdatum" class="input" type="date" placeholder="YYYY-MM-DD" />
-          <input name="eigenaarId" class="input" placeholder="Eigenaar (klantId)" />
-          <input name="chip" class="input" placeholder="Chipnummer" />
           <select name="status" class="input">
             <option value="actief" selected>actief</option>
             <option value="inactief">inactief</option>
           </select>
           <button class="btn primary" type="submit">💾 Opslaan</button>
         </form>
-        <div id="form-msg-hond" class="muted" role="status" aria-live="polite"></div>
+        <div id="form-msg-klanten" class="muted" role="status" aria-live="polite"></div>
       </section>
     </section>
 
+    <!-- Honden -->
+    <section id="tab-content-honden" class="tab-panel" style="display:none">
+      <section class="card">
+        <div class="toolbar">
+          <input id="search-honden" class="input" placeholder="Zoek op naam of chip…" />
+          <button id="refresh-honden" class="btn" type="button">🔄 Verversen</button>
+        </div>
+        <div id="state-honden" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
+        <div class="table-wrap" style="margin-top:.5rem">
+          <table class="table" id="tbl-honden">
+            <thead>
+              <tr>
+                <th>Naam</th>
+                <th>Ras</th>
+                <th>Geboortedatum</th>
+                <th>Eigenaar (id)</th>
+                <th style="width:1%">Acties</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" style="margin-top:1rem">
+        <h2>Nieuwe hond toevoegen</h2>
+        <form id="form-honden" class="form-grid">
+          <input name="name" class="input" placeholder="Naam" required />
+          <input name="breed" class="input" placeholder="Ras" />
+          <input name="birthdate" class="input" type="date" placeholder="YYYY-MM-DD" />
+          <input name="ownerId" class="input" placeholder="Eigenaar (id)" />
+          <input name="chip" class="input" placeholder="Chipnummer" />
+          <input name="notes" class="input" placeholder="Notities" />
+          <select name="status" class="input">
+            <option value="actief" selected>actief</option>
+            <option value="inactief">inactief</option>
+          </select>
+          <button class="btn primary" type="submit">💾 Opslaan</button>
+        </form>
+        <div id="form-msg-honden" class="muted" role="status" aria-live="polite"></div>
+      </section>
+    </section>
   </main>
 
-  <footer id="footer"></footer>
+  <footer id="footer" class="footer"></footer>
 
+  <!-- JS -->
   <script type="module">
     import { SuperhondUI } from '../js/layout.js';
     import '../js/klanten.js?v=0.27.6';
-    import { initHondenTab } from '../js/honden-tab.js?v=0.27.6';
+    import '../js/honden.js?v=0.27.6';
 
-    SuperhondUI.mount({
-      title: 'Klanten & Honden',
-      icon: '🐾',
-      back: '../dashboard/',
-      home: false
-    });
+    SuperhondUI.mount({ title: 'Klanten & Honden', icon: '🐾', back: '../dashboard/' });
 
+    // Tabs
     document.querySelectorAll('.tab').forEach(tab => {
       tab.addEventListener('click', () => {
-        const sel = tab.dataset.tab;
+        const selected = tab.dataset.tab;
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
         tab.classList.add('active');
-        document.getElementById(`tab-content-${sel}`).style.display = '';
-
-        if (sel === 'honden') {
-          initHondenTab();
-        }
+        document.getElementById(`tab-content-${selected}`).style.display = '';
       });
     });
   </script>
 
-  <noscript>
-    <p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p>
-  </noscript>
+  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p></noscript>
 </body>
 </html>
