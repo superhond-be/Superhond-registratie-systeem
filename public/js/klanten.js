@@ -1,6 +1,6 @@
 /**
  * klanten.js — Beheer van klanten voor Superhond
- * Verbeterde versie met logging, timeouts en foutafhandeling
+ * v0.27.7 – opgeschoond, enkel 'Klanten'-tabblad
  * © 2025 Superhond
  */
 
@@ -130,19 +130,11 @@ async function refresh() {
 
   try {
     setState('⏳ Laden…');
-    let rows = [];
 
-    try {
-      console.log('[klanten] → fetchSheet("Klanten")');
-      const raw = await fetchSheet('Klanten', { signal: ac.signal, timeout: TIMEOUT_MS });
-      console.log('[klanten] ✅ Data van "Klanten" ontvangen');
-      rows = toArrayRows(raw);
-    } catch (err1) {
-      console.warn('[klanten] ⚠️ Fallback naar "Leden":', err1?.message);
-      const raw2 = await fetchSheet('Leden', { signal: ac.signal, timeout: TIMEOUT_MS });
-      console.log('[klanten] ✅ Data van "Leden" ontvangen');
-      rows = toArrayRows(raw2);
-    }
+    console.log('[klanten] → fetchSheet("Klanten")');
+    const raw = await fetchSheet('Klanten', { signal: ac.signal, timeout: TIMEOUT_MS });
+    console.log('[klanten] ✅ Data ontvangen van "Klanten"');
+    const rows = toArrayRows(raw);
 
     allRows = rows.map(normalize).sort((a, b) => collator.compare(a.naam || '', b.naam || ''));
     console.log(`[klanten] ${allRows.length} rijen genormaliseerd`);
