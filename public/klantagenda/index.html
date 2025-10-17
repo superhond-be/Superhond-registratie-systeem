@@ -8,12 +8,24 @@
   <!-- Alleen UI/CSS + layout.js -->
   <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
+
   <style>
     .toolbar { margin:1rem 0; display:flex; gap:.5rem; flex-wrap:wrap; }
-    select.select { padding:.4rem .75rem; font-size:.9rem; border:1px solid #d1d5db; border-radius:.375rem; background:#fff; }
-    .ag-punt { padding:.75rem; border-bottom:1px solid #e5e7eb; }
+    select.select {
+      padding:.4rem .75rem; font-size:.9rem; border:1px solid #d1d5db;
+      border-radius:.375rem; background:#fff;
+    }
+    select.select:focus { outline:none; border-color:var(--accent,#f4c400); box-shadow:0 0 0 2px rgba(251,191,36,.3); }
+
+    .ag-punt { padding:.75rem; border-bottom:1px solid #e5e7eb; transition:background .2s; }
+    .ag-punt:hover { background:#f9fafb; }
+    .ag-punt:last-child { border-bottom:none; }
     .ag-punt .info { color:#6b7280; font-size:.9rem; }
-    .mededelingen-onder { margin-top:.5rem; padding-left:1rem; border-left:3px solid var(--accent,#f4c400); font-size:.9rem; }
+
+    .mededelingen-onder {
+      margin-top:.5rem; padding-left:1rem; border-left:3px solid var(--accent,#f4c400);
+      color:#374151; font-size:.9rem;
+    }
     .mededelingen-onder.urgent { border-left-color:#dc2626; background:#fef2f2; }
     .mededelingen-onder small { display:block; color:#9ca3af; font-size:.8rem; margin-bottom:.25rem; }
   </style>
@@ -25,6 +37,7 @@
   <main class="container">
     <h1 class="page-title">Agenda & Mededelingen</h1>
 
+    <!-- Filters -->
     <div class="toolbar">
       <select id="filter-categorie" class="select" aria-label="Filter categorie">
         <option value="">Alle categorieën</option>
@@ -40,6 +53,7 @@
       </select>
     </div>
 
+    <!-- Agenda container -->
     <section id="agenda-list" class="card">
       <p class="muted" id="agenda-loader">⏳ Agenda wordt geladen…</p>
     </section>
@@ -47,19 +61,42 @@
 
   <footer id="footer"></footer>
 
+  <!-- Eén module met alles: layout + lokale testdata + render -->
   <script type="module">
     import { SuperhondUI } from '../js/layout.js?v=0.27.6';
 
-    // ---------- HULP ----------
-    const $ = (s, r=document) => r.querySelector(s);
-    const escapeHtml = s => String(s).replace(/[&<>"']/g, c =>
-      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);
+    // ---------- kleine flash-melding (tijdelijk) ----------
+    function flash(msg, ms = 2800) {
+      const n = document.createElement('div');
+      n.textContent = msg;
+      Object.assign(n.style, {
+        position: 'fixed',
+        top: '10px',
+        right: '12px',
+        zIndex: 9999,
+        padding: '10px 12px',
+        border: '1px solid #d1d5db',
+        borderRadius: '10px',
+        background: '#fff',
+        boxShadow: '0 8px 20px rgba(0,0,0,.12)',
+        fontSize: '14px',
+        color: '#111827'
+      });
+      document.body.appendChild(n);
+      setTimeout(() => n.remove(), ms);
+    }
 
+    // ---------- helpers ----------
+    const $ = (s, r=document) => r.querySelector(s);
     const currentFilters = { categorie:'', prioriteit:'' };
+
+    const escapeHtml = s => String(s ?? '').replace(/[&<>"']/g, c =>
+      ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
+    );
 
     function filterMededelingen(meds, {lesId, dag, categorie, prioriteit}){
       const now = new Date();
-      return meds.filter(m=>{
+      return (meds||[]).filter(m=>{
         if(!m.zichtbaar) return false;
         if(lesId && m.targetLes && m.targetLes!==lesId) return false;
         if(dag && m.datum && m.datum!==dag) return false;
@@ -87,7 +124,9 @@
         });
         return `
           <div class="ag-punt">
-            <div class="ag-header"><strong>${escapeHtml(l.lesnaam)}</strong> — ${escapeHtml(l.datum)} ${escapeHtml(l.tijd)}</div>
+            <div class="ag-header">
+              <strong>${escapeHtml(l.lesnaam)}</strong> — ${escapeHtml(l.datum)} ${escapeHtml(l.tijd)}
+            </div>
             <div class="info">📍 ${escapeHtml(l.locatie||'Onbekende locatie')}</div>
             ${meds.length?`
               <div class="mededelingen-onder ${meds.some(m=>m.prioriteit==='Hoog')?'urgent':''}">
@@ -101,25 +140,34 @@
       el.innerHTML = html;
     }
 
-    // ---------- BOOTSTRAP ----------
     document.addEventListener('DOMContentLoaded', () => {
+      // Topbar (blauw) + versie
       SuperhondUI.mount({ title:'Agenda & Mededelingen', icon:'📅', back:'../dashboard/' });
+      flash('🧩 Testmodus — lokale data');
 
-      // 🔸 PURE LOKALE TESTDATA (geen Sheets, geen fetch)
+      // 🔸 PURE LOKALE TESTDATA (geen Sheets)
       const lesData = [
         { id:'T1', lesnaam:'Puppy Groep', datum:'2025-10-20', tijd:'09:00', locatie:'Hal 1', groep:'Puppy' },
         { id:'T2', lesnaam:'Gevorderd',  datum:'2025-10-21', tijd:'14:00', locatie:'Hal 2', groep:'Gevorderd' }
       ];
       const medData = [
-        { id:'M1', inhoud:'Breng regenjas mee', datum:'2025-10-20', tijd:'08:00', targetLes:'T1', doelgroep:'klant', categorie:'Weer', prioriteit:'Laag',   zichtbaar:true },
-        { id:'M2', inhoud:'Les verlaat 30 min', datum:'2025-10-21', tijd:'13:30', targetLes:'T2', doelgroep:'klant', categorie:'Info', prioriteit:'Normaal', zichtbaar:true },
-        { id:'M3', inhoud:'Parkeer op parking B', datum:'2025-10-20', tijd:'08:45', targetLes:'T1', doelgroep:'klant', categorie:'Info', prioriteit:'Hoog',  zichtbaar:true }
+        { id:'M1', inhoud:'Breng regenjas mee',     datum:'2025-10-20', tijd:'08:00', targetLes:'T1', doelgroep:'klant', categorie:'Weer',     prioriteit:'Laag',   link:'', zichtbaar:true },
+        { id:'M2', inhoud:'Les verlaat 30 min',     datum:'2025-10-21', tijd:'13:30', targetLes:'T2', doelgroep:'klant', categorie:'Info',     prioriteit:'Normaal',link:'', zichtbaar:true },
+        { id:'M3', inhoud:'Parkeer op parking B',   datum:'2025-10-20', tijd:'08:45', targetLes:'T1', doelgroep:'klant', categorie:'Info',     prioriteit:'Hoog',   link:'', zichtbaar:true },
+        { id:'M4', inhoud:'Bevestig je boeking svp',datum:'2025-10-19', tijd:'18:00', targetLes:'',   doelgroep:'klant', categorie:'Boekingen', prioriteit:'Laag',   link:'#', zichtbaar:true }
       ];
 
-      // events
-      $('#filter-categorie')?.addEventListener('change', e=>{ currentFilters.categorie = e.target.value; renderAgenda(lesData, medData); });
-      $('#filter-prioriteit')?.addEventListener('change', e=>{ currentFilters.prioriteit = e.target.value; renderAgenda(lesData, medData); });
+      // Filter events
+      $('#filter-categorie')?.addEventListener('change', e=>{
+        currentFilters.categorie = e.target.value;
+        renderAgenda(lesData, medData);
+      });
+      $('#filter-prioriteit')?.addEventListener('change', e=>{
+        currentFilters.prioriteit = e.target.value;
+        renderAgenda(lesData, medData);
+      });
 
+      // Eerste render
       renderAgenda(lesData, medData);
     });
   </script>
