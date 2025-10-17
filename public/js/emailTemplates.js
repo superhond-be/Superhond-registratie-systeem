@@ -1,39 +1,28 @@
-// public/js/emailTemplates.js
+let templates = [];
 
-import { fetchSheet } from './sheets.js';
-
-export async function loadEmailTemplates(useLocal = false) {
-  if (useLocal) {
-    return loadEmailTemplatesLocal();
-  } else {
-    return loadEmailTemplatesSheets();
-  }
+export async function loadEmailTemplates(data) {
+  // data = array uit JSON of sheet
+  templates = data;
 }
 
-async function loadEmailTemplatesLocal() {
-  try {
-    const resp = await fetch('../data/emailtemplates.json');
-    if (!resp.ok) {
-      throw new Error('HTTP error ' + resp.status);
-    }
-    const arr = await resp.json();
-    return arr.filter(t => String(t.zichtbaar || '').toLowerCase() === 'ja');
-  } catch (err) {
-    console.error('Kon e-mailtemplates lokaal niet laden:', err);
-    return [];
-  }
+export function getTemplateById(id) {
+  return templates.find(t => t.templateId === id);
 }
 
-async function loadEmailTemplatesSheets() {
-  try {
-    const raw = await fetchSheet('E‑MailTemplates');
-    // ruwe formaten mogelijk: raw.data, raw.rows, raw.result
-    const arr = Array.isArray(raw)
-      ? raw
-      : (raw.data ?? raw.rows ?? raw.result ?? []);
-    return arr.filter(t => String(t.zichtbaar || '').toLowerCase() === 'ja');
-  } catch (err) {
-    console.error('Kon e-mailtemplates uit sheet niet laden:', err);
-    return [];
-  }
+export function renderTemplate(template, context) {
+  // context = { voornaam: 'Jan', lesNaam: 'Puppyles', ... }
+  const render = (str = '') =>
+    str.replace(/\{\{(.*?)\}\}/g, (_, key) => context[key.trim()] || '');
+  return {
+    onderwerp: render(template.onderwerp),
+    body: render(template.body)
+  };
+}
+
+export function listTemplates({ trigger = null, doelgroep = null, automatisch = null } = {}) {
+  return templates.filter(t =>
+    (trigger == null || t.trigger === trigger) &&
+    (doelgroep == null || t.doelgroep === doelgroep) &&
+    (automatisch == null || t.automatisch === automatisch)
+  );
 }
