@@ -1,82 +1,89 @@
 <!doctype html>
 <html lang="nl">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Honden – Superhond</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lessen – Superhond</title>
 
-  <!-- 🔗 Koppel met juiste Google Apps Script -->
-  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec">
-
+  <!-- Centrale stijlen -->
   <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
   <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
 </head>
 
-<body class="subpage page-honden">
+<body class="subpage page-lessen">
   <header id="topbar"></header>
 
   <main class="container">
-    <h1 class="page-title">Honden</h1>
+    <h1 class="page-title">Lessen</h1>
 
+    <!-- Overzicht -->
     <section class="card">
-      <div class="toolbar">
-        <input id="search-hond" class="input" placeholder="Zoek op naam of chip…" />
-        <button id="refresh-hond" class="btn" type="button">🔄 Verversen</button>
+      <div class="row" style="display:flex;gap:.5rem;align-items:center">
+        <input id="search" class="input" placeholder="Zoek op naam, type of locatie…" />
+        <button id="refresh" class="btn">🔄 Ververs</button>
       </div>
-      <div id="state-hond" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
+
+      <div id="state" class="muted" style="margin-top:.5rem">⏳ Laden…</div>
 
       <div class="table-wrap" style="margin-top:.5rem">
-        <table class="table" id="tbl-hond">
+        <table class="table" id="tbl">
           <thead>
             <tr>
               <th>Naam</th>
-              <th>Ras</th>
-              <th>Geboortedatum</th>
-              <th>Eigenaar (id)</th>
-              <th style="width:1%">Acties</th>
+              <th>Datum</th>
+              <th>Locatie</th>
+              <th>Trainer</th>
+              <th>Status</th>
+              <th style="width:1%"></th>
             </tr>
           </thead>
-          <tbody></tbody>
+          <tbody><!-- dynamische rijen --></tbody>
         </table>
       </div>
     </section>
 
+    <!-- Nieuwe les toevoegen -->
     <section class="card" style="margin-top:1rem">
-      <h2>Nieuwe hond toevoegen</h2>
-      <form id="form-add-hond" class="form-grid" autocomplete="off">
-        <input name="name" class="input" placeholder="Naam" required />
-        <input name="breed" class="input" placeholder="Ras" />
-        <input name="birthdate" class="input" type="date" />
-        <input name="ownerId" class="input" placeholder="Eigenaar (id)" required />
-        <input name="chip" class="input" placeholder="Chipnummer" />
+      <h2>Nieuwe les toevoegen</h2>
+
+      <form id="form-add" class="form-grid" autocomplete="off">
+        <input name="type" class="input" placeholder="Type / Naam" required />
+        <input name="trainer" class="input" placeholder="Trainer" />
+        <input name="location" class="input" placeholder="Locatie" />
+        <input name="capacity" class="input" type="number" min="0" step="1" placeholder="Capaciteit" />
+
+        <div class="row" style="display:flex;gap:.5rem">
+          <input name="date" class="input" type="date" required />
+          <input name="time" class="input" type="time" required />
+        </div>
+
         <input name="notes" class="input" placeholder="Notities" />
         <select name="status" class="input">
-          <option value="actief" selected>actief</option>
+          <option value="actief">actief</option>
           <option value="inactief">inactief</option>
         </select>
-        <button class="btn primary" type="submit">💾 Opslaan</button>
+
+        <button class="btn" type="submit">💾 Opslaan</button>
       </form>
-      <div id="form-msg-hond" class="muted" role="status" aria-live="polite"></div>
+
+      <div id="form-msg" class="field-error" style="display:none;"></div>
     </section>
   </main>
 
-  <footer id="footer" class="footer"></footer>
+  <footer id="footer"></footer>
 
-  <!-- ✅ Goed script -->
+  <!-- Scripts -->
+  <script src="../js/layout.js?v=0.27.6" defer></script>
+  <script type="module" src="../js/lessen.js?v=0.27.6"></script>
+
+  <!-- Mount layout.js (versie/status/topbar/footer) -->
   <script type="module">
     import { SuperhondUI } from '../js/layout.js';
-    import { initHondenTab } from '../js/honden-tab.js?v=0.27.6';
-
     SuperhondUI.mount({
-      title: 'Honden',
-      icon: '🐶',
-      back: '../dashboard/',
-      home: false
+      title: 'Lessen',
+      icon: '📅',
+      back: '../dashboard/'
     });
-
-    initHondenTab();
   </script>
-
-  <noscript><p style="padding:1rem;color:#b91c1c">JavaScript is vereist.</p></noscript>
 </body>
 </html>
