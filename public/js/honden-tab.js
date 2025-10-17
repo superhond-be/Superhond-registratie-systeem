@@ -1,14 +1,16 @@
-
 <!doctype html>
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Klanten & Honden – Superhond</title>
-  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj‑aP6ud8mG49xicSHd8SUcG22sPw/exec">
 
-  <link rel="stylesheet" href="../css/style.css?v=0.27.6" />
-  <link rel="stylesheet" href="../css/superhond.css?v=0.27.6" />
+  <!-- ✅ Verbind met juiste Google Apps Script -->
+  <meta name="superhond-exec" content="https://script.google.com/macros/s/AKfycbyxPiFzgCcMplcC5kyFgVPHcIIjDXcQoWdPMEvI2zj-aP6ud8mG49xicSHd8SUcG22sPw/exec" />
+
+  <!-- ✅ Stijlen -->
+  <link rel="stylesheet" href="../../css/style.css?v=0.27.6" />
+  <link rel="stylesheet" href="../../css/superhond.css?v=0.27.6" />
 </head>
 
 <body class="subpage page-klanten">
@@ -46,6 +48,7 @@
           </table>
         </div>
       </section>
+
       <section class="card" style="margin-top:1rem">
         <h2>Nieuwe klant toevoegen</h2>
         <form id="form-add" class="form-grid" autocomplete="off">
@@ -86,6 +89,7 @@
           </table>
         </div>
       </section>
+
       <section class="card" style="margin-top:1rem">
         <h2>Nieuwe hond toevoegen</h2>
         <form id="form-add-hond" class="form-grid" autocomplete="off">
@@ -104,20 +108,20 @@
         <div id="form-msg-hond" class="muted" role="status" aria-live="polite"></div>
       </section>
     </section>
-
   </main>
 
   <footer id="footer"></footer>
 
+  <!-- ✅ Juiste script imports -->
   <script type="module">
-    import { SuperhondUI } from '../js/layout.js';
-    import '../js/klanten.js?v=0.27.6';
-    import { initHondenTab } from '../js/honden-tab.js?v=0.27.6';
+    import { SuperhondUI } from '../../js/layout.js';
+    import '../../js/klanten.js?v=0.27.6';
+    import { initHondenTab } from '../../js/honden-tab.js?v=0.27.6';
 
     SuperhondUI.mount({
       title: 'Klanten & Honden',
       icon: '🐾',
-      back: '../dashboard/',
+      back: '../../dashboard/',
       home: false
     });
 
